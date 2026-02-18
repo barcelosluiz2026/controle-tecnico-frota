@@ -33,6 +33,7 @@ class Aircraft(db.Model):
     model = db.Column(db.String(50), nullable=False)
     prefix = db.Column(db.String(10), unique=True, nullable=False)
     photo_url = db.Column(db.String(500))
+    status = db.Column(db.String(50), default="OPERACIONAL")
 
 # ======================
 # DECORATOR DE LOGIN
@@ -135,12 +136,21 @@ def home():
         html += f"<div class='model-title'>🚁 {model}</div>"
         html += "<div class='grid'>"
         for ac in items:
-            html += f"""
-            <div class='card'>
-                <img src='{ac.photo_url}' alt='foto'>
-                <div class='prefix'>{ac.prefix}</div>
-            </div>
-            """
+
+    color = {
+        "OPERACIONAL": "#16a34a",
+        "MANUTENCAO": "#facc15",
+        "AOG": "#dc2626"
+    }.get(ac.status, "#64748b")
+
+    html += f"""
+    <div class='card' style='border-top: 6px solid {color};'>
+        <img src='{ac.photo_url}' alt='foto'>
+        <div class='prefix'>{ac.prefix}</div>
+        <div style='margin-top:5px; font-size:12px;'>{ac.status}</div>
+        {'<a href="/delete_aircraft/'+str(ac.id)+'" style="color:red;">Excluir</a>' if session["role"]=="Admin" else ""}
+    </div>
+    """
         html += "</div>"
 
     html += "</body></html>"
@@ -249,7 +259,7 @@ def login():
     </head>
     <body>
         <div class="login-box">
-            <h2>Controle Técnico de Frota ✈️</h2>
+            <h2>Controle Técnico de Frota 🚁</h2>
             <form method="POST">
                 <input name="username" placeholder="Usuário">
                 <input type="password" name="password" placeholder="Senha">
@@ -273,6 +283,7 @@ def add_aircraft():
         model = request.form["model"]
         prefix = request.form["prefix"].upper()
         photo_url = request.form["photo_url"]
+        status = request.form["status"]
 
         if not re.match(r"^[A-Z]{2}-[A-Z]{3}$", prefix):
             return "Prefixo inválido. Use formato PR-ABC"
@@ -280,17 +291,26 @@ def add_aircraft():
         if Aircraft.query.filter_by(prefix=prefix).first():
             return "Aeronave já cadastrada"
 
-        new_aircraft = Aircraft(
-            model=model,
-            prefix=prefix,
-            photo_url=photo_url
-        )
+ new_aircraft = Aircraft(
+    model=model,
+    prefix=prefix,
+    photo_url=photo_url,
+    status=status
+)
 
         db.session.add(new_aircraft)
         db.session.commit()
 
         return redirect(url_for("home"))
-
+        
+@app.route("/delete_aircraft/<int:id>")
+@login_required("Admin")
+def delete_aircraft(id):
+    aircraft = Aircraft.query.get_or_404(id)
+    db.session.delete(aircraft)
+    db.session.commit()
+    return redirect(url_for("home"))
+    
     return """
     <h2>Cadastrar Helicóptero 🚁</h2>
     <form method="POST">
@@ -308,7 +328,12 @@ def add_aircraft():
 
         Link da Foto:
         <input name="photo_url" placeholder="https://..."><br><br>
-
+Status:
+<select name="status">
+    <option value="OPERACIONAL">OPERACIONAL</option>
+    <option value="MANUTENCAO">MANUTENÇÃO</option>
+    <option value="AOG">AOG</option>
+</select><br><br>
         <button type="submit">Cadastrar</button>
     </form>
     """
@@ -322,6 +347,7 @@ with app.app_context():
 
 if __name__ == "__main__":
     app.run()
+
 
 
 
