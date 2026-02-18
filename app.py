@@ -344,12 +344,3 @@ with app.app_context():
 
 if __name__ == "__main__":
     app.run()
-
-@app.route("/reset_database_123")
-def reset_database():
-    db.drop_all()
-    db.create_all()
-    return "Banco recriado com sucesso!"
-
-
-
