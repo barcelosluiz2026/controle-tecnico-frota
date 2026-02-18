@@ -131,10 +131,9 @@ def home():
             </div>
         </div>
     """
-
     for model, items in grouped.items():
-    html += f"<div class='model-title'>🚁 {model}</div>"
-    html += "<div class='grid'>"
+        html += f"<div class='model-title'>🚁 {model}</div>"
+        html += "<div class='grid'>"
 
     for ac in items:
 
@@ -348,6 +347,7 @@ with app.app_context():
 
 if __name__ == "__main__":
     app.run()
+
 
 
 
