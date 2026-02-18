@@ -277,31 +277,28 @@ def logout():
     return redirect(url_for("login"))
     
 @app.route("/add_aircraft", methods=["GET", "POST"])
-@login_required("Admin")
+@login_required
 def add_aircraft():
+
     if request.method == "POST":
-        model = request.form["model"]
-        prefix = request.form["prefix"].upper()
-        photo_url = request.form["photo_url"]
-        status = request.form["status"]
+        model = request.form.get("model")
+        prefix = request.form.get("prefix")
+        photo_url = request.form.get("photo_url")
+        status = request.form.get("status")
 
-        if not re.match(r"^[A-Z]{2}-[A-Z]{3}$", prefix):
-            return "Prefixo inválido. Use formato PR-ABC"
+        new_aircraft = Aircraft(
+            model=model,
+            prefix=prefix,
+            photo_url=photo_url,
+            status=status
+        )
 
-        if Aircraft.query.filter_by(prefix=prefix).first():
-            return "Aeronave já cadastrada"
+        db.session.add(new_aircraft)
+        db.session.commit()
 
-    new_aircraft = Aircraft(
-    model=model,
-    prefix=prefix,
-    photo_url=photo_url,
-    status=status
-)
+        return redirect(url_for("home"))
 
-    db.session.add(new_aircraft)
-    db.session.commit()
-
-    return redirect(url_for("home"))
+    return render_template("add_aircraft.html")
         
 @app.route("/delete_aircraft/<int:id>")
 @login_required("Admin")
@@ -347,3 +344,4 @@ with app.app_context():
 
 if __name__ == "__main__":
     app.run()
+
