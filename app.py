@@ -22,6 +22,16 @@ class User(db.Model):
     username = db.Column(db.String(100), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
     role = db.Column(db.String(50), nullable=False)
+    
+# ======================
+# MODELO DE AERONAVE
+# ======================
+
+class Aircraft(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    model = db.Column(db.String(50), nullable=False)
+    prefix = db.Column(db.String(10), unique=True, nullable=False)
+    photo_url = db.Column(db.String(500))
 
 # ======================
 # DECORATOR DE LOGIN
@@ -46,12 +56,94 @@ def login_required(role=None):
 @app.route("/")
 @login_required()
 def home():
-    return f"""
-    <h1>Controle Técnico de Frota ✈️</h1>
-    <p>Usuário: {session['username']}</p>
-    <p>Perfil: {session['role']}</p>
-    <a href='/logout'>Sair</a>
+    aircrafts = Aircraft.query.order_by(Aircraft.model, Aircraft.prefix).all()
+
+    grouped = {}
+    for ac in aircrafts:
+        grouped.setdefault(ac.model, []).append(ac)
+
+    html = """
+    <html>
+    <head>
+        <title>Controle Técnico</title>
+        <style>
+            body {
+                font-family: Arial;
+                background-color: #0f172a;
+                color: white;
+                padding: 20px;
+            }
+
+            .model-title {
+                margin-top: 40px;
+                font-size: 24px;
+                border-bottom: 2px solid #1e293b;
+                padding-bottom: 10px;
+            }
+
+            .grid {
+                display: grid;
+                grid-template-columns: repeat(7, 1fr);
+                gap: 15px;
+                margin-top: 20px;
+            }
+
+            .card {
+                background: #1e293b;
+                padding: 10px;
+                border-radius: 8px;
+                text-align: center;
+            }
+
+            .card img {
+                width: 100%;
+                height: 100px;
+                object-fit: cover;
+                border-radius: 6px;
+            }
+
+            .prefix {
+                font-weight: bold;
+                margin-top: 5px;
+            }
+
+            .top-bar {
+                display:flex;
+                justify-content: space-between;
+            }
+
+            a {
+                color: #38bdf8;
+                text-decoration: none;
+            }
+
+        </style>
+    </head>
+    <body>
+
+        <div class="top-bar">
+            <h1>🚁 Controle Técnico de Frota</h1>
+            <div>
+                <a href="/add_aircraft">Cadastrar Helicóptero</a> |
+                <a href="/logout">Sair</a>
+            </div>
+        </div>
     """
+
+    for model, items in grouped.items():
+        html += f"<div class='model-title'>🚁 {model}</div>"
+        html += "<div class='grid'>"
+        for ac in items:
+            html += f"""
+            <div class='card'>
+                <img src='{ac.photo_url}' alt='foto'>
+                <div class='prefix'>{ac.prefix}</div>
+            </div>
+            """
+        html += "</div>"
+
+    html += "</body></html>"
+    return html
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -182,4 +274,5 @@ with app.app_context():
 
 if __name__ == "__main__":
     app.run()
+
 
