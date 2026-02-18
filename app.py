@@ -291,17 +291,17 @@ def add_aircraft():
         if Aircraft.query.filter_by(prefix=prefix).first():
             return "Aeronave já cadastrada"
 
- new_aircraft = Aircraft(
+    new_aircraft = Aircraft(
     model=model,
     prefix=prefix,
     photo_url=photo_url,
     status=status
 )
 
-        db.session.add(new_aircraft)
-        db.session.commit()
+    db.session.add(new_aircraft)
+    db.session.commit()
 
-        return redirect(url_for("home"))
+    return redirect(url_for("home"))
         
 @app.route("/delete_aircraft/<int:id>")
 @login_required("Admin")
@@ -347,12 +347,3 @@ with app.app_context():
 
 if __name__ == "__main__":
     app.run()
-
-
-
-
-
-
-
-
-
