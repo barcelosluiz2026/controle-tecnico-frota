@@ -118,7 +118,6 @@ def home():
                 color: #38bdf8;
                 text-decoration: none;
             }
-
         </style>
     </head>
     <body>
@@ -131,28 +130,29 @@ def home():
             </div>
         </div>
     """
+
     for model, items in grouped.items():
         html += f"<div class='model-title'>🚁 {model}</div>"
         html += "<div class='grid'>"
 
-    for ac in items:
+        for ac in items:
+            color = {
+                "OPERACIONAL": "#16a34a",
+                "MANUTENCAO": "#facc15",
+                "AOG": "#dc2626"
+            }.get(ac.status, "#64748b")
 
-        color = {
-            "OPERACIONAL": "#16a34a",
-            "MANUTENCAO": "#facc15",
-            "AOG": "#dc2626"
-        }.get(ac.status, "#64748b")
+            html += f"""
+            <div class='card' style='border-top: 6px solid {color};'>
+                <img src='{ac.photo_url}' alt='foto'>
+                <div class='prefix'>{ac.prefix}</div>
+                <div style='margin-top:5px; font-size:12px;'>{ac.status}</div>
+                {'<a href="/delete_aircraft/'+str(ac.id)+'" style="color:red;">Excluir</a>' if session["role"]=="Admin" else ""}
+            </div>
+            """
 
-        html += f"""
-        <div class='card' style='border-top: 6px solid {color};'>
-            <img src='{ac.photo_url}' alt='foto'>
-            <div class='prefix'>{ac.prefix}</div>
-            <div style='margin-top:5px; font-size:12px;'>{ac.status}</div>
-            {'<a href="/delete_aircraft/'+str(ac.id)+'" style="color:red;">Excluir</a>' if session["role"]=="Admin" else ""}
-        </div>
-        """
+        html += "</div>"
 
-    html += "</div>"
     html += "</body></html>"
     return html
 
@@ -347,6 +347,7 @@ with app.app_context():
 
 if __name__ == "__main__":
     app.run()
+
 
 
 
