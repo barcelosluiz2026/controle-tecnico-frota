@@ -276,29 +276,10 @@ def logout():
     session.clear()
     return redirect(url_for("login"))
     
-@app.route("/add_aircraft", methods=["GET", "POST"])
-@login_required
+@app.route("/add_aircraft")
 def add_aircraft():
+    return "ROTA FUNCIONANDO"
 
-    if request.method == "POST":
-        model = request.form.get("model")
-        prefix = request.form.get("prefix")
-        photo_url = request.form.get("photo_url")
-        status = request.form.get("status")
-
-        new_aircraft = Aircraft(
-            model=model,
-            prefix=prefix,
-            photo_url=photo_url,
-            status=status
-        )
-
-        db.session.add(new_aircraft)
-        db.session.commit()
-
-        return redirect(url_for("home"))
-
-    return render_template("add_aircraft.html")
         
 @app.route("/delete_aircraft/<int:id>")
 @login_required("Admin")
@@ -344,4 +325,5 @@ with app.app_context():
 
 if __name__ == "__main__":
     app.run()
+
 
