@@ -131,11 +131,11 @@ def home():
         </div>
     """
 
-    for model, items in grouped.items():
-        html += f"<div class='model-title'>🚁 {model}</div>"
-        html += "<div class='grid'>"
+        for model, items in grouped.items():
+            html += f"<div class='model-title'>🚁 {model}</div>"
+            html += "<div class='grid'>"
 
-        for ac in items:
+            for ac in items:
             color = {
                 "OPERACIONAL": "#16a34a",
                 "MANUTENCAO": "#facc15",
@@ -151,9 +151,9 @@ def home():
             </div>
             """
 
-        html += "</div>"
+            html += "</div>"
 
-    html += "</body></html>"
+        html += "</body></html>"
     return html
 
 @app.route("/register", methods=["GET", "POST"])
@@ -347,6 +347,7 @@ with app.app_context():
 
 if __name__ == "__main__":
     app.run()
+
 
 
 
