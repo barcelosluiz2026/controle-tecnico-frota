@@ -3,6 +3,7 @@ from flask import Flask, request, redirect, url_for, session, render_template_st
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
+import re
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
@@ -264,6 +265,53 @@ def login():
 def logout():
     session.clear()
     return redirect(url_for("login"))
+    
+@app.route("/add_aircraft", methods=["GET", "POST"])
+@login_required("Admin")
+def add_aircraft():
+    if request.method == "POST":
+        model = request.form["model"]
+        prefix = request.form["prefix"].upper()
+        photo_url = request.form["photo_url"]
+
+        if not re.match(r"^[A-Z]{2}-[A-Z]{3}$", prefix):
+            return "Prefixo inválido. Use formato PR-ABC"
+
+        if Aircraft.query.filter_by(prefix=prefix).first():
+            return "Aeronave já cadastrada"
+
+        new_aircraft = Aircraft(
+            model=model,
+            prefix=prefix,
+            photo_url=photo_url
+        )
+
+        db.session.add(new_aircraft)
+        db.session.commit()
+
+        return redirect(url_for("home"))
+
+    return """
+    <h2>Cadastrar Helicóptero 🚁</h2>
+    <form method="POST">
+        Modelo:
+        <select name="model">
+            <option>AW139</option>
+            <option>EC175</option>
+            <option>S-92A</option>
+            <option>H160</option>
+            <option>EC225</option>
+        </select><br><br>
+
+        Prefixo:
+        <input name="prefix" placeholder="PR-ABC"><br><br>
+
+        Link da Foto:
+        <input name="photo_url" placeholder="https://..."><br><br>
+
+        <button type="submit">Cadastrar</button>
+    </form>
+    """
 
 # ======================
 # CRIAR TABELAS
@@ -274,5 +322,6 @@ with app.app_context():
 
 if __name__ == "__main__":
     app.run()
+
 
 
