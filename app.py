@@ -281,10 +281,15 @@ def logout():
 def add_aircraft():
     if request.method == "POST":
         try:
+            print("FORM DATA:", request.form)
+
             model = request.form.get("model")
             prefix = request.form.get("prefix")
             photo_url = request.form.get("photo_url")
             status = request.form.get("status")
+
+            if not model or not prefix:
+                return "Model e Prefix são obrigatórios"
 
             new_aircraft = Aircraft(
                 model=model,
@@ -296,11 +301,11 @@ def add_aircraft():
             db.session.add(new_aircraft)
             db.session.commit()
 
-            return redirect(url_for("dashboard"))
+            return "SALVO COM SUCESSO"
 
         except Exception as e:
-            print("ERRO AO SALVAR:", e)
-            return f"Erro interno: {e}"
+            db.session.rollback()
+            return f"ERRO REAL: {str(e)}"
 
     return render_template("add_aircraft.html")
         
@@ -312,7 +317,6 @@ def delete_aircraft(id):
     db.session.commit()
     return redirect(url_for("home"))
     
-    return """
     <h2>Cadastrar Helicóptero 🚁</h2>
     <form method="POST">
         Modelo:
@@ -348,6 +352,7 @@ with app.app_context():
 
 if __name__ == "__main__":
     app.run()
+
 
 
 
