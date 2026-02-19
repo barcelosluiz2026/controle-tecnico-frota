@@ -3,7 +3,7 @@ from flask import Flask, request, redirect, url_for, session, render_template_st
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
- import re
+import re
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
@@ -230,3 +230,4 @@ with app.app_context():
 
 if __name__ == "__main__":
     app.run()
+
