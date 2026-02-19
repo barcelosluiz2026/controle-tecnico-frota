@@ -317,30 +317,6 @@ def delete_aircraft(id):
     db.session.commit()
     return redirect(url_for("home"))
     
-    <h2>Cadastrar Helicóptero</h2>
-    <form method="POST">
-        Modelo:
-        <select name="model">
-            <option>AW139</option>
-            <option>EC175</option>
-            <option>S92A</option>
-            <option>H160</option>
-            <option>EC225</option>
-        </select><br><br>
-
-        Prefixo:
-        <input name="prefix" placeholder="PR-ABC"><br><br>
-
-        Link da Foto:
-        <input name="photo_url" placeholder="https://..."><br><br>
-Status:
-<select name="status">
-    <option value="OPERACIONAL">OPERACIONAL</option>
-    <option value="MANUTENCAO">MANUTENÇÃO</option>
-    <option value="AOG">AOG</option>
-</select><br><br>
-        <button type="submit">Cadastrar</button>
-    </form>
     """
 
 # ======================
@@ -352,6 +328,7 @@ with app.app_context():
 
 if __name__ == "__main__":
     app.run()
+
 
 
 
