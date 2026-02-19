@@ -317,7 +317,7 @@ def delete_aircraft(id):
     db.session.commit()
     return redirect(url_for("home"))
     
-    <h2>Cadastrar Helicóptero 🚁</h2>
+    <h2>Cadastrar Helicóptero</h2>
     <form method="POST">
         Modelo:
         <select name="model">
@@ -352,6 +352,7 @@ with app.app_context():
 
 if __name__ == "__main__":
     app.run()
+
 
 
 
