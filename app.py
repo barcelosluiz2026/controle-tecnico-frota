@@ -323,7 +323,7 @@ def delete_aircraft(id):
         <select name="model">
             <option>AW139</option>
             <option>EC175</option>
-            <option>S-92A</option>
+            <option>S92A</option>
             <option>H160</option>
             <option>EC225</option>
         </select><br><br>
@@ -352,6 +352,7 @@ with app.app_context():
 
 if __name__ == "__main__":
     app.run()
+
 
 
 
