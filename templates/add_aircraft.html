@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cadastrar Helicóptero</title>
+    <style>
+        body { font-family: Arial; background: #f1f5f9; padding: 40px; }
+        .container { background: white; padding: 30px; border-radius: 8px; width: 400px; margin: auto; }
+        input, select { width: 100%; padding: 8px; margin-top: 10px; }
+        button { margin-top: 15px; padding: 10px; width: 100%; background: #2563eb; color: white; border: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🚁 Cadastrar Helicóptero</h2>
+
+    <form method="POST">
+
+        <label>Modelo</label>
+        <select name="model" required>
+            <option>AW139</option>
+            <option>EC175</option>
+            <option>S-92A</option>
+            <option>H160</option>
+            <option>EC225</option>
+        </select>
+
+        <label>Prefixo (PR-XXX)</label>
+        <input type="text"
+               name="prefix"
+               pattern="PR-[A-Z]{3}"
+               oninput="this.value = this.value.toUpperCase()"
+               placeholder="PR-ABC"
+               required>
+
+        <label>URL da Foto</label>
+        <input type="text" name="photo_url" placeholder="https://...">
+
+        <label>Status</label>
+        <select name="status">
+            <option value="OPERACIONAL">OPERACIONAL</option>
+            <option value="MANUTENCAO">MANUTENÇÃO</option>
+            <option value="AOG">AOG</option>
+        </select>
+
+        <button type="submit">Cadastrar</button>
+    </form>
+
+</div>
+
+</body>
+</html>

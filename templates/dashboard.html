@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard - Frota</title>
+    <style>
+        body { font-family: Arial; background: #f1f5f9; margin: 0; }
+
+        .topbar {
+            background: #0f172a;
+            color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .container { padding: 20px; }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 15px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        img {
+            width: 100%;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 6px;
+        }
+
+        .prefix { font-weight: bold; margin-top: 5px; }
+
+        .model-title {
+            margin-top: 30px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .btn {
+            background: #2563eb;
+            color: white;
+            padding: 6px 10px;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+
+        .delete {
+            color: red;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="topbar">
+    <div>🚁 Controle Técnico de Frota</div>
+    <div>
+        <a href="/add_aircraft" class="btn">+ Adicionar</a>
+        <a href="/logout" class="btn">Sair</a>
+    </div>
+</div>
+
+<div class="container">
+
+{% for model in aircrafts | map(attribute='model') | unique %}
+
+    <div class="model-title">{{ model }}</div>
+
+    <div class="grid">
+    {% for ac in aircrafts if ac.model == model %}
+
+        {% set color =
+            "#16a34a" if ac.status=="OPERACIONAL"
+            else "#facc15" if ac.status=="MANUTENCAO"
+            else "#dc2626" if ac.status=="AOG"
+            else "#64748b"
+        %}
+
+        <div class="card" style="border-top:6px solid {{color}}">
+            {% if ac.photo_url %}
+                <img src="{{ ac.photo_url }}">
+            {% endif %}
+            <div class="prefix">🚁 {{ ac.prefix }}</div>
+            <div>{{ ac.status }}</div>
+
+            {% if current_user.role == "Admin" %}
+                <a class="delete" href="/delete_aircraft/{{ ac.id }}">Excluir</a>
+            {% endif %}
+        </div>
+
+    {% endfor %}
+    </div>
+
+{% endfor %}
+
+</div>
+
+</body>
+</html>
