@@ -1,0 +1,27 @@
+<h2>Cadastrar Helicóptero</h2>
+
+<form method="POST">
+    <label>Modelo:</label>
+    <select name="model" required>
+        <option>AW139</option>
+        <option>EC175</option>
+        <option>S-92A</option>
+        <option>H160</option>
+        <option>EC225</option>
+    </select>
+
+    <label>Prefixo:</label>
+    <input type="text" name="prefix" required>
+
+    <label>URL da Foto:</label>
+    <input type="text" name="photo_url">
+
+    <label>Status:</label>
+    <select name="status">
+        <option>OPERACIONAL</option>
+        <option>MANUTENCAO</option>
+        <option>AOG</option>
+    </select>
+
+    <button type="submit">Cadastrar</button>
+</form>
