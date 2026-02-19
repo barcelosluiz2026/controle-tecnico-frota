@@ -1,7 +1,3 @@
-git add .
-git commit -m "force rebuild python 3.11"
-git push
-
 import os
 from flask import Flask, render_template, redirect, url_for, request, flash
 from flask_sqlalchemy import SQLAlchemy
@@ -154,4 +150,5 @@ def create_tables():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
 
