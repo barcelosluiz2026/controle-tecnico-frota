@@ -306,7 +306,7 @@ def delete_aircraft(id):
 
 @app.route("/aircraft/<int:id>", methods=["GET", "POST"])
 @login_required()
-def add_pane(aircraft_id):
+def aircraft_page(id):
     aircraft = Aircraft.query.get_or_404(aircraft_id)
 
     if request.method == "POST":
@@ -332,7 +332,9 @@ def add_pane(aircraft_id):
         db.session.add(new_pane)
         db.session.commit()
 
-        return redirect(url_for("aircraft_detail", aircraft_id=aircraft.id))
+        return redirect(url_for("aircraft_page", id=aircraft.id))
+
+    panes = Pane.query.filter_by(aircraft_id=aircraft.id).all()
 
     html = f"""
     <html>
@@ -599,6 +601,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
