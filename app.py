@@ -38,6 +38,15 @@ class Aircraft(db.Model):
     model = db.Column(db.String(50), nullable=False)
     prefix = db.Column(db.String(10), unique=True, nullable=False)
     photo_url = db.Column(db.String(500))
+
+class Pane(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    aircraft_id = db.Column(db.Integer, db.ForeignKey("aircraft.id"), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    status = db.Column(db.String(50), default="Aberta")
+
+    aircraft = db.relationship("Aircraft", backref="panes")
     
 # ======================
 # LOGIN REQUIRED
@@ -143,7 +152,11 @@ def home():
             html += f"""
             <div class='card'>
     <img src='{ac.photo_url}' alt='foto'>
-    <div class='prefix'>{ac.prefix}</div>
+    <div class='prefix'>
+    <a href='/aircraft/{ac.id}' style='color:white;text-decoration:none;'>
+        {ac.prefix}
+    </a>
+</div>
     {"<a href='/delete_aircraft/" + str(ac.id) + "' style='color:#f87171;font-size:12px;'>Excluir</a>" if session.get("role") == "Admin" else ""}
 </div>
             """
@@ -205,10 +218,6 @@ def add_aircraft():
         <button type="submit">Cadastrar</button>
     </form>
     """
-
-# ======================
-# EXCLUIR AERONAVE
-# ======================
 
 # ======================
 # EXCLUIR AERONAVE
@@ -286,6 +295,108 @@ def delete_aircraft(id):
     </body>
     </html>
     """
+# ======================
+# PAGINA DA AERONAVE
+# ======================
+
+@app.route("/aircraft/<int:id>", methods=["GET", "POST"])
+@login_required()
+def aircraft_page(id):
+    aircraft = Aircraft.query.get_or_404(id)
+
+    if request.method == "POST":
+        title = request.form["title"]
+        description = request.form["description"]
+
+        new_pane = Pane(
+            aircraft_id=aircraft.id,
+            title=title,
+            description=description,
+            status="Aberta"
+        )
+
+        db.session.add(new_pane)
+        db.session.commit()
+
+        return redirect(url_for("aircraft_page", id=aircraft.id))
+
+    panes = Pane.query.filter_by(aircraft_id=aircraft.id).all()
+
+    html = f"""
+    <html>
+    <head>
+        <title>{aircraft.prefix}</title>
+        <style>
+            body {{
+                font-family: Arial;
+                background-color: #0f172a;
+                color: white;
+                padding: 20px;
+            }}
+
+            .card {{
+                background: #1e293b;
+                padding: 15px;
+                border-radius: 8px;
+                margin-bottom: 15px;
+            }}
+
+            input, textarea {{
+                width: 100%;
+                padding: 8px;
+                margin-bottom: 10px;
+                border-radius: 5px;
+                border: none;
+            }}
+
+            button {{
+                padding: 8px 15px;
+                background: #2563eb;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+            }}
+
+            .status {{
+                font-size: 12px;
+                color: #38bdf8;
+            }}
+
+            a {{
+                color: #38bdf8;
+                text-decoration: none;
+            }}
+        </style>
+    </head>
+    <body>
+
+        <a href="/">← Voltar</a>
+
+        <h2>🚁 {aircraft.prefix} - {aircraft.model}</h2>
+
+        <h3>Nova Pane</h3>
+
+        <form method="POST">
+            <input name="title" placeholder="Título da pane" required>
+            <textarea name="description" placeholder="Descrição"></textarea>
+            <button type="submit">Cadastrar Pane</button>
+        </form>
+
+        <h3>Panes Registradas</h3>
+    """
+
+    for pane in panes:
+        html += f"""
+        <div class='card'>
+            <strong>{pane.title}</strong>
+            <div class='status'>Status: {pane.status}</div>
+            <p>{pane.description}</p>
+        </div>
+        """
+
+    html += "</body></html>"
+    return html
 
 # ======================
 # LOGIN
@@ -428,6 +539,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
