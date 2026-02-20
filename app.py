@@ -304,165 +304,150 @@ def delete_aircraft(id):
 # PAGINA DA AERONAVE
 # ======================
 
-@app.route("/aircraft/<int:id>", methods=["GET", "POST"])
+@app.route("/add_pane/<int:aircraft_id>", methods=["GET", "POST"])
 @login_required()
-def aircraft_page(id):
-    aircraft = Aircraft.query.get_or_404(id)
+def add_pane(aircraft_id):
+    aircraft = Aircraft.query.get_or_404(aircraft_id)
 
     if request.method == "POST":
-        description = request.form["description"]
-        ata = request.form["ata"]
-        tipo = request.form["tipo"]
-        responsavel = request.form["responsavel"]
+        description = request.form.get("description")
+        ata = request.form.get("ata")
+        tipo = request.form.get("tipo")
+        responsavel = request.form.get("responsavel")
         photo_url = request.form.get("photo_url")
 
+        # Validação backend segura
+        if not ata or not ata.isdigit() or len(ata) != 2:
+            return "ATA deve conter exatamente 2 números."
+
         new_pane = Pane(
-            aircraft_id=aircraft.id,
             description=description,
             ata=ata,
             tipo=tipo,
             responsavel=responsavel,
             photo_url=photo_url,
-            status="Aberta"
+            aircraft_id=aircraft.id
         )
 
         db.session.add(new_pane)
         db.session.commit()
 
-        return redirect(url_for("aircraft_page", id=aircraft.id))
-
-    panes = Pane.query.filter_by(aircraft_id=aircraft.id).all()
+        return redirect(url_for("aircraft_detail", aircraft_id=aircraft.id))
 
     html = f"""
     <html>
     <head>
-        <title>{aircraft.prefix}</title>
+        <title>Nova Pane</title>
         <style>
             body {{
                 font-family: Arial;
                 background-color: #0f172a;
                 color: white;
-                padding: 20px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
             }}
 
-            .top {{
-                display:flex;
-                justify-content: space-between;
-                align-items:center;
+            .form-container {{
+                background: #1e293b;
+                padding: 40px;
+                border-radius: 12px;
+                width: 400px;
+                box-shadow: 0 0 20px rgba(0,0,0,0.4);
             }}
 
-            .btn {{
-                padding: 8px 15px;
-                background: #2563eb;
-                color: white;
+            h2 {{
+                text-align: center;
+                margin-bottom: 25px;
+            }}
+
+            label {{
+                display: block;
+                margin-top: 15px;
+                font-size: 14px;
+            }}
+
+            input, select {{
+                width: 100%;
+                padding: 8px;
+                margin-top: 5px;
+                border-radius: 6px;
                 border: none;
-                border-radius: 5px;
+            }}
+
+            .buttons {{
+                margin-top: 25px;
+                display: flex;
+                justify-content: space-between;
+            }}
+
+            button {{
+                padding: 8px 15px;
+                border-radius: 6px;
+                border: none;
                 cursor: pointer;
             }}
 
-            .modal {{
-                display:none;
-                position: fixed;
-                top:0;
-                left:0;
-                width:100%;
-                height:100%;
-                background: rgba(0,0,0,0.8);
-                justify-content:center;
-                align-items:center;
+            .save {{
+                background-color: #38bdf8;
+                color: black;
             }}
 
-            .modal-content {{
-                background:#1e293b;
-                padding:25px;
-                border-radius:10px;
-                width:400px;
+            .cancel {{
+                background-color: #f87171;
+                color: white;
+                text-decoration: none;
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }}
 
-            input, textarea {{
-                width:100%;
-                padding:8px;
-                margin-bottom:10px;
-                border-radius:5px;
-                border:none;
-            }}
-
-            .card {{
-                background:#1e293b;
-                padding:15px;
-                border-radius:8px;
-                margin-top:15px;
-            }}
-
-            a {{
-                color:#38bdf8;
-                text-decoration:none;
-            }}
         </style>
-
-        <script>
-            function abrirModal() {{
-                document.getElementById("modal").style.display="flex";
-            }}
-
-            function fecharModal() {{
-                document.getElementById("modal").style.display="none";
-            }}
-        </script>
     </head>
-
     <body>
 
-        <a href="/">← Voltar</a>
+        <div class="form-container">
+            <h2>Nova Pane - {aircraft.prefix}</h2>
 
-        <div class="top">
-            <h2>🚁 {aircraft.prefix} - {aircraft.model}</h2>
-            <button class="btn" onclick="abrirModal()">Cadastrar Pane</button>
+            <form method="POST">
+
+                <label>Descrição da Pane *</label>
+                <input type="text" name="description" required>
+
+                <label>ATA (2 dígitos) *</label>
+                <input type="text"
+                       name="ata"
+                       inputmode="numeric"
+                       maxlength="2"
+                       pattern="[0-9]{{2}}"
+                       required>
+
+                <label>Tipo *</label>
+                <select name="tipo" required>
+                    <option value="">Selecione</option>
+                    <option value="Mecânico">Mecânico</option>
+                    <option value="Aviônico">Aviônico</option>
+                </select>
+
+                <label>Responsável pela informação *</label>
+                <input type="text" name="responsavel" required>
+
+                <label>URL da Foto (opcional)</label>
+                <input type="text" name="photo_url">
+
+                <div class="buttons">
+                    <button type="submit" class="save">Salvar</button>
+                    <a href="/aircraft/{aircraft.id}" class="cancel">Cancelar</a>
+                </div>
+
+            </form>
         </div>
 
-        <!-- MODAL CENTRALIZADO -->
-        <div class="modal" id="modal">
-            <div class="modal-content">
-                <h3>Nova Pane</h3>
-                <form method="POST">
-                    <textarea name="description" placeholder="Descrição da Pane" required></textarea>
-
-                    <input name="ata" placeholder="ATA (2 dígitos)" 
-                        pattern="[0-9]{2}" maxlength="2" required
-
-                    <div>
-                        <label>
-                            <input type="radio" name="tipo" value="Mecânico" required> Mecânico
-                        </label>
-                        <label>
-                            <input type="radio" name="tipo" value="Aviônico" required> Aviônico
-                        </label>
-                    </div>
-
-                    <input name="responsavel" placeholder="Responsável pela informação" required>
-
-                    <input name="photo_url" placeholder="URL da Foto (opcional)">
-
-                    <button type="submit" class="btn">Salvar</button>
-                    <button type="button" class="btn" onclick="fecharModal()" style="background:#475569;">Cancelar</button>
-                </form>
-            </div>
-        </div>
-
-        <h3>Panes Registradas</h3>
+    </body>
+    </html>
     """
 
-    for pane in panes:
-        html += f"""
-        <div class='card'>
-            <strong>ATA {pane.ata} - {pane.tipo}</strong><br>
-            <small>Responsável: {pane.responsavel}</small>
-            <p>{pane.description}</p>
-            {"<img src='"+pane.photo_url+"' width='100%'>" if pane.photo_url else ""}
-        </div>
-        """
-
-    html += "</body></html>"
     return html
 # ======================
 # LOGIN
@@ -605,6 +590,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
