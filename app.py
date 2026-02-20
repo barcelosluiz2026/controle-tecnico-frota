@@ -155,15 +155,26 @@ def home():
         html += f"<div class='model-title'>🚁 {model}</div>"
         html += "<div class='grid'>"
         for ac in items:
-            html += f"""
-            <div class='card' style='position:relative;'>
 
-            <a href='/aircraft/{ac.id}' style='text-decoration:none;color:inherit;'>
+    delete_button = ""
+    if session.get("role") == "Admin":
+        delete_button = f"""
+        <a href='/delete_aircraft/{ac.id}'
+           onclick="return confirm('Tem certeza que deseja excluir esta aeronave?')"
+           style='position:absolute;top:5px;right:5px;color:#f87171;font-size:12px;'>
+           Excluir
+        </a>
+        """
+
+    html += f"""
+    <div class='card' style='position:relative;'>
+
+        <a href='/aircraft/{ac.id}' style='text-decoration:none;color:inherit;'>
             <img src='{ac.photo_url}' alt='foto'>
             <div class='prefix'>{ac.prefix}</div>
         </a>
 
-        {"<a href='/delete_aircraft/" + str(ac.id) + " onclick='return confirm("Tem certeza que deseja excluir esta aeronave?")' style='position:absolute;top:5px;right:5px;color:#f87171;font-size:12px;'>Excluir</a>" if session.get("role") == "Admin" else ""}
+        {delete_button}
 
     </div>
     """
@@ -550,6 +561,7 @@ def aircraft_detail(id):
     </body>
     </html>
     """
+
 
 
 
