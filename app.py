@@ -155,10 +155,10 @@ def home():
         html += f"<div class='model-title'>🚁 {model}</div>"
         html += "<div class='grid'>"
         for ac in items:
-        html += f"""
-    <div class='card' style='position:relative;'>
+            html += f"""
+            <div class='card' style='position:relative;'>
 
-        <a href='/aircraft/{ac.id}' style='text-decoration:none;color:inherit;'>
+            <a href='/aircraft/{ac.id}' style='text-decoration:none;color:inherit;'>
             <img src='{ac.photo_url}' alt='foto'>
             <div class='prefix'>{ac.prefix}</div>
         </a>
@@ -550,6 +550,7 @@ def aircraft_detail(id):
     </body>
     </html>
     """
+
 
 
 
