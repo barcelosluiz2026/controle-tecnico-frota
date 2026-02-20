@@ -5,7 +5,6 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from collections import defaultdict
-from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
@@ -39,20 +38,6 @@ class Aircraft(db.Model):
     model = db.Column(db.String(50), nullable=False)
     prefix = db.Column(db.String(10), unique=True, nullable=False)
     photo_url = db.Column(db.String(500))
-
-# ======================
-# MODELO DE PANE
-# ======================
-
-class Pane(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    aircraft_id = db.Column(db.Integer, db.ForeignKey('aircraft.id'), nullable=False)
-    titulo = db.Column(db.String(200), nullable=False)
-    descricao = db.Column(db.Text, nullable=False)
-    status = db.Column(db.String(50), default="Aberta")
-    data_abertura = db.Column(db.DateTime, default=datetime.utcnow)
-
-    aircraft = db.relationship('Aircraft', backref=db.backref('panes', lazy=True))
     
 # ======================
 # LOGIN REQUIRED
@@ -155,29 +140,13 @@ def home():
         html += f"<div class='model-title'>🚁 {model}</div>"
         html += "<div class='grid'>"
         for ac in items:
-
-    delete_button = ""
-    if session.get("role") == "Admin":
-        delete_button = f"""
-        <a href='/delete_aircraft/{ac.id}'
-           onclick="return confirm('Tem certeza que deseja excluir esta aeronave?')"
-           style='position:absolute;top:5px;right:5px;color:#f87171;font-size:12px;'>
-           Excluir
-        </a>
-        """
-
-    html += f"""
-    <div class='card' style='position:relative;'>
-
-        <a href='/aircraft/{ac.id}' style='text-decoration:none;color:inherit;'>
-            <img src='{ac.photo_url}' alt='foto'>
-            <div class='prefix'>{ac.prefix}</div>
-        </a>
-
-        {delete_button}
-
-    </div>
-    """
+            html += f"""
+            <div class='card'>
+    <img src='{ac.photo_url}' alt='foto'>
+    <div class='prefix'>{ac.prefix}</div>
+    {"<a href='/delete_aircraft/" + str(ac.id) + "' style='color:#f87171;font-size:12px;'>Excluir</a>" if session.get("role") == "Admin" else ""}
+</div>
+            """
         html += "</div>"
 
     html += "</body></html>"
@@ -238,13 +207,8 @@ def add_aircraft():
     """
 
 # ======================
-# RESETE BANCO DE DADOS
+# EXCLUIR AERONAVE
 # ======================
-@app.route("/reset_db")
-def reset_db():
-    db.drop_all()
-    db.create_all()
-    return "Banco recriado com sucesso!"
 
 # ======================
 # EXCLUIR AERONAVE
@@ -455,118 +419,15 @@ with app.app_context():
 if __name__ == "__main__":
     app.run()
 
-# ======================
-# PÁGINA DA AERONAVE
-# ======================
+# =========================
+# RESETE DO BANCO DE DADOS
+# =========================
 
-@app.route("/aircraft/<int:id>", methods=["GET", "POST"])
-@login_required()
-def aircraft_detail(id):
-    aircraft = Aircraft.query.get_or_404(id)
-
-    if request.method == "POST":
-        titulo = request.form["titulo"]
-        descricao = request.form["descricao"]
-
-        nova_pane = Pane(
-            aircraft_id=aircraft.id,
-            titulo=titulo,
-            descricao=descricao
-        )
-
-        db.session.add(nova_pane)
-        db.session.commit()
-
-        return redirect(url_for("aircraft_detail", id=id))
-
-    panes = Pane.query.filter_by(aircraft_id=id).order_by(Pane.data_abertura.desc()).all()
-
-    panes_html = ""
-    for p in panes:
-        panes_html += f"""
-        <div style='background:#1e293b;padding:10px;margin-bottom:10px;border-radius:6px;'>
-            <b>{p.titulo}</b><br>
-            <small>Status: {p.status}</small><br>
-            <small>{p.data_abertura.strftime('%d/%m/%Y %H:%M')}</small>
-            <p>{p.descricao}</p>
-        </div>
-        """
-
-    return f"""
-    <html>
-    <head>
-        <title>{aircraft.prefix}</title>
-        <style>
-            body {{
-                font-family: Arial;
-                background-color: #0f172a;
-                color: white;
-                padding: 30px;
-            }}
-
-            input, textarea {{
-                width: 100%;
-                padding: 8px;
-                margin-top: 5px;
-                margin-bottom: 10px;
-                border-radius: 5px;
-                border: none;
-            }}
-
-            button {{
-                padding: 10px 20px;
-                border: none;
-                border-radius: 5px;
-                background-color: #2563eb;
-                color: white;
-                cursor: pointer;
-            }}
-
-            .container {{
-                max-width: 900px;
-                margin: auto;
-            }}
-
-            .header {{
-                margin-bottom: 30px;
-            }}
-        </style>
-    </head>
-    <body>
-
-        <div class="container">
-
-            <div class="header">
-                <h2>{aircraft.prefix} - {aircraft.model}</h2>
-                <p>Status Operacional: {aircraft.status}</p>
-                <a href="/">⬅ Voltar</a>
-            </div>
-
-            <h3>➕ Nova Pane</h3>
-
-            <form method="POST">
-                <input type="text" name="titulo" placeholder="Título da Pane" required>
-                <textarea name="descricao" placeholder="Descrição detalhada" required></textarea>
-                <button type="submit">Cadastrar Pane</button>
-            </form>
-
-            <hr style="margin:30px 0;">
-
-            <h3>📋 Panes Registradas</h3>
-
-            {panes_html if panes_html else "<p>Nenhuma pane registrada.</p>"}
-
-        </div>
-
-    </body>
-    </html>
-    """
-
-
-
-
-
-
+@app.route("/reset_db")
+def reset_db():
+    db.drop_all()
+    db.create_all()
+    return "Banco recriado com sucesso!"
 
 
 
