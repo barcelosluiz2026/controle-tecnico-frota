@@ -42,8 +42,13 @@ class Aircraft(db.Model):
 class Pane(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     aircraft_id = db.Column(db.Integer, db.ForeignKey("aircraft.id"), nullable=False)
-    title = db.Column(db.String(200), nullable=False)
-    description = db.Column(db.Text)
+
+    description = db.Column(db.Text, nullable=False)
+    ata = db.Column(db.String(2), nullable=False)
+    tipo = db.Column(db.String(20), nullable=False)
+    responsavel = db.Column(db.String(100), nullable=False)
+    photo_url = db.Column(db.String(500))
+
     status = db.Column(db.String(50), default="Aberta")
 
     aircraft = db.relationship("Aircraft", backref="panes")
@@ -305,13 +310,19 @@ def aircraft_page(id):
     aircraft = Aircraft.query.get_or_404(id)
 
     if request.method == "POST":
-        title = request.form["title"]
         description = request.form["description"]
+        ata = request.form["ata"]
+        tipo = request.form["tipo"]
+        responsavel = request.form["responsavel"]
+        photo_url = request.form.get("photo_url")
 
         new_pane = Pane(
             aircraft_id=aircraft.id,
-            title=title,
             description=description,
+            ata=ata,
+            tipo=tipo,
+            responsavel=responsavel,
+            photo_url=photo_url,
             status="Aberta"
         )
 
@@ -334,22 +345,13 @@ def aircraft_page(id):
                 padding: 20px;
             }}
 
-            .card {{
-                background: #1e293b;
-                padding: 15px;
-                border-radius: 8px;
-                margin-bottom: 15px;
+            .top {{
+                display:flex;
+                justify-content: space-between;
+                align-items:center;
             }}
 
-            input, textarea {{
-                width: 100%;
-                padding: 8px;
-                margin-bottom: 10px;
-                border-radius: 5px;
-                border: none;
-            }}
-
-            button {{
+            .btn {{
                 padding: 8px 15px;
                 background: #2563eb;
                 color: white;
@@ -358,30 +360,94 @@ def aircraft_page(id):
                 cursor: pointer;
             }}
 
-            .status {{
-                font-size: 12px;
-                color: #38bdf8;
+            .modal {{
+                display:none;
+                position: fixed;
+                top:0;
+                left:0;
+                width:100%;
+                height:100%;
+                background: rgba(0,0,0,0.8);
+                justify-content:center;
+                align-items:center;
+            }}
+
+            .modal-content {{
+                background:#1e293b;
+                padding:25px;
+                border-radius:10px;
+                width:400px;
+            }}
+
+            input, textarea {{
+                width:100%;
+                padding:8px;
+                margin-bottom:10px;
+                border-radius:5px;
+                border:none;
+            }}
+
+            .card {{
+                background:#1e293b;
+                padding:15px;
+                border-radius:8px;
+                margin-top:15px;
             }}
 
             a {{
-                color: #38bdf8;
-                text-decoration: none;
+                color:#38bdf8;
+                text-decoration:none;
             }}
         </style>
+
+        <script>
+            function abrirModal() {{
+                document.getElementById("modal").style.display="flex";
+            }}
+
+            function fecharModal() {{
+                document.getElementById("modal").style.display="none";
+            }}
+        </script>
     </head>
+
     <body>
 
         <a href="/">← Voltar</a>
 
-        <h2>🚁 {aircraft.prefix} - {aircraft.model}</h2>
+        <div class="top">
+            <h2>🚁 {aircraft.prefix} - {aircraft.model}</h2>
+            <button class="btn" onclick="abrirModal()">Cadastrar Pane</button>
+        </div>
 
-        <h3>Nova Pane</h3>
+        <!-- MODAL CENTRALIZADO -->
+        <div class="modal" id="modal">
+            <div class="modal-content">
+                <h3>Nova Pane</h3>
+                <form method="POST">
+                    <textarea name="description" placeholder="Descrição da Pane" required></textarea>
 
-        <form method="POST">
-            <input name="title" placeholder="Título da pane" required>
-            <textarea name="description" placeholder="Descrição"></textarea>
-            <button type="submit">Cadastrar Pane</button>
-        </form>
+                    <input name="ata" placeholder="ATA (2 dígitos)" 
+                        pattern="[0-9]{2}" maxlength="2" required
+
+                    <div>
+                        <label>
+                            <input type="radio" name="tipo" value="Mecânico" required> Mecânico
+                        </label>
+                        <label>
+                            <input type="radio" name="tipo" value="Aviônico" required> Aviônico
+                        </label>
+                    </div>
+
+                    <input name="responsavel" placeholder="Responsável pela informação" required>
+
+                    <input name="photo_url" placeholder="URL da Foto (opcional)">
+
+                    <button type="submit" class="btn">Salvar</button>
+                    <button type="button" class="btn" onclick="fecharModal()" style="background:#475569;">Cancelar</button>
+                </form>
+            </div>
+        </div>
 
         <h3>Panes Registradas</h3>
     """
@@ -389,15 +455,15 @@ def aircraft_page(id):
     for pane in panes:
         html += f"""
         <div class='card'>
-            <strong>{pane.title}</strong>
-            <div class='status'>Status: {pane.status}</div>
+            <strong>ATA {pane.ata} - {pane.tipo}</strong><br>
+            <small>Responsável: {pane.responsavel}</small>
             <p>{pane.description}</p>
+            {"<img src='"+pane.photo_url+"' width='100%'>" if pane.photo_url else ""}
         </div>
         """
 
     html += "</body></html>"
     return html
-
 # ======================
 # LOGIN
 # ======================
@@ -539,6 +605,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
