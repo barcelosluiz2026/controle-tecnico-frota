@@ -163,7 +163,7 @@ def home():
             <div class='prefix'>{ac.prefix}</div>
         </a>
 
-        {"<a href='/delete_aircraft/" + str(ac.id) + "' onclick='return confirm(\"Tem certeza que deseja excluir esta aeronave?\")' style='position:absolute;top:5px;right:5px;color:#f87171;font-size:12px;'>Excluir</a>" if session.get("role") == "Admin" else ""}
+        {"<a href='/delete_aircraft/" + str(ac.id) + " onclick='return confirm("Tem certeza que deseja excluir esta aeronave?")' style='position:absolute;top:5px;right:5px;color:#f87171;font-size:12px;'>Excluir</a>" if session.get("role") == "Admin" else ""}
 
     </div>
     """
@@ -550,6 +550,7 @@ def aircraft_detail(id):
     </body>
     </html>
     """
+
 
 
 
