@@ -304,7 +304,7 @@ def delete_aircraft(id):
 # PAGINA DA AERONAVE
 # ======================
 
-@app.route("/add_pane/<int:aircraft_id>", methods=["GET", "POST"])
+@app.route("/aircraft/<int:id>", methods=["GET", "POST"])
 @login_required()
 def add_pane(aircraft_id):
     aircraft = Aircraft.query.get_or_404(aircraft_id)
@@ -423,12 +423,13 @@ def add_pane(aircraft_id):
                        pattern="[0-9]{{2}}"
                        required>
 
-                <label>Tipo *</label>
-                <select name="tipo" required>
-                    <option value="">Selecione</option>
-                    <option value="Mecânico">Mecânico</option>
-                    <option value="Aviônico">Aviônico</option>
-                </select>
+                <label>
+                            <input type="radio" name="tipo" value="Mecânico" required> Mecânico
+                        </label>
+                        <label>
+                            <input type="radio" name="tipo" value="Aviônico" required> Aviônico
+                        </label>
+                    </div>
 
                 <label>Responsável pela informação *</label>
                 <input type="text" name="responsavel" required>
@@ -436,18 +437,26 @@ def add_pane(aircraft_id):
                 <label>URL da Foto (opcional)</label>
                 <input type="text" name="photo_url">
 
-                <div class="buttons">
-                    <button type="submit" class="save">Salvar</button>
-                    <a href="/aircraft/{aircraft.id}" class="cancel">Cancelar</a>
-                </div>
-
-            </form>
+                <button type="submit" class="btn">Salvar</button>
+                    <button type="button" class="btn" onclick="fecharModal()" style="background:#475569;">Cancelar</button>
+                </form>
+            </div>
         </div>
 
-    </body>
-    </html>
+        <h3>Panes Registradas</h3>
     """
 
+    for pane in panes:
+        html += f"""
+        <div class='card'>
+            <strong>ATA {pane.ata} - {pane.tipo}</strong><br>
+            <small>Responsável: {pane.responsavel}</small>
+            <p>{pane.description}</p>
+            {"<img src='"+pane.photo_url+"' width='100%'>" if pane.photo_url else ""}
+        </div>
+        """
+
+    html += "</body></html>"
     return html
 # ======================
 # LOGIN
@@ -590,6 +599,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
