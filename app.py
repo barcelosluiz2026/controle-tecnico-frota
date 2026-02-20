@@ -35,7 +35,7 @@ class User(db.Model):
 
 class Aircraft(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    model = db.Column(db.String(100), nullable=False)
+    model = db.Column(db.String(50), nullable=False)
     prefix = db.Column(db.String(10), unique=True, nullable=False)
     photo_url = db.Column(db.String(500))
     
@@ -62,40 +62,93 @@ def login_required(role=None):
 @app.route("/")
 @login_required()
 def home():
+    aircrafts = Aircraft.query.order_by(Aircraft.model, Aircraft.prefix).all()
 
-    aircraft_list = Aircraft.query.order_by(Aircraft.prefix.asc()).all()
+    grouped = {}
+    for ac in aircrafts:
+        grouped.setdefault(ac.model, []).append(ac)
 
-    grouped = defaultdict(list)
-    for a in aircraft_list:
-        grouped[a.model].append(a)
+    html = """
+    <html>
+    <head>
+        <title>Controle Técnico</title>
+        <style>
+            body {
+                font-family: Arial;
+                background-color: #0f172a;
+                color: white;
+                padding: 20px;
+            }
 
-    html = f"""
-    <h1>Controle Técnico de Frota 🚁</h1>
-    <p>Usuário: {session['username']} | Perfil: {session['role']}</p>
-    <a href='/add_aircraft'>Cadastrar Helicóptero</a> |
-    <a href='/logout'>Sair</a>
-    <hr>
+            .model-title {
+                margin-top: 40px;
+                font-size: 24px;
+                border-bottom: 2px solid #1e293b;
+                padding-bottom: 10px;
+            }
+
+            .grid {
+                display: grid;
+                grid-template-columns: repeat(7, 1fr);
+                gap: 15px;
+                margin-top: 20px;
+            }
+
+            .card {
+                background: #1e293b;
+                padding: 10px;
+                border-radius: 8px;
+                text-align: center;
+            }
+
+            .card img {
+                width: 100%;
+                height: 100px;
+                object-fit: cover;
+                border-radius: 6px;
+            }
+
+            .prefix {
+                font-weight: bold;
+                margin-top: 5px;
+            }
+
+            .top-bar {
+                display:flex;
+                justify-content: space-between;
+            }
+
+            a {
+                color: #38bdf8;
+                text-decoration: none;
+            }
+
+        </style>
+    </head>
+    <body>
+
+        <div class="top-bar">
+            <h1>🚁 Controle Técnico de Frota</h1>
+            <div>
+                <a href="/add_aircraft">Cadastrar Helicóptero</a> |
+                <a href="/logout">Sair</a>
+            </div>
+        </div>
     """
 
-    for model, aircrafts in grouped.items():
-        html += f"<h2>{model}</h2>"
-        html += "<div style='display:grid; grid-template-columns: repeat(7, 1fr); gap:15px;'>"
-
-        for a in aircrafts:
+    for model, items in grouped.items():
+        html += f"<div class='model-title'>🚁 {model}</div>"
+        html += "<div class='grid'>"
+        for ac in items:
             html += f"""
-            <div style='border:1px solid #ccc; padding:10px; text-align:center;'>
-                <img src='{a.photo_url}' width='100'><br>
-                <strong>{a.prefix}</strong><br>
-                
+            <div class='card'>
+                <img src='{ac.photo_url}' alt='foto'>
+                <div class='prefix'>{ac.prefix}</div>
+            </div>
             """
+        html += "</div>"
 
-            if session["role"] == "Admin":
-                html += f"<a href='/delete_aircraft/{a.id}'>Excluir</a>"
-
-            html += "</div>"
-
-        html += "</div><br>"
-
+    html += "</body></html>"
     return html
 
 # ======================
@@ -295,6 +348,7 @@ with app.app_context():
 
 if __name__ == "__main__":
     app.run()
+
 
 
 
