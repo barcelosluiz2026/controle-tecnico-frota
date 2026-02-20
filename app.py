@@ -142,9 +142,10 @@ def home():
         for ac in items:
             html += f"""
             <div class='card'>
-                <img src='{ac.photo_url}' alt='foto'>
-                <div class='prefix'>{ac.prefix}</div>
-            </div>
+    <img src='{ac.photo_url}' alt='foto'>
+    <div class='prefix'>{ac.prefix}</div>
+    {"<a href='/delete_aircraft/" + str(ac.id) + "' style='color:#f87171;font-size:12px;'>Excluir</a>" if session.get("role") == "Admin" else ""}
+</div>
             """
         html += "</div>"
 
@@ -209,13 +210,82 @@ def add_aircraft():
 # EXCLUIR AERONAVE
 # ======================
 
-@app.route("/delete_aircraft/<int:id>")
+# ======================
+# EXCLUIR AERONAVE
+# ======================
+
+@app.route("/delete_aircraft/<int:id>", methods=["GET", "POST"])
 @login_required("Admin")
 def delete_aircraft(id):
     aircraft = Aircraft.query.get_or_404(id)
-    db.session.delete(aircraft)
-    db.session.commit()
-    return redirect(url_for("home"))
+
+    if request.method == "POST":
+        db.session.delete(aircraft)
+        db.session.commit()
+        return redirect(url_for("home"))
+
+    return f"""
+    <html>
+    <head>
+        <title>Confirmar Exclusão</title>
+        <style>
+            body {{
+                font-family: Arial;
+                background-color: #0f172a;
+                color: white;
+                padding: 40px;
+                text-align: center;
+            }}
+
+            .box {{
+                background: #1e293b;
+                padding: 30px;
+                border-radius: 10px;
+                display: inline-block;
+            }}
+
+            button {{
+                padding: 10px 20px;
+                margin: 10px;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+            }}
+
+            .delete {{
+                background-color: #dc2626;
+                color: white;
+            }}
+
+            .cancel {{
+                background-color: #475569;
+                color: white;
+            }}
+
+            a {{
+                text-decoration: none;
+                color: white;
+            }}
+        </style>
+    </head>
+    <body>
+
+        <div class="box">
+            <h2>⚠ Confirmar Exclusão</h2>
+            <p>Deseja realmente excluir a aeronave:</p>
+            <h3>{aircraft.prefix} - {aircraft.model}</h3>
+
+            <form method="POST">
+                <button type="submit" class="delete">Excluir</button>
+                <a href="{url_for('home')}">
+                    <button type="button" class="cancel">Cancelar</button>
+                </a>
+            </form>
+        </div>
+
+    </body>
+    </html>
+    """
 
 # ======================
 # LOGIN
@@ -348,6 +418,7 @@ with app.app_context():
 
 if __name__ == "__main__":
     app.run()
+
 
 
 
