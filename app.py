@@ -38,8 +38,7 @@ class Aircraft(db.Model):
     model = db.Column(db.String(100), nullable=False)
     prefix = db.Column(db.String(10), unique=True, nullable=False)
     photo_url = db.Column(db.String(500))
-    status = db.Column(db.String(50), default="Operacional")
-
+    
 # ======================
 # LOGIN REQUIRED
 # ======================
@@ -87,7 +86,7 @@ def home():
             <div style='border:1px solid #ccc; padding:10px; text-align:center;'>
                 <img src='{a.photo_url}' width='100'><br>
                 <strong>{a.prefix}</strong><br>
-                Status: {a.status}<br>
+                
             """
 
             if session["role"] == "Admin":
@@ -112,8 +111,7 @@ def add_aircraft():
         model = request.form["model"]
         prefix = request.form["prefix"].upper()
         photo_url = request.form["photo_url"]
-        status = request.form["status"]
-
+        
         if not re.match(r"^[A-Z]{2}-[A-Z]{3}$", prefix):
             return "Prefixo inválido. Use formato PR-ABC"
 
@@ -124,7 +122,7 @@ def add_aircraft():
             model=model,
             prefix=prefix,
             photo_url=photo_url,
-            status=status
+           
         )
 
         db.session.add(new_aircraft)
@@ -146,13 +144,6 @@ def add_aircraft():
 
         Prefixo:
         <input name="prefix" placeholder="PR-ABC"><br><br>
-
-        Status:
-        <select name="status">
-            <option>Operacional</option>
-            <option>Manutenção</option>
-            <option>Indisponível</option>
-        </select><br><br>
 
         Link da Foto:
         <input name="photo_url" placeholder="https://..."><br><br>
@@ -217,3 +208,4 @@ with app.app_context():
 
 if __name__ == "__main__":
     app.run()
+
