@@ -170,7 +170,6 @@ def delete_aircraft(id):
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-
     if request.method == "POST":
         username = request.form["username"]
         password = request.form["password"]
@@ -186,12 +185,69 @@ def login():
         return "Login inválido"
 
     return """
-    <h2>Login</h2>
-    <form method="POST">
-        Usuário: <input name="username"><br><br>
-        Senha: <input type="password" name="password"><br><br>
-        <button type="submit">Entrar</button>
-    </form>
+    <html>
+    <head>
+        <title>Login - Controle Técnico</title>
+        <style>
+            body {
+                margin: 0;
+                font-family: Arial, sans-serif;
+                background: url('/static/fundo.jpg') no-repeat center center fixed;
+                background-size: cover;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+            }
+
+            .login-box {
+                background: rgba(0, 0, 0, 0.75);
+                padding: 40px;
+                border-radius: 10px;
+                color: white;
+                width: 300px;
+                text-align: center;
+                box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            }
+
+            input {
+                width: 100%;
+                padding: 10px;
+                margin: 10px 0;
+                border: none;
+                border-radius: 5px;
+            }
+
+            button {
+                width: 100%;
+                padding: 10px;
+                background: #007bff;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+            }
+
+            button:hover {
+                background: #0056b3;
+            }
+
+            h2 {
+                margin-bottom: 20px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="login-box">
+            <h2>Controle Técnico de Frota 🚁</h2>
+            <form method="POST">
+                <input name="username" placeholder="Usuário">
+                <input type="password" name="password" placeholder="Senha">
+                <button type="submit">Entrar</button>
+            </form>
+        </div>
+    </body>
+    </html>
     """
 
 @app.route("/logout")
@@ -208,4 +264,5 @@ with app.app_context():
 
 if __name__ == "__main__":
     app.run()
+
 
