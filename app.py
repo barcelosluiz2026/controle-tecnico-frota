@@ -310,10 +310,10 @@ def aircraft_page(id):
     aircraft = Aircraft.query.get_or_404(id)
 
     if request.method == "POST":
-        description = request.form.get("description")
-        ata = request.form.get("ata")
-        tipo = request.form.get("tipo")
-        responsavel = request.form.get("responsavel")
+        description = request.form["description"]
+        ata = request.form["ata"]
+        tipo = request.form["tipo"]
+        responsavel = request.form["responsavel"]
         photo_url = request.form.get("photo_url")
 
         # Validação backend segura
@@ -326,8 +326,7 @@ def aircraft_page(id):
             ata=ata,
             tipo=tipo,
             responsavel=responsavel,
-            photo_url=photo_url,
-            aircraft_id=aircraft.id
+            photo_url=photo_url
         )
 
         db.session.add(new_pane)
@@ -602,6 +601,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
