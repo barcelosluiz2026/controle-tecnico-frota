@@ -307,7 +307,7 @@ def delete_aircraft(id):
 @app.route("/aircraft/<int:id>", methods=["GET", "POST"])
 @login_required()
 def aircraft_page(id):
-    aircraft = Aircraft.query.get_or_404(aircraft_id)
+    aircraft = Aircraft.query.get_or_404(id)
 
     if request.method == "POST":
         description = request.form.get("description")
@@ -321,6 +321,7 @@ def aircraft_page(id):
             return "ATA deve conter exatamente 2 números."
 
         new_pane = Pane(
+            aircraft_id=aircraft.id,
             description=description,
             ata=ata,
             tipo=tipo,
@@ -601,6 +602,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
