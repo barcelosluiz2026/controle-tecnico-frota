@@ -360,7 +360,7 @@ def aircraft_page(id):
                 cursor: pointer;
             }}
 
-            .modal {
+            .modal {{
                 display:none;
                 position: fixed;
                 top:0;
@@ -368,35 +368,36 @@ def aircraft_page(id):
                 width:100%;
                 height:100%;
                 background: rgba(0,0,0,0.8);
-
-                display:flex;
                 justify-content:center;
                 align-items:center;
-            }
+            }}
 
-            .modal-content {
+            .modal-content {{
                 background:#1e293b;
                 padding:30px;
                 border-radius:10px;
                 width:420px;
-                box-shadow:0 0 20px rgba(0,0,0,0.6);
-            }
-
-            .modal-content h3 {
-                text-align:center;
-                margin-bottom:20px;
-            }
-
-           .modal-content form {
                 display:flex;
                 flex-direction:column;
-            }
+                align-items:center;
+            }}
 
-           .modal-content button {
+            .modal-content form {{
+                width:100%;
+                display:flex;
+                flex-direction:column;
+            }}
+
+            .modal-content label {{
+                margin-right:15px;
+            }}
+
+            .modal-content .btn {{
+                width:100%;
                 margin-top:5px;
-            }
+            }}
 
-                input, textarea {{
+            input, textarea {{
                 width:100%;
                 padding:8px;
                 margin-bottom:10px;
@@ -460,10 +461,8 @@ def aircraft_page(id):
 
                     <input name="photo_url" placeholder="URL da Foto (opcional)">
 
-                    <div style="display:flex; gap:10px; margin-top:10px;">
-                         <button type="submit" class="btn" style="flex:1;">Salvar</button>
-                         <button type="button" class="btn" onclick="fecharModal()" style="background:#475569; flex:1;">Cancelar</button>
-</div>
+                    <button type="submit" class="btn">Salvar</button>
+                    <button type="button" class="btn" onclick="fecharModal()" style="background:#475569;">Cancelar</button>
                 </form>
             </div>
         </div>
@@ -624,5 +623,4 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
-
 
