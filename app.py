@@ -316,17 +316,14 @@ def aircraft_page(id):
         responsavel = request.form["responsavel"]
         photo_url = request.form.get("photo_url")
 
-        # Validação backend segura
-        if not ata or not ata.isdigit() or len(ata) != 2:
-            return "ATA deve conter exatamente 2 números."
-
         new_pane = Pane(
             aircraft_id=aircraft.id,
             description=description,
             ata=ata,
             tipo=tipo,
             responsavel=responsavel,
-            photo_url=photo_url
+            photo_url=photo_url,
+            status="Aberta"
         )
 
         db.session.add(new_pane)
@@ -339,93 +336,102 @@ def aircraft_page(id):
     html = f"""
     <html>
     <head>
-        <title>Nova Pane</title>
+        <title>{aircraft.prefix}</title>
         <style>
             body {{
                 font-family: Arial;
                 background-color: #0f172a;
                 color: white;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                height: 100vh;
+                padding: 20px;
             }}
 
-            .form-container {{
-                background: #1e293b;
-                padding: 40px;
-                border-radius: 12px;
-                width: 400px;
-                box-shadow: 0 0 20px rgba(0,0,0,0.4);
-            }}
-
-            h2 {{
-                text-align: center;
-                margin-bottom: 25px;
-            }}
-
-            label {{
-                display: block;
-                margin-top: 15px;
-                font-size: 14px;
-            }}
-
-            input, select {{
-                width: 100%;
-                padding: 8px;
-                margin-top: 5px;
-                border-radius: 6px;
-                border: none;
-            }}
-
-            .buttons {{
-                margin-top: 25px;
-                display: flex;
+            .top {{
+                display:flex;
                 justify-content: space-between;
+                align-items:center;
             }}
 
-            button {{
+            .btn {{
                 padding: 8px 15px;
-                border-radius: 6px;
+                background: #2563eb;
+                color: white;
                 border: none;
+                border-radius: 5px;
                 cursor: pointer;
             }}
 
-            .save {{
-                background-color: #38bdf8;
-                color: black;
+            .modal {{
+                display:none;
+                position: fixed;
+                top:0;
+                left:0;
+                width:100%;
+                height:100%;
+                background: rgba(0,0,0,0.8);
+                justify-content:center;
+                align-items:center;
             }}
 
-            .cancel {{
-                background-color: #f87171;
-                color: white;
-                text-decoration: none;
-                display: flex;
-                align-items: center;
-                justify-content: center;
+            .modal-content {{
+                background:#1e293b;
+                padding:25px;
+                border-radius:10px;
+                width:400px;
             }}
 
+            input, textarea {{
+                width:100%;
+                padding:8px;
+                margin-bottom:10px;
+                border-radius:5px;
+                border:none;
+            }}
+
+            .card {{
+                background:#1e293b;
+                padding:15px;
+                border-radius:8px;
+                margin-top:15px;
+            }}
+
+            a {{
+                color:#38bdf8;
+                text-decoration:none;
+            }}
         </style>
+
+        <script>
+            function abrirModal() {{
+                document.getElementById("modal").style.display="flex";
+            }}
+
+            function fecharModal() {{
+                document.getElementById("modal").style.display="none";
+            }}
+        </script>
     </head>
+
     <body>
 
-        <div class="form-container">
-            <h2>Nova Pane - {aircraft.prefix}</h2>
+        <a href="/">← Voltar</a>
 
-            <form method="POST">
+        <div class="top">
+            <h2>🚁 {aircraft.prefix} - {aircraft.model}</h2>
+            <button class="btn" onclick="abrirModal()">Cadastrar Pane</button>
+        </div>
 
-                <label>Descrição da Pane *</label>
-                <input type="text" name="description" required>
+        <!-- MODAL CENTRALIZADO -->
+        <div class="modal" id="modal">
+            <div class="modal-content">
+                <h3>Nova Pane</h3>
+                <form method="POST">
+                    <textarea name="description" placeholder="Descrição da Pane" required></textarea>
 
-                <label>ATA (2 dígitos) *</label>
-                <input type="text"
-                       name="ata"
-                       inputmode="numeric"
-                       maxlength="2"
-                       pattern="[0-9]{{2}}"
-                       required>
+                    <input name="ata" placeholder="ATA (2 dígitos)" 
+                        pattern="[0-9]{2}" maxlength="2" required
 
-                <label>
+                    <div>
+                        <label>
                             <input type="radio" name="tipo" value="Mecânico" required> Mecânico
                         </label>
                         <label>
@@ -433,13 +439,11 @@ def aircraft_page(id):
                         </label>
                     </div>
 
-                <label>Responsável pela informação *</label>
-                <input type="text" name="responsavel" required>
+                    <input name="responsavel" placeholder="Responsável pela informação" required>
 
-                <label>URL da Foto (opcional)</label>
-                <input type="text" name="photo_url">
+                    <input name="photo_url" placeholder="URL da Foto (opcional)">
 
-                <button type="submit" class="btn">Salvar</button>
+                    <button type="submit" class="btn">Salvar</button>
                     <button type="button" class="btn" onclick="fecharModal()" style="background:#475569;">Cancelar</button>
                 </form>
             </div>
@@ -601,14 +605,3 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
-
-
-
-
-
-
-
-
-
-
-
