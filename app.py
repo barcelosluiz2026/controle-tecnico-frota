@@ -460,8 +460,10 @@ def aircraft_page(id):
 
                     <input name="photo_url" placeholder="URL da Foto (opcional)">
 
-                    <button type="submit" class="btn">Salvar</button>
-                    <button type="button" class="btn" onclick="fecharModal()" style="background:#475569;">Cancelar</button>
+                    <div style="display:flex; gap:10px; margin-top:10px;">
+                         <button type="submit" class="btn" style="flex:1;">Salvar</button>
+                         <button type="button" class="btn" onclick="fecharModal()" style="background:#475569; flex:1;">Cancelar</button>
+</div>
                 </form>
             </div>
         </div>
@@ -622,4 +624,5 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
