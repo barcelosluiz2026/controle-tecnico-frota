@@ -156,7 +156,7 @@ def home():
         for ac in items:
             html += f"""
             <div class='card'>
-    <img src='{ac.photo_url}' alt='foto'>
+    <img src='{ac.photo_url}' alt='photo'>
     <div class='prefix'>
     <a href='/aircraft/{ac.id}' style='color:white;text-decoration:none;'>
         {ac.prefix}
@@ -492,7 +492,7 @@ def aircraft_page(id):
                 <strong>{p.ata} - {p.tipo}</strong><br>
                 {p.description}<br>
                 <small>Responsável: {p.responsavel}</small><br>
-                {"<img src='" + p.foto_url + "' style='width:120px;margin-top:8px;border-radius:6px;'>" if p.foto_url else ""}
+                {"<img src='" + photo_url + "' style='width:120px;margin-top:8px;border-radius:6px;'>" if photo_url else ""}
             </div>
         """
 
@@ -639,6 +639,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
