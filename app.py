@@ -360,7 +360,7 @@ def aircraft_page(id):
                 cursor: pointer;
             }}
 
-            .modal {{
+            .modal {
                 display:none;
                 position: fixed;
                 top:0;
@@ -368,18 +368,35 @@ def aircraft_page(id):
                 width:100%;
                 height:100%;
                 background: rgba(0,0,0,0.8);
+
+                display:flex;
                 justify-content:center;
                 align-items:center;
-            }}
+            }
 
-            .modal-content {{
+            .modal-content {
                 background:#1e293b;
-                padding:25px;
+                padding:30px;
                 border-radius:10px;
-                width:400px;
-            }}
+                width:420px;
+                box-shadow:0 0 20px rgba(0,0,0,0.6);
+            }
 
-            input, textarea {{
+            .modal-content h3 {
+                text-align:center;
+                margin-bottom:20px;
+            }
+
+           .modal-content form {
+                display:flex;
+                flex-direction:column;
+            }
+
+           .modal-content button {
+                margin-top:5px;
+            }
+
+                input, textarea {{
                 width:100%;
                 padding:8px;
                 margin-bottom:10px;
@@ -605,3 +622,4 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
