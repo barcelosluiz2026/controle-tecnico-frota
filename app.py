@@ -487,14 +487,14 @@ def aircraft_page(id):
     """
 
     for p in panes:
-    html += f"""
-        <div class='pane-item'>
-            <strong>{p.ata} - {p.tipo}</strong><br>
-            {p.description}<br>
-            <small>Responsável: {p.responsavel}</small><br>
-            {"<img src='" + p.foto_url + "' style='width:120px;margin-top:8px;border-radius:6px;'>" if p.foto_url else ""}
-        </div>
-    """
+        html += f"""
+            <div class='pane-item'>
+                <strong>{p.ata} - {p.tipo}</strong><br>
+                {p.description}<br>
+                <small>Responsável: {p.responsavel}</small><br>
+                {"<img src='" + p.foto_url + "' style='width:120px;margin-top:8px;border-radius:6px;'>" if p.foto_url else ""}
+            </div>
+        """
 
     html += "</body></html>"
     return html
@@ -639,6 +639,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
