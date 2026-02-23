@@ -359,15 +359,15 @@ def aircraft_page(id):
                 border-radius: 5px;
                 cursor: pointer;
             }}
-
+ 
             .modal {{
                 display:none;
-                position: fixed;
+                position:fixed;
                 top:0;
                 left:0;
                 width:100%;
                 height:100%;
-                background: rgba(0,0,0,0.8);
+                background:rgba(0,0,0,0.7);
                 justify-content:center;
                 align-items:center;
             }}
@@ -375,26 +375,42 @@ def aircraft_page(id):
             .modal-content {{
                 background:#1e293b;
                 padding:30px;
-                border-radius:10px;
-                width:420px;
+                border-radius:12px;
+                width:450px;
                 display:flex;
                 flex-direction:column;
                 align-items:center;
+            }}
+
+            .modal-content h3 {{
+               margin-bottom:20px;
             }}
 
             .modal-content form {{
                 width:100%;
                 display:flex;
                 flex-direction:column;
+                gap:12px;
             }}
 
-            .modal-content label {{
-                margin-right:15px;
+            .modal-content input,
+            .modal-content textarea,
+            .modal-content select {{
+                width:100%;
+                padding:8px;
+                border-radius:6px;
+                border:none;
+            }}
+
+            .modal-content .radio-group {{
+                display:flex;
+                gap:20px;
             }}
 
             .modal-content .btn {{
+                margin-top:10px;
                 width:100%;
-                margin-top:5px;
+                text-align:center;
             }}
 
             input, textarea {{
@@ -623,4 +639,5 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
