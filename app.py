@@ -42,15 +42,12 @@ class Aircraft(db.Model):
 class Pane(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     aircraft_id = db.Column(db.Integer, db.ForeignKey("aircraft.id"), nullable=False)
-
     description = db.Column(db.Text, nullable=False)
     ata = db.Column(db.String(2), nullable=False)
     tipo = db.Column(db.String(20), nullable=False)
     responsavel = db.Column(db.String(100), nullable=False)
     photo_url = db.Column(db.String(500))
-
     status = db.Column(db.String(50), default="Aberta")
-
     aircraft = db.relationship("Aircraft", backref="panes")
     
 # ======================
@@ -428,7 +425,7 @@ def aircraft_page(id):
                     <textarea name="description" placeholder="Descrição da Pane" required></textarea>
 
                     <input name="ata" placeholder="ATA (2 dígitos)" 
-                        pattern="[0-9]{2}" maxlength="2" required
+                        pattern="^[0-9]{1,2}$" maxlength="2" required
 
                     <div>
                         <label>
@@ -605,6 +602,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
