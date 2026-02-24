@@ -376,7 +376,7 @@ def aircraft_page(id):
                 background:#1e293b;
                 padding:25px;
                 border-radius:10px;
-                width:100px;
+                width:200px;
             }}
 
             input, textarea {{
@@ -605,6 +605,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
