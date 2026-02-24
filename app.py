@@ -334,7 +334,7 @@ def aircraft_page(id):
     <html>
  <head>
   <style>
-    body { 
+    body {{
       box-sizing: border-box; 
       display: flex;
       justify-content: center;
@@ -342,9 +342,9 @@ def aircraft_page(id):
       min-height: 100vh;
       background: #0f172a;
       padding: 20px;
-    }
+    }}
     
-    form {
+    form {{
       display: flex;
       flex-direction: column;
       gap: 12px;
@@ -353,7 +353,7 @@ def aircraft_page(id):
       border-radius: 10px;
       width: 100%;
       max-width: 500px;
-    }
+    }}
     
     textarea, input[type="text"], input[type="number"], input[type="email"] {
       width: 100%;
@@ -361,41 +361,41 @@ def aircraft_page(id):
       border-radius: 5px;
       border: none;
       box-sizing: border-box;
-    }
+    }}
     
-    .row-flex {
+    .row-flex {{
       display: flex;
       gap: 12px;
       align-items: center;
-    }
+    }}
     
-    input[type="number"] {
+    input[type="number"] {{
       width: 100px;
       flex-shrink: 0;
-    }
+    }}
     
-    .radio-group {
+    .radio-group {{
       display: flex;
       gap: 20px;
       align-items: center;
       flex: 1;
-    }
+    }}
     
-    .radio-group label {
+    .radio-group label {{
       display: flex;
       align-items: center;
       gap: 6px;
       margin: 0;
       color: white;
-    }
+    }}
     
-    .button-group {
+    .button-group {{
       display: flex;
       gap: 10px;
       justify-content: center;
-    }
+    }}
     
-    .btn {
+    .btn {{
       padding: 8px 15px;
       background: #2563eb;
       color: white;
@@ -403,11 +403,11 @@ def aircraft_page(id):
       border-radius: 5px;
       cursor: pointer;
       font-size: 14px;
-    }
+    }}
     
-    .btn:hover {
+    .btn:hover {{
       background: #1d4ed8;
-    }
+    }}
   </style>
   <script src="https://cdn.tailwindcss.com/3.4.17" type="text/javascript"></script>
   <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
@@ -580,6 +580,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
