@@ -420,11 +420,25 @@ def aircraft_page(id):
     </div>
    </div><input name="responsavel" placeholder="Responsável pela informação" required> <input name="photo_url" placeholder="URL da Foto (opcional)">
    <div class="button-group"><button type="submit" class="btn">Salvar</button> <button type="button" class="btn" onclick="fecharModal()" style="background:#475569;">Cancelar</button>
-   </div>
   </form>
- <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9d301545b5c7c03f',t:'MTc3MTk0Nzg1My4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
-</html>
+      </div>
+  </div>
+  <h3>Panes Registradas</h3>
+    """
+
+    for pane in panes:
+        html += f"""
+        <div class='card'>
+            <strong>ATA {pane.ata} - {pane.tipo}</strong><br>
+            <small>Responsável: {pane.responsavel}</small>
+            <p>{pane.description}</p>
+            {"<img src='"+pane.photo_url+"' width='10%'>" if pane.photo_url else ""}
+        </div>
+        """
+
+    html += "</body></html>"
     return html
+
 # ======================
 # LOGIN
 # ======================
@@ -566,6 +580,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
