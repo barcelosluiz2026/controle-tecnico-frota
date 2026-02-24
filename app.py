@@ -425,7 +425,7 @@ def aircraft_page(id):
                     <textarea name="description" placeholder="Descrição da Pane" required></textarea>
 
                     <input name="ata" placeholder="ATA (2 dígitos)" 
-                        pattern="^[0-9]{1,2}$" maxlength="2" required
+                        type="number" min="0" max="99" maxlength="2" required
 
                     <div>
                         <label>
@@ -602,6 +602,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
