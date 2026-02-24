@@ -533,15 +533,15 @@ def pane_detail(id):
             if not hasattr(pane, "pendencias"):
                 pane.pendencias = []
             # Armazenar etapas e pendências em texto simples (pode ser expandido depois)
-            if not pane.description.endswith("\n\n--- ETAPAS ---\n"):
-                pane.description += "\n\n--- ETAPAS ---\n"
-            pane.description += f"- {step_desc}\n"
+            if not pane.description.endswith("--- ETAPAS ---"):
+                pane.description += "--- ETAPAS ---"
+            pane.description += f"- {step_desc}"
 
         elif action == "add_pendency":
             pend_desc = request.form["pend_desc"]
-            if not pane.description.endswith("\n\n--- PENDÊNCIAS ---\n"):
-                pane.description += "\n\n--- PENDÊNCIAS ---\n"
-            pane.description += f"- {pend_desc}\n"
+            if not pane.description.endswith("--- PENDÊNCIAS ---"):
+                pane.description += "--- PENDÊNCIAS ---"
+            pane.description += f"- {pend_desc}"
 
         elif action == "finalize":
             pane.status = "Finalizadas"
@@ -796,6 +796,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
