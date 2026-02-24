@@ -380,7 +380,7 @@ def aircraft_page(id):
             }}
 
             input, textarea {{
-                width:100%;
+                width:50%;
                 padding:8px;
                 margin-bottom:10px;
                 border-radius:5px;
@@ -605,6 +605,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
