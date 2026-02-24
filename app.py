@@ -455,7 +455,7 @@ def aircraft_page(id):
             <strong>ATA {pane.ata} - {pane.tipo}</strong><br>
             <small>Responsável: {pane.responsavel}</small>
             <p>{pane.description}</p>
-            {"<img src='"+pane.photo_url+"' width='20%'>" if pane.photo_url else ""}
+            {"<img src='"+pane.photo_url+"' width='10%'>" if pane.photo_url else ""}
         </div>
         """
 
@@ -602,6 +602,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
