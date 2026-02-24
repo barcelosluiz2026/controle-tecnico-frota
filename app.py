@@ -394,6 +394,11 @@ def aircraft_page(id):
       gap: 10px;
       justify-content: center;
     }}
+    .top {{
+        display:flex;
+        justify-content: space-between;
+        align-items:center;
+    }}
     
     .btn {{
       padding: 8px 15px;
@@ -615,6 +620,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
