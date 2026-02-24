@@ -320,7 +320,7 @@ def aircraft_page(id):
             tipo=tipo,
             responsavel=responsavel,
             photo_url=photo_url,
-            status="Aberta"
+            status="Pane Lançada"
         )
 
         db.session.add(new_pane)
@@ -329,6 +329,20 @@ def aircraft_page(id):
         return redirect(url_for("aircraft_page", id=aircraft.id))
 
     panes = Pane.query.filter_by(aircraft_id=aircraft.id).all()
+
+    statuses = [
+        "Pane Lançada",
+        "In Progress Avi",
+        "In Progress Mec",
+        "Wait Material",
+        "Wait Tools",
+        "Wait Transfer",
+        "Finalizadas"
+    ]
+
+    grouped_panes = {status: [] for status in statuses}
+    for pane in panes:
+        grouped_panes[pane.status].append(pane)
 
     html = f"""
     <html>
@@ -344,7 +358,7 @@ def aircraft_page(id):
             }}
 
             .container {{
-                max-width: 800px;
+                max-width: 1200px;
                 margin: 0 auto;
             }}
 
@@ -382,7 +396,7 @@ def aircraft_page(id):
                 gap: 15px;
             }}
 
-            textarea, input, select {{
+            textarea, input {{
                 width: 100%;
                 padding: 10px;
                 border-radius: 5px;
@@ -408,17 +422,39 @@ def aircraft_page(id):
                 gap: 6px;
             }}
 
-            .card {{
+            .kanban {{
+                display: grid;
+                grid-template-columns: repeat(7, 1fr);
+                gap: 15px;
+                overflow-x: auto;
+            }}
+
+            .column {{
                 background: #1e293b;
-                padding: 15px;
                 border-radius: 8px;
-                margin-bottom: 15px;
+                padding: 10px;
+                min-width: 200px;
+            }}
+
+            .column h4 {{
+                text-align: center;
+                background: #334155;
+                padding: 8px;
+                border-radius: 5px;
+                margin-bottom: 10px;
+            }}
+
+            .card {{
+                background: #334155;
+                padding: 10px;
+                border-radius: 6px;
+                margin-bottom: 10px;
             }}
 
             .card img {{
-                margin-top: 10px;
+                margin-top: 8px;
                 border-radius: 5px;
-                max-width: 200px;
+                max-width: 100%;
             }}
 
             a {{
@@ -451,20 +487,25 @@ def aircraft_page(id):
                 </form>
             </div>
 
-            <h3>Panes Registradas</h3>
+            <h3>Kanban de Panes</h3>
+            <div class="kanban">
     """
 
-    for pane in panes:
-        html += f"""
-        <div class='card'>
-            <strong>ATA {pane.ata} - {pane.tipo}</strong><br>
-            <small>Responsável: {pane.responsavel}</small>
-            <p>{pane.description}</p>
-            {"<img src='"+pane.photo_url+"' alt='foto da pane'>" if pane.photo_url else ""}
-        </div>
-        """
+    for status in statuses:
+        html += f"<div class='column'><h4>{status}</h4>"
+        for pane in grouped_panes[status]:
+            html += f"""
+            <div class='card'>
+                <strong>ATA {pane.ata} - {pane.tipo}</strong><br>
+                <small>Responsável: {pane.responsavel}</small>
+                <p>{pane.description}</p>
+                {"<img src='"+pane.photo_url+"' alt='foto da pane'>" if pane.photo_url else ""}
+            </div>
+            """
+        html += "</div>"
 
     html += """
+            </div>
         </div>
     </body>
     </html>
@@ -611,6 +652,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
