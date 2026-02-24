@@ -419,6 +419,7 @@ def aircraft_page(id):
     <div class="radio-group"><label> <input type="radio" name="tipo" value="Mecânico" required> Mecânico </label> <label> <input type="radio" name="tipo" value="Aviônico" required> Aviônico </label>
     </div>
    </div><input name="responsavel" placeholder="Responsável pela informação" required> <input name="photo_url" placeholder="URL da Foto (opcional)">
+   <button type="submit" class="btn">Salvar</button>
    <button type="button" class="btn" onclick="fecharModal()" style="background:#475569;">Cancelar</button>
                 </form>
             </div>
@@ -581,6 +582,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
