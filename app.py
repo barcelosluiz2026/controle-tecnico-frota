@@ -414,9 +414,25 @@ def aircraft_page(id):
       background: #1d4ed8;
     }}
   </style>
-  <script src="https://cdn.tailwindcss.com/3.4.17" type="text/javascript"></script>
-  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
-  <script src="/_sdk/element_sdk.js" type="text/javascript"></script>
+  <script>
+            function abrirModal() {{
+                document.getElementById("modal").style.display="flex";
+            }}
+
+            function fecharModal() {{
+                document.getElementById("modal").style.display="none";
+            }}
+        </script>
+    </head>
+
+    <body>
+
+        <a href="/">← Voltar</a>
+
+        <div class="top">
+            <h2>🚁 {aircraft.prefix} - {aircraft.model}</h2>
+            <button class="btn" onclick="abrirModal()">Cadastrar Pane</button>
+        </div>
  </head>
  <body>
   <form method="POST"><textarea name="description" placeholder="Descrição da Pane" required></textarea>
@@ -587,6 +603,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
