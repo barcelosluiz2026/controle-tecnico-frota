@@ -532,22 +532,24 @@ def pane_detail(id):
                 pane.steps = []
             if not hasattr(pane, "pendencias"):
                 pane.pendencias = []
-            # Armazenar etapas e pendências em texto simples (pode ser expandido depois)
             if not pane.description.endswith("--- ETAPAS ---"):
-                pane.description += "--- ETAPAS ---"
-            pane.description += f"- {step_desc}"
+                pane.description += "\n\n--- ETAPAS ---\n"
+            pane.description += f"- {step_desc}\n"
 
         elif action == "add_pendency":
             pend_desc = request.form["pend_desc"]
             if not pane.description.endswith("--- PENDÊNCIAS ---"):
-                pane.description += "--- PENDÊNCIAS ---"
-            pane.description += f"- {pend_desc}"
+                pane.description += "\n\n--- PENDÊNCIAS ---\n"
+            pane.description += f"- {pend_desc}\n"
 
         elif action == "finalize":
             pane.status = "Finalizadas"
 
         db.session.commit()
         return redirect(url_for("pane_detail", id=pane.id))
+
+    # Corrige o problema da barra invertida processando antes
+    description_html = pane.description.replace("\n", "<br>")
 
     html = f"""
     <html>
@@ -624,7 +626,7 @@ def pane_detail(id):
             <div class="card">
                 <strong>ATA {pane.ata} - {pane.tipo}</strong><br>
                 <small>Responsável: {pane.responsavel}</small>
-                <p>{pane.description.replace("\\n", "<br>")}</p>
+                <p>{description_html}</p>
                 {"<img src='"+pane.photo_url+"' alt='foto da pane' style='max-width:200px;border-radius:5px;margin-top:10px;'>" if pane.photo_url else ""}
                 <p><strong>Status:</strong> {pane.status}</p>
             </div>
@@ -796,6 +798,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
