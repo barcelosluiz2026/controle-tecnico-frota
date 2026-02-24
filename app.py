@@ -332,136 +332,98 @@ def aircraft_page(id):
 
     html = f"""
     <html>
-    <head>
-        <title>{aircraft.prefix}</title>
-        <style>
-            body {{
-                font-family: Arial;
-                background-color: #0f172a;
-                color: white;
-                padding: 20px;
-            }}
-
-            .top {{
-                display:flex;
-                justify-content: space-between;
-                align-items:center;
-            }}
-
-            .btn {{
-                padding: 8px 15px;
-                background: #2563eb;
-                color: white;
-                border: none;
-                border-radius: 5px;
-                cursor: pointer;
-            }}
-
-            .modal {{
-                display:none;
-                position: fixed;
-                top:0;
-                left:0;
-                width:100%;
-                height:100%;
-                background: rgba(0,0,0,0.8);
-                justify-content:center;
-                align-items:center;
-            }}
-
-            .modal-content {{
-                background:#1e293b;
-                padding:25px;
-                border-radius:10px;
-                width:400px;
-            }}
-
-            input, textarea {{
-                width:100%;
-                padding:8px;
-                margin-bottom:10px;
-                border-radius:5px;
-                border:none;
-                display: block;
-                box-sizing: border-box;
-            }}
-
-            .card {{
-                background:#1e293b;
-                padding:15px;
-                border-radius:8px;
-                margin-top:15px;
-            }}
-
-            a {{
-                color:#38bdf8;
-                text-decoration:none;
-            }}
-        </style>
-
-        <script>
-            function abrirModal() {{
-                document.getElementById("modal").style.display="flex";
-            }}
-
-            function fecharModal() {{
-                document.getElementById("modal").style.display="none";
-            }}
-        </script>
-    </head>
-
-    <body>
-
-        <a href="/">← Voltar</a>
-
-        <div class="top">
-            <h2>🚁 {aircraft.prefix} - {aircraft.model}</h2>
-            <button class="btn" onclick="abrirModal()">Cadastrar Pane</button>
-        </div>
-
-        <!-- MODAL CENTRALIZADO -->
-        <div class="modal" id="modal">
-            <div class="modal-content">
-                <h3>Nova Pane</h3>
-                <form method="POST">
-                    <textarea name="description" placeholder="Descrição da Pane" required></textarea>
-
-                    <input name="ata" placeholder="ATA (2 dígitos)" 
-                        type="number" min="0" max="99" maxlength="2" required
-
-                    <div>
-                        <label>
-                            <input type="radio" name="tipo" value="Mecânico" required> Mecânico
-                        </label>
-                        <label>
-                            <input type="radio" name="tipo" value="Aviônico" required> Aviônico
-                        </label>
-                    </div>
-
-                    <input name="responsavel" placeholder="Responsável pela informação" required>
-
-                    <input name="photo_url" placeholder="URL da Foto (opcional)">
-
-                    <button type="submit" class="btn">Salvar</button>
-                    <button type="button" class="btn" onclick="fecharModal()" style="background:#475569;">Cancelar</button>
-                </form>
-            </div>
-        </div>
-
-        <h3>Panes Registradas</h3>
-    """
-
-    for pane in panes:
-        html += f"""
-        <div class='card'>
-            <strong>ATA {pane.ata} - {pane.tipo}</strong><br>
-            <small>Responsável: {pane.responsavel}</small>
-            <p>{pane.description}</p>
-            {"<img src='"+pane.photo_url+"' width='10%'>" if pane.photo_url else ""}
-        </div>
-        """
-
-    html += "</body></html>"
+ <head>
+  <style>
+    body { 
+      box-sizing: border-box; 
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: #0f172a;
+      padding: 20px;
+    }
+    
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      background: #1e293b;
+      padding: 25px;
+      border-radius: 10px;
+      width: 100%;
+      max-width: 500px;
+    }
+    
+    textarea, input[type="text"], input[type="number"], input[type="email"] {
+      width: 100%;
+      padding: 10px;
+      border-radius: 5px;
+      border: none;
+      box-sizing: border-box;
+    }
+    
+    .row-flex {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    
+    input[type="number"] {
+      width: 100px;
+      flex-shrink: 0;
+    }
+    
+    .radio-group {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      flex: 1;
+    }
+    
+    .radio-group label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 0;
+      color: white;
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+    
+    .btn {
+      padding: 8px 15px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    .btn:hover {
+      background: #1d4ed8;
+    }
+  </style>
+  <script src="https://cdn.tailwindcss.com/3.4.17" type="text/javascript"></script>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+  <script src="/_sdk/element_sdk.js" type="text/javascript"></script>
+ </head>
+ <body>
+  <form method="POST"><textarea name="description" placeholder="Descrição da Pane" required></textarea>
+   <div class="row-flex"><input name="ata" placeholder="ATA (2 dígitos)" type="number" min="0" max="99" maxlength="2" required>
+    <div class="radio-group"><label> <input type="radio" name="tipo" value="Mecânico" required> Mecânico </label> <label> <input type="radio" name="tipo" value="Aviônico" required> Aviônico </label>
+    </div>
+   </div><input name="responsavel" placeholder="Responsável pela informação" required> <input name="photo_url" placeholder="URL da Foto (opcional)">
+   <div class="button-group"><button type="submit" class="btn">Salvar</button> <button type="button" class="btn" onclick="fecharModal()" style="background:#475569;">Cancelar</button>
+   </div>
+  </form>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9d301545b5c7c03f',t:'MTc3MTk0Nzg1My4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
     return html
 # ======================
 # LOGIN
@@ -604,6 +566,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
