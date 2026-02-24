@@ -489,7 +489,7 @@ def login():
                 display: flex;
                 justify-content: center;
                 align-items: center;
-                height: 100vh;
+                height: 100%;
             }
 
             .login-box {
@@ -566,6 +566,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
