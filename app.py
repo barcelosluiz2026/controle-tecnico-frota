@@ -495,16 +495,160 @@ def aircraft_page(id):
         html += f"<div class='column'><h4>{status}</h4>"
         for pane in grouped_panes[status]:
             html += f"""
-            <div class='card'>
-                <strong>ATA {pane.ata} - {pane.tipo}</strong><br>
-                <small>Responsável: {pane.responsavel}</small>
-                <p>{pane.description}</p>
-                {"<img src='"+pane.photo_url+"' alt='foto da pane'>" if pane.photo_url else ""}
-            </div>
+            <a href='/pane/{pane.id}' style='text-decoration:none;color:white;'>
+    <div class='card'>
+        <strong>ATA {pane.ata} - {pane.tipo}</strong><br>
+        <small>Responsável: {pane.responsavel}</small>
+        <p>{pane.description}</p>
+        {"<img src='"+pane.photo_url+"' alt='foto da pane'>" if pane.photo_url else ""}
+    </div>
+</a>
             """
         html += "</div>"
 
     html += """
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    return html
+
+# ======================
+# DETALHES DA PANE
+# ======================
+
+@app.route("/pane/<int:id>", methods=["GET", "POST"])
+@login_required()
+def pane_detail(id):
+    pane = Pane.query.get_or_404(id)
+
+    if request.method == "POST":
+        action = request.form.get("action")
+
+        if action == "add_step":
+            step_desc = request.form["step_desc"]
+            if not hasattr(pane, "steps"):
+                pane.steps = []
+            if not hasattr(pane, "pendencias"):
+                pane.pendencias = []
+            # Armazenar etapas e pendências em texto simples (pode ser expandido depois)
+            if not pane.description.endswith("\n\n--- ETAPAS ---\n"):
+                pane.description += "\n\n--- ETAPAS ---\n"
+            pane.description += f"- {step_desc}\n"
+
+        elif action == "add_pendency":
+            pend_desc = request.form["pend_desc"]
+            if not pane.description.endswith("\n\n--- PENDÊNCIAS ---\n"):
+                pane.description += "\n\n--- PENDÊNCIAS ---\n"
+            pane.description += f"- {pend_desc}\n"
+
+        elif action == "finalize":
+            pane.status = "Finalizadas"
+
+        db.session.commit()
+        return redirect(url_for("pane_detail", id=pane.id))
+
+    html = f"""
+    <html>
+    <head>
+        <title>Pane {pane.id}</title>
+        <style>
+            body {{
+                font-family: Arial, sans-serif;
+                background-color: #0f172a;
+                color: white;
+                margin: 0;
+                padding: 40px;
+            }}
+
+            .container {{
+                max-width: 800px;
+                margin: 0 auto;
+            }}
+
+            .top {{
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 30px;
+            }}
+
+            .btn {{
+                padding: 10px 20px;
+                background: #2563eb;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 14px;
+            }}
+
+            .btn:hover {{
+                background: #1d4ed8;
+            }}
+
+            .card {{
+                background: #1e293b;
+                padding: 20px;
+                border-radius: 10px;
+                margin-bottom: 20px;
+            }}
+
+            textarea {{
+                width: 100%;
+                padding: 10px;
+                border-radius: 5px;
+                border: none;
+                box-sizing: border-box;
+                margin-top: 10px;
+            }}
+
+            form {{
+                margin-bottom: 20px;
+            }}
+
+            a {{
+                color: #38bdf8;
+                text-decoration: none;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="top">
+                <a href="/aircraft/{pane.aircraft_id}">← Voltar</a>
+                <h2>Detalhes da Pane #{pane.id}</h2>
+            </div>
+
+            <div class="card">
+                <strong>ATA {pane.ata} - {pane.tipo}</strong><br>
+                <small>Responsável: {pane.responsavel}</small>
+                <p>{pane.description.replace("\\n", "<br>")}</p>
+                {"<img src='"+pane.photo_url+"' alt='foto da pane' style='max-width:200px;border-radius:5px;margin-top:10px;'>" if pane.photo_url else ""}
+                <p><strong>Status:</strong> {pane.status}</p>
+            </div>
+
+            <div class="card">
+                <h3>Adicionar Etapa</h3>
+                <form method="POST">
+                    <textarea name="step_desc" placeholder="Descreva a etapa realizada" required></textarea>
+                    <button type="submit" name="action" value="add_step" class="btn">Salvar Etapa</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3>Adicionar Pendência</h3>
+                <form method="POST">
+                    <textarea name="pend_desc" placeholder="Descreva a pendência" required></textarea>
+                    <button type="submit" name="action" value="add_pendency" class="btn" style="background:#f59e0b;">Salvar Pendência</button>
+                </form>
+            </div>
+
+            <div class="card" style="text-align:center;">
+                <form method="POST">
+                    <button type="submit" name="action" value="finalize" class="btn" style="background:#16a34a;">Finalizar Pane</button>
+                </form>
             </div>
         </div>
     </body>
@@ -652,6 +796,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
