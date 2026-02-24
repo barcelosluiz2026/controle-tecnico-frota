@@ -156,7 +156,7 @@ def home():
         for ac in items:
             html += f"""
             <div class='card'>
-    <img src='{ac.photo_url}' alt='photo'>
+    <img src='{ac.photo_url}' alt='foto'>
     <div class='prefix'>
     <a href='/aircraft/{ac.id}' style='color:white;text-decoration:none;'>
         {ac.prefix}
@@ -359,62 +359,28 @@ def aircraft_page(id):
                 border-radius: 5px;
                 cursor: pointer;
             }}
- 
+
             .modal {{
                 display:none;
-                position:fixed;
+                position: fixed;
                 top:0;
                 left:0;
-                width:100%;
-                height:100%;
-                background:rgba(0,0,0,0.7);
+                width:50%;
+                height:50%;
+                background: rgba(0,0,0,0.8);
                 justify-content:center;
                 align-items:center;
             }}
 
             .modal-content {{
                 background:#1e293b;
-                padding:30px;
-                border-radius:12px;
-                width:450px;
-                display:flex;
-                flex-direction:column;
-                align-items:center;
-            }}
-
-            .modal-content h3 {{
-               margin-bottom:20px;
-            }}
-
-            .modal-content form {{
-                width:100%;
-                display:flex;
-                flex-direction:column;
-                gap:12px;
-            }}
-
-            .modal-content input,
-            .modal-content textarea,
-            .modal-content select {{
-                width:100%;
-                padding:8px;
-                border-radius:6px;
-                border:none;
-            }}
-
-            .modal-content .radio-group {{
-                display:flex;
-                gap:20px;
-            }}
-
-            .modal-content .btn {{
-                margin-top:10px;
-                width:100%;
-                text-align:center;
+                padding:25px;
+                border-radius:10px;
+                width:100px;
             }}
 
             input, textarea {{
-                width:100%;
+                width:50%;
                 padding:8px;
                 margin-bottom:10px;
                 border-radius:5px;
@@ -486,14 +452,14 @@ def aircraft_page(id):
         <h3>Panes Registradas</h3>
     """
 
-    for p in panes:
+    for pane in panes:
         html += f"""
-            <div class='pane-item'>
-                <strong>{p.ata} - {p.tipo}</strong><br>
-                {p.description}<br>
-                <small>Responsável: {p.responsavel}</small><br>
-                {"<img src='" + photo_url + "' style='width:120px;margin-top:8px;border-radius:6px;'>" if photo_url else ""}
-            </div>
+        <div class='card'>
+            <strong>ATA {pane.ata} - {pane.tipo}</strong><br>
+            <small>Responsável: {pane.responsavel}</small>
+            <p>{pane.description}</p>
+            {"<img src='"+pane.photo_url+"' width='100%'>" if pane.photo_url else ""}
+        </div>
         """
 
     html += "</body></html>"
@@ -639,6 +605,8 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
+
 
 
 
