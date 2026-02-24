@@ -404,7 +404,12 @@ def aircraft_page(id):
       cursor: pointer;
       font-size: 14px;
     }}
-    
+    .card {{
+                background:#1e293b;
+                padding:15px;
+                border-radius:8px;
+                margin-top:15px;
+            }}
     .btn:hover {{
       background: #1d4ed8;
     }}
@@ -582,6 +587,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
