@@ -332,138 +332,126 @@ def aircraft_page(id):
 
     html = f"""
     <html>
- <head>
-  <style>
-    body {{
-      box-sizing: border-box; 
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      background: #0f172a;
-      padding: 20px;
-    }}
-    
-    form {{
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      background: #1e293b;
-      padding: 25px;
-      border-radius: 10px;
-      width: 100%;
-      max-width: 500px;
-    }}
-    
-    textarea, input[type="text"], input[type="number"], input[type="email"] {{
-      width: 100%;
-      padding: 10px;
-      border-radius: 5px;
-      border: none;
-      box-sizing: border-box;
-    }}
-    
-    .row-flex {{
-      display: flex;
-      gap: 12px;
-      align-items: center;
-    }}
-    
-    input[type="number"] {{
-      width: 100px;
-      flex-shrink: 0;
-    }}
-    
-    .radio-group {{
-      display: flex;
-      gap: 20px;
-      align-items: center;
-      flex: 1;
-    }}
-    
-    .radio-group label {{
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin: 0;
-      color: white;
-    }}
-    
-    .button-group {{
-      display: flex;
-      gap: 10px;
-      justify-content: center;
-    }}
-    .top {{
-        display:flex;
-        justify-content: space-between;
-        align-items:center;
-    }}
-    
-    .btn {{
-      padding: 8px 15px;
-      background: #2563eb;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 14px;
-    }}
-    .modal {{
-        display:none;
-        position: fixed;
-        top:0;
-        left:0;
-        width:100%;
-        height:100%;
-        background: rgba(0,0,0,0.8);
-        justify-content:center;
-        align-items:center;
-    }}
-    .card {{
-        background:#1e293b;
-        padding:15px;
-        border-radius:8px;
-        margin-top:15px;
-        display: block;
-    }}
-    .btn:hover {{
-      background: #1d4ed8;
-    }}
-  </style>
-  <script>
-            function abrirModal() {{
-                document.getElementById("modal").style.display="flex";
+    <head>
+        <title>{aircraft.prefix} - {aircraft.model}</title>
+        <style>
+            body {{
+                font-family: Arial, sans-serif;
+                background-color: #0f172a;
+                color: white;
+                margin: 0;
+                padding: 40px;
             }}
 
-            function fecharModal() {{
-                document.getElementById("modal").style.display="none";
+            .container {{
+                max-width: 800px;
+                margin: 0 auto;
             }}
-        </script>
+
+            .top {{
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 30px;
+            }}
+
+            .btn {{
+                padding: 10px 20px;
+                background: #2563eb;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 14px;
+            }}
+
+            .btn:hover {{
+                background: #1d4ed8;
+            }}
+
+            .form-box {{
+                background: #1e293b;
+                padding: 25px;
+                border-radius: 10px;
+                margin-bottom: 40px;
+            }}
+
+            form {{
+                display: flex;
+                flex-direction: column;
+                gap: 15px;
+            }}
+
+            textarea, input, select {{
+                width: 100%;
+                padding: 10px;
+                border-radius: 5px;
+                border: none;
+                box-sizing: border-box;
+            }}
+
+            .row-flex {{
+                display: flex;
+                gap: 15px;
+                align-items: center;
+            }}
+
+            .radio-group {{
+                display: flex;
+                gap: 20px;
+                align-items: center;
+            }}
+
+            .radio-group label {{
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }}
+
+            .card {{
+                background: #1e293b;
+                padding: 15px;
+                border-radius: 8px;
+                margin-bottom: 15px;
+            }}
+
+            .card img {{
+                margin-top: 10px;
+                border-radius: 5px;
+                max-width: 200px;
+            }}
+
+            a {{
+                color: #38bdf8;
+                text-decoration: none;
+            }}
+        </style>
     </head>
-
     <body>
+        <div class="container">
+            <div class="top">
+                <a href="/">← Voltar</a>
+                <h2>🚁 {aircraft.prefix} - {aircraft.model}</h2>
+            </div>
 
-        <a href="/">← Voltar</a>
-
-        <div class="top">
-            <h2>🚁 {aircraft.prefix} - {aircraft.model}</h2>
-            <button class="btn" onclick="abrirModal()">Cadastrar Pane</button>
-        </div>
- </head>
- <body>
-  <form method="POST"><textarea name="description" placeholder="Descrição da Pane" required></textarea>
-   <div class="row-flex"><input name="ata" placeholder="ATA (2 dígitos)" type="number" min="0" max="99" maxlength="2" required>
-    <div class="radio-group"><label> <input type="radio" name="tipo" value="Mecânico" required> Mecânico </label> <label> <input type="radio" name="tipo" value="Aviônico" required> Aviônico </label>
-    </div>
-   </div><input name="responsavel" placeholder="Responsável pela informação" required> <input name="photo_url" placeholder="URL da Foto (opcional)">
-   <button type="submit" class="btn">Salvar</button>
-   <button type="button" class="btn" onclick="fecharModal()" style="background:#475569;">Cancelar</button>
+            <div class="form-box">
+                <h3>Registrar Nova Pane</h3>
+                <form method="POST">
+                    <textarea name="description" placeholder="Descrição da Pane" required></textarea>
+                    <div class="row-flex">
+                        <input name="ata" placeholder="ATA (2 dígitos)" type="number" min="0" max="99" required>
+                        <div class="radio-group">
+                            <label><input type="radio" name="tipo" value="Mecânico" required> Mecânico</label>
+                            <label><input type="radio" name="tipo" value="Aviônico" required> Aviônico</label>
+                        </div>
+                    </div>
+                    <input name="responsavel" placeholder="Responsável pela informação" required>
+                    <input name="photo_url" placeholder="URL da Foto (opcional)">
+                    <button type="submit" class="btn">Salvar Pane</button>
                 </form>
             </div>
-        </div>
 
-        <h3>Panes Registradas</h3>
+            <h3>Panes Registradas</h3>
     """
 
     for pane in panes:
@@ -472,13 +460,16 @@ def aircraft_page(id):
             <strong>ATA {pane.ata} - {pane.tipo}</strong><br>
             <small>Responsável: {pane.responsavel}</small>
             <p>{pane.description}</p>
-            {"<img src='"+pane.photo_url+"' width='10%'>" if pane.photo_url else ""}
+            {"<img src='"+pane.photo_url+"' alt='foto da pane'>" if pane.photo_url else ""}
         </div>
         """
 
-    html += "</body></html>"
+    html += """
+        </div>
+    </body>
+    </html>
+    """
     return html
-
 # ======================
 # LOGIN
 # ======================
@@ -620,6 +611,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
