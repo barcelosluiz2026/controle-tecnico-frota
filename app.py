@@ -353,7 +353,20 @@ def aircraft_page(id):
         db.session.commit()
         return redirect(url_for("aircraft_page", id=aircraft.id))
 
-    panes = Pane.query.filter_by(aircraft_id=aircraft.id, status="Pane Lançada").order_by(Pane.created_at.desc()).all()
+    panes = Pane.query.filter_by(aircraft_id=aircraft.id).all()
+    statuses = [
+        "Pane Lançada",
+        "In Progress Avi",
+        "In Progress Mec",
+        "Wait Material",
+        "Wait Tools",
+        "Wait Transfer",
+        "Finalizadas"
+    ]
+
+    grouped_panes = {status: [] for status in statuses}
+    for pane in panes:
+        grouped_panes[pane.status].append(pane)
 
     html = f"""
     <html>
@@ -361,69 +374,166 @@ def aircraft_page(id):
         <title>{aircraft.prefix} - {aircraft.model}</title>
         <style>
             body {{
-                font-family: Arial;
+                font-family: 'Segoe UI', Arial, sans-serif;
                 background-color: #0f172a;
-                color: white;
+                color: #f1f5f9;
+                margin: 0;
                 padding: 40px;
             }}
-            .card {{
+
+            h2, h3 {{
+                color: #38bdf8;
+            }}
+
+            .container {{
+                max-width: 1300px;
+                margin: 0 auto;
+            }}
+
+            .form-box {{
                 background: #1e293b;
-                padding: 15px;
+                padding: 30px;
+                border-radius: 12px;
+                box-shadow: 0 0 15px rgba(0,0,0,0.3);
+                margin-bottom: 40px;
+            }}
+
+            form {{
+                display: grid;
+                gap: 15px;
+            }}
+
+            textarea, input, select {{
+                background: #0f172a;
+                color: #f1f5f9;
+                border: 1px solid #334155;
+                border-radius: 6px;
+                padding: 10px;
+                font-size: 14px;
+                width: 100%;
+                box-sizing: border-box;
+                transition: border-color 0.3s;
+            }}
+
+            textarea:focus, input:focus, select:focus {{
+                border-color: #38bdf8;
+                outline: none;
+            }}
+
+            .radio-group {{
+                display: flex;
+                gap: 20px;
+                align-items: center;
+            }}
+
+            .btn {{
+                background: linear-gradient(90deg, #2563eb, #1d4ed8);
+                color: white;
+                border: none;
+                padding: 12px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-weight: bold;
+                transition: background 0.3s;
+            }}
+
+            .btn:hover {{
+                background: linear-gradient(90deg, #1d4ed8, #2563eb);
+            }}
+
+            .kanban {{
+                display: grid;
+                grid-template-columns: repeat(7, 1fr);
+                gap: 15px;
+                overflow-x: auto;
+            }}
+
+            .column {{
+                background: #1e293b;
+                border-radius: 10px;
+                padding: 10px;
+                min-width: 200px;
+                box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            }}
+
+            .column h4 {{
+                text-align: center;
+                background: #334155;
+                padding: 8px;
+                border-radius: 6px;
+                margin-bottom: 10px;
+                color: #38bdf8;
+            }}
+
+            .card {{
+                background: #334155;
+                padding: 12px;
                 border-radius: 8px;
                 margin-bottom: 10px;
+                transition: transform 0.2s;
             }}
+
+            .card:hover {{
+                transform: scale(1.02);
+            }}
+
             .card small {{
                 color: #94a3b8;
             }}
-            .form-box {{
-                background: #1e293b;
-                padding: 25px;
-                border-radius: 10px;
-                margin-bottom: 40px;
-            }}
-            .btn {{
-                background: #2563eb;
-                color: white;
-                border: none;
-                padding: 10px;
-                border-radius: 5px;
-                cursor: pointer;
+
+            a {{
+                color: #38bdf8;
+                text-decoration: none;
             }}
         </style>
     </head>
     <body>
-        <a href="/">← Voltar</a>
-        <h2>🚁 {aircraft.prefix} - {aircraft.model}</h2>
+        <div class="container">
+            <a href="/">← Voltar</a>
+            <h2>🚁 {aircraft.prefix} - {aircraft.model}</h2>
 
-        <div class="form-box">
-            <h3>Registrar Nova Pane</h3>
-            <form method="POST">
-                <textarea name="description" placeholder="Descrição da Pane" required></textarea><br>
-                <input name="ata" placeholder="ATA (2 dígitos)" required><br>
-                <label><input type="radio" name="tipo" value="Mecânico" required> Mecânico</label>
-                <label><input type="radio" name="tipo" value="Aviônico" required> Aviônico</label><br>
-                <input name="responsavel" placeholder="Responsável" required><br>
-                <input name="photo_url" placeholder="URL da Foto (opcional)"><br>
-                <button type="submit" class="btn">Salvar Pane</button>
-            </form>
-        </div>
+            <div class="form-box">
+                <h3>Registrar Nova Pane</h3>
+                <form method="POST">
+                    <textarea name="description" placeholder="Descrição da Pane" required></textarea>
+                    <div style="display:flex; gap:15px;">
+                        <input name="ata" placeholder="ATA (2 dígitos)" required style="flex:1;">
+                        <div class="radio-group">
+                            <label><input type="radio" name="tipo" value="Mecânico" required> Mecânico</label>
+                            <label><input type="radio" name="tipo" value="Aviônico" required> Aviônico</label>
+                        </div>
+                    </div>
+                    <input name="responsavel" placeholder="Responsável" required>
+                    <input name="photo_url" placeholder="URL da Foto (opcional)">
+                    <button type="submit" class="btn">Salvar Pane</button>
+                </form>
+            </div>
 
-        <h3>Panes Lançadas</h3>
+            <h3>Kanban de Panes</h3>
+            <div class="kanban">
     """
 
-    for pane in panes:
-        html += f"""
-        <a href='/pane/{pane.id}' style='text-decoration:none;color:white;'>
-            <div class='card'>
-                <strong>ATA {pane.ata}</strong> - {pane.description}<br>
-                <small>Responsável: {pane.responsavel}</small><br>
-                <small>Data: {pane.created_at.strftime('%d/%m/%Y %H:%M')}</small><br>
-                <small>Registrado por: {pane.created_by}</small>
-            </div>
-        </a>
-        """
+    for status in statuses:
+        html += f"<div class='column'><h4>{status}</h4>"
+        for pane in grouped_panes[status]:
+            html += f"""
+            <a href='/pane/{pane.id}' style='text-decoration:none;color:white;'>
+                <div class='card'>
+                    <strong>ATA {pane.ata}</strong><br>
+                    <p>{pane.description}</p>
+                    <small>Responsável: {pane.responsavel}</small><br>
+                    <small>{pane.created_at.strftime('%d/%m/%Y %H:%M')} - {pane.created_by}</small>
+                </div>
+            </a>
+            """
+        html += "</div>"
 
-    html += "</body></html>"
+    html += """
+            </div>
+        </div>
+    </body>
+    </html>
+    """
     return html
 
 # ======================
@@ -475,33 +585,70 @@ def pane_detail(id):
         <title>Pane {pane.id}</title>
         <style>
             body {{
-                font-family: Arial;
+                font-family: 'Segoe UI', Arial, sans-serif;
                 background-color: #0f172a;
-                color: white;
+                color: #f1f5f9;
                 padding: 40px;
             }}
+
             .card {{
                 background: #1e293b;
-                padding: 20px;
-                border-radius: 10px;
-                margin-bottom: 20px;
+                padding: 25px;
+                border-radius: 12px;
+                margin-bottom: 25px;
+                box-shadow: 0 0 10px rgba(0,0,0,0.3);
             }}
+
+            textarea, input, select {{
+                background: #0f172a;
+                color: #f1f5f9;
+                border: 1px solid #334155;
+                border-radius: 6px;
+                padding: 10px;
+                width: 100%;
+                box-sizing: border-box;
+                margin-top: 8px;
+                transition: border-color 0.3s;
+            }}
+
+            textarea:focus, input:focus, select:focus {{
+                border-color: #38bdf8;
+                outline: none;
+            }}
+
             .btn {{
-                background: #2563eb;
+                background: linear-gradient(90deg, #2563eb, #1d4ed8);
                 color: white;
                 border: none;
-                padding: 10px;
-                border-radius: 5px;
+                padding: 10px 20px;
+                border-radius: 6px;
                 cursor: pointer;
+                font-weight: bold;
+                transition: background 0.3s;
+            }}
+
+            .btn:hover {{
+                background: linear-gradient(90deg, #1d4ed8, #2563eb);
+            }}
+
+            h3 {{
+                color: #38bdf8;
+            }}
+
+            small {{
+                color: #94a3b8;
             }}
         </style>
     </head>
     <body>
         <a href="/aircraft/{pane.aircraft_id}">← Voltar</a>
         <h2>Pane #{pane.id} - ATA {pane.ata}</h2>
-        <p><strong>Descrição:</strong> {pane.description}</p>
-        <p><strong>Responsável:</strong> {pane.responsavel}</p>
-        <p><strong>Status:</strong> {pane.status}</p>
+
+        <div class="card">
+            <strong>Descrição:</strong> {pane.description}<br>
+            <small>Responsável: {pane.responsavel}</small><br>
+            <small>Status: {pane.status}</small>
+        </div>
 
         <div class="card">
             <h3>Etapas</h3>
@@ -512,7 +659,7 @@ def pane_detail(id):
 
     html += """
             <form method="POST">
-                <textarea name="step_desc" placeholder="Descreva a etapa" required></textarea><br>
+                <textarea name="step_desc" placeholder="Descreva a etapa" required></textarea>
                 <button type="submit" name="action" value="add_step" class="btn">Salvar Etapa</button>
             </form>
         </div>
@@ -520,21 +667,21 @@ def pane_detail(id):
         <div class="card">
             <h3>Registrar Pendência</h3>
             <form method="POST">
-                <label>Tipo do Item:</label>
                 <select name="tipo_item" required>
+                    <option value="">Tipo do Item</option>
                     <option>Ferramenta</option>
                     <option>Material</option>
-                </select><br>
-                <label>Tipo de Aquisição:</label>
+                </select>
                 <select name="tipo_aquisicao" required>
+                    <option value="">Tipo de Aquisição</option>
                     <option>Transferência</option>
                     <option>Compra</option>
-                </select><br>
-                <input name="descricao" placeholder="Descrição" required><br>
-                <input name="pn" placeholder="P/N"><br>
-                <input name="sms_part_request" placeholder="SMS/Part Request (números e ponto)" pattern="[0-9.]+"><br>
-                <input name="task_card" placeholder="Task Card (números e hífen)" pattern="[0-9-]+"><br>
-                <input name="responsavel" placeholder="Responsável" required><br>
+                </select>
+                <input name="descricao" placeholder="Descrição" required>
+                <input name="pn" placeholder="P/N">
+                <input name="sms_part_request" placeholder="SMS/Part Request (números e ponto)" pattern="[0-9.]+">
+                <input name="task_card" placeholder="Task Card (números e hífen)" pattern="[0-9-]+">
+                <input name="responsavel" placeholder="Responsável" required>
                 <button type="submit" name="action" value="add_pendency" class="btn" style="background:#f59e0b;">Salvar Pendência</button>
             </form>
         </div>
@@ -697,4 +844,5 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
