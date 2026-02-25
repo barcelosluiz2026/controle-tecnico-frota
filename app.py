@@ -436,6 +436,22 @@ def aircraft_page(id):
                 <a href="/">← Voltar</a>
                 <h2>🚁 {aircraft.prefix} - {aircraft.model}</h2>
             </div>
+            <div class="form-box">
+                <h3>Registrar Nova Pane</h3>
+                <form method="POST">
+                    <textarea name="description" placeholder="Descrição da Pane" required></textarea>
+                    <div class="row-flex">
+                        <input name="ata" placeholder="ATA (2 dígitos)" type="number" min="0" max="99" required>
+                        <div class="radio-group">
+                            <label><input type="radio" name="tipo" value="Mecânico" required> Mecânico</label>
+                            <label><input type="radio" name="tipo" value="Aviônico" required> Aviônico</label>
+                        </div>
+                    </div>
+                    <input name="responsavel" placeholder="Responsável pela informação" required>
+                    <input name="photo_url" placeholder="URL da Foto (opcional)">
+                    <button type="submit" class="btn">Salvar Pane</button>
+                </form>
+            </div>
 
             <h3>Kanban de Panes</h3>
             <div class="kanban">
@@ -758,6 +774,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
