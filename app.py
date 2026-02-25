@@ -5,7 +5,6 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from collections import defaultdict
-from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
@@ -48,43 +47,7 @@ class Pane(db.Model):
     tipo = db.Column(db.String(20), nullable=False)
     responsavel = db.Column(db.String(100), nullable=False)
     photo_url = db.Column(db.String(500))
-    status = db.Column(db.String(50), default="Pane Lançada")
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_by = db.Column(db.String(100))
-    aircraft = db.relationship("Aircraft", backref="panes")
-
-class Step(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    pane_id = db.Column(db.Integer, db.ForeignKey("pane.id"), nullable=False)
-    description = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    created_by = db.Column(db.String(100))
-    pane = db.relationship("Pane", backref="steps")
-
-class Pendencia(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    pane_id = db.Column(db.Integer, db.ForeignKey("pane.id"), nullable=False)
-    tipo_item = db.Column(db.String(20))  # Ferramenta ou Material
-    tipo_aquisicao = db.Column(db.String(20))  # Transferência ou Compra
-    descricao = db.Column(db.Text, nullable=False)
-    pn = db.Column(db.String(50))
-    sms_part_request = db.Column(db.String(20))
-    task_card = db.Column(db.String(20))
-    responsavel = db.Column(db.String(100))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    created_by = db.Column(db.String(100))
-    pane = db.relationship("Pane", backref="pendencias")
-    
-class Pane(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    aircraft_id = db.Column(db.Integer, db.ForeignKey("aircraft.id"), nullable=False)
-    description = db.Column(db.Text, nullable=False)
-    ata = db.Column(db.String(2), nullable=False)
-    tipo = db.Column(db.String(20), nullable=False)
-    responsavel = db.Column(db.String(100), nullable=False)
-    photo_url = db.Column(db.String(500))
-    status = db.Column(db.String(50), default="Pane Lançada")
-    created_by = db.Column(db.String(100))  # Novo campo
+    status = db.Column(db.String(50), default="Aberta")
     aircraft = db.relationship("Aircraft", backref="panes")
     
 # ======================
@@ -342,6 +305,7 @@ def delete_aircraft(id):
 @login_required()
 def aircraft_page(id):
     aircraft = Aircraft.query.get_or_404(id)
+
     if request.method == "POST":
         description = request.form["description"]
         ata = request.form["ata"]
@@ -350,15 +314,14 @@ def aircraft_page(id):
         photo_url = request.form.get("photo_url")
 
         new_pane = Pane(
-    aircraft_id=aircraft.id,
-    description=description,
-    ata=ata,
-    tipo=tipo,
-    responsavel=responsavel,
-    photo_url=photo_url,
-    status="Pane Lançada",
-    created_by=session.get("username")  # salva o usuário logado
-)
+            aircraft_id=aircraft.id,
+            description=description,
+            ata=ata,
+            tipo=tipo,
+            responsavel=responsavel,
+            photo_url=photo_url,
+            status="Pane Lançada"
+        )
 
         db.session.add(new_pane)
         db.session.commit()
@@ -393,28 +356,86 @@ def aircraft_page(id):
                 margin: 0;
                 padding: 40px;
             }}
+
             .container {{
                 max-width: 1200px;
                 margin: 0 auto;
             }}
+
             .top {{
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
                 margin-bottom: 30px;
             }}
+
+            .btn {{
+                padding: 10px 20px;
+                background: #2563eb;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 14px;
+            }}
+
+            .btn:hover {{
+                background: #1d4ed8;
+            }}
+
+            .form-box {{
+                background: #1e293b;
+                padding: 25px;
+                border-radius: 10px;
+                margin-bottom: 40px;
+            }}
+
+            form {{
+                display: flex;
+                flex-direction: column;
+                gap: 15px;
+            }}
+
+            textarea, input {{
+                width: 100%;
+                padding: 10px;
+                border-radius: 5px;
+                border: none;
+                box-sizing: border-box;
+            }}
+
+            .row-flex {{
+                display: flex;
+                gap: 15px;
+                align-items: center;
+            }}
+
+            .radio-group {{
+                display: flex;
+                gap: 20px;
+                align-items: center;
+            }}
+
+            .radio-group label {{
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }}
+
             .kanban {{
                 display: grid;
                 grid-template-columns: repeat(7, 1fr);
                 gap: 15px;
                 overflow-x: auto;
             }}
+
             .column {{
                 background: #1e293b;
                 border-radius: 8px;
                 padding: 10px;
-                min-width: 220px;
+                min-width: 200px;
             }}
+
             .column h4 {{
                 text-align: center;
                 background: #334155;
@@ -422,24 +443,23 @@ def aircraft_page(id):
                 border-radius: 5px;
                 margin-bottom: 10px;
             }}
+
             .card {{
                 background: #334155;
                 padding: 10px;
                 border-radius: 6px;
                 margin-bottom: 10px;
-                font-size: 13px;
             }}
-            .card:hover {{
-                background: #475569;
+
+            .card img {{
+                margin-top: 8px;
+                border-radius: 5px;
+                max-width: 100%;
             }}
+
             a {{
-                color: white;
+                color: #38bdf8;
                 text-decoration: none;
-            }}
-            .info {{
-                margin-top: 5px;
-                font-size: 12px;
-                color: #cbd5e1;
             }}
         </style>
     </head>
@@ -449,6 +469,7 @@ def aircraft_page(id):
                 <a href="/">← Voltar</a>
                 <h2>🚁 {aircraft.prefix} - {aircraft.model}</h2>
             </div>
+
             <div class="form-box">
                 <h3>Registrar Nova Pane</h3>
                 <form method="POST">
@@ -465,14 +486,6 @@ def aircraft_page(id):
                     <button type="submit" class="btn">Salvar Pane</button>
                 </form>
             </div>
-            <div class="form-box">
-    <h3>Registrar Pendência</h3>
-    <form method="POST" action="/add_pendency/{aircraft.id}">
-        <textarea name="pend_desc" placeholder="Descreva a pendência" required></textarea>
-        <input name="responsavel" placeholder="Responsável pela pendência" required>
-        <button type="submit" class="btn" style="background:#f59e0b;">Salvar Pendência</button>
-    </form>
-</div>
 
             <h3>Kanban de Panes</h3>
             <div class="kanban">
@@ -483,16 +496,15 @@ def aircraft_page(id):
         for pane in grouped_panes[status]:
             html += f"""
             <a href='/pane/{pane.id}' style='text-decoration:none;color:white;'>
-            <div class='card'>
-                <strong>ATA {pane.ata} - {pane.tipo}</strong><br>
-                <small>Responsável: {pane.responsavel}</small><br>
-                <small>Usuário: {pane.created_by or '-'}</small>
-                <p>{pane.description}</p>
-                {"<img src='"+pane.photo_url+"' alt='foto da pane'>" if pane.photo_url else ""}
-            </div>
-        </a>
-        """
-    html += "</div>"
+    <div class='card'>
+        <strong>ATA {pane.ata} - {pane.tipo}</strong><br>
+        <small>Responsável: {pane.responsavel}</small>
+        <p>{pane.description}</p>
+        {"<img src='"+pane.photo_url+"' alt='foto da pane'>" if pane.photo_url else ""}
+    </div>
+</a>
+            """
+        html += "</div>"
 
     html += """
             </div>
@@ -516,16 +528,13 @@ def pane_detail(id):
 
         if action == "add_step":
             step_desc = request.form["step_desc"]
-
+            if not hasattr(pane, "steps"):
+                pane.steps = []
+            if not hasattr(pane, "pendencias"):
+                pane.pendencias = []
             if not pane.description.endswith("--- ETAPAS ---"):
                 pane.description += "\n\n--- ETAPAS ---\n"
             pane.description += f"- {step_desc}\n"
-
-            # Atualiza o status automaticamente conforme o tipo
-            if pane.tipo == "Aviônico":
-                pane.status = "In Progress Avi"
-            elif pane.tipo == "Mecânico":
-                pane.status = "In Progress Mec"
 
         elif action == "add_pendency":
             pend_desc = request.form["pend_desc"]
@@ -533,15 +542,13 @@ def pane_detail(id):
                 pane.description += "\n\n--- PENDÊNCIAS ---\n"
             pane.description += f"- {pend_desc}\n"
 
-            # Quando há pendência, muda o status para "Wait Material"
-            pane.status = "Wait Material"
-
         elif action == "finalize":
             pane.status = "Finalizadas"
 
         db.session.commit()
         return redirect(url_for("pane_detail", id=pane.id))
 
+    # Corrige o problema da barra invertida processando antes
     description_html = pane.description.replace("\n", "<br>")
 
     html = f"""
@@ -650,30 +657,6 @@ def pane_detail(id):
     </html>
     """
     return html
-
-# ======================
-# PENDENCIAS
-# ======================
-
-@app.route("/add_pendency/<int:aircraft_id>", methods=["POST"])
-@login_required()
-def add_pendency(aircraft_id):
-    pend_desc = request.form["pend_desc"]
-    responsavel = request.form["responsavel"]
-
-    new_pane = Pane(
-        aircraft_id=aircraft_id,
-        description=f"Pendência: {pend_desc}",
-        ata="--",
-        tipo="Pendência",
-        responsavel=responsavel,
-        status="Wait Material",
-        created_by=session.get("username")
-    )
-
-    db.session.add(new_pane)
-    db.session.commit()
-    return redirect(url_for("aircraft_page", id=aircraft_id))
 # ======================
 # LOGIN
 # ======================
@@ -815,44 +798,3 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
