@@ -548,6 +548,7 @@ def pane_detail(id):
     if request.method == "POST":
         action = request.form.get("action")
 
+        # Adicionar etapa
         if action == "add_step":
             step = Step(
                 pane_id=pane.id,
@@ -556,6 +557,13 @@ def pane_detail(id):
             )
             db.session.add(step)
 
+            # Atualiza status automaticamente
+            if pane.tipo == "Aviônico":
+                pane.status = "In Progress Avi"
+            elif pane.tipo == "Mecânico":
+                pane.status = "In Progress Mec"
+
+        # Adicionar pendência
         elif action == "add_pendency":
             pend = Pendencia(
                 pane_id=pane.id,
@@ -570,12 +578,20 @@ def pane_detail(id):
             )
             db.session.add(pend)
 
+            # Atualiza status automaticamente
+            if pend.tipo_aquisicao == "Compra":
+                pane.status = "Wait Material"
+            elif pend.tipo_aquisicao == "Transferência":
+                pane.status = "Wait Transfer"
+
+        # Finalizar pane
         elif action == "finalize":
             pane.status = "Finalizadas"
 
         db.session.commit()
-        return redirect(url_for("pane_detail", id=pane.id))
+        return redirect(url_for("aircraft_page", id=pane.aircraft_id))
 
+    # Consulta etapas e pendências
     steps = Step.query.filter_by(pane_id=pane.id).order_by(Step.created_at.asc()).all()
     pendencias = Pendencia.query.filter_by(pane_id=pane.id).order_by(Pendencia.created_at.asc()).all()
 
@@ -647,7 +663,7 @@ def pane_detail(id):
         <div class="card">
             <strong>Descrição:</strong> {pane.description}<br>
             <small>Responsável: {pane.responsavel}</small><br>
-            <small>Status: {pane.status}</small>
+            <small>Status atual: {pane.status}</small>
         </div>
 
         <div class="card">
@@ -844,5 +860,6 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
