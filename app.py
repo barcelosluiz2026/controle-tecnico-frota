@@ -75,6 +75,18 @@ class Pendencia(db.Model):
     created_by = db.Column(db.String(100))
     pane = db.relationship("Pane", backref="pendencias")
     
+class Pane(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    aircraft_id = db.Column(db.Integer, db.ForeignKey("aircraft.id"), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    ata = db.Column(db.String(2), nullable=False)
+    tipo = db.Column(db.String(20), nullable=False)
+    responsavel = db.Column(db.String(100), nullable=False)
+    photo_url = db.Column(db.String(500))
+    status = db.Column(db.String(50), default="Pane Lançada")
+    created_by = db.Column(db.String(100))  # Novo campo
+    aircraft = db.relationship("Aircraft", backref="panes")
+    
 # ======================
 # LOGIN REQUIRED
 # ======================
@@ -338,14 +350,15 @@ def aircraft_page(id):
         photo_url = request.form.get("photo_url")
 
         new_pane = Pane(
-            aircraft_id=aircraft.id,
-            description=description,
-            ata=ata,
-            tipo=tipo,
-            responsavel=responsavel,
-            photo_url=photo_url,
-            status="Pane Lançada"
-        )
+    aircraft_id=aircraft.id,
+    description=description,
+    ata=ata,
+    tipo=tipo,
+    responsavel=responsavel,
+    photo_url=photo_url,
+    status="Pane Lançada",
+    created_by=session.get("username")  # salva o usuário logado
+)
 
         db.session.add(new_pane)
         db.session.commit()
@@ -452,30 +465,34 @@ def aircraft_page(id):
                     <button type="submit" class="btn">Salvar Pane</button>
                 </form>
             </div>
+            <div class="form-box">
+    <h3>Registrar Pendência</h3>
+    <form method="POST" action="/add_pendency/{aircraft.id}">
+        <textarea name="pend_desc" placeholder="Descreva a pendência" required></textarea>
+        <input name="responsavel" placeholder="Responsável pela pendência" required>
+        <button type="submit" class="btn" style="background:#f59e0b;">Salvar Pendência</button>
+    </form>
+</div>
 
             <h3>Kanban de Panes</h3>
             <div class="kanban">
     """
 
     for status in statuses:
-        html += f"<div class='column'><h4>{status}</h4>"
-        for pane in grouped_panes[status]:
-            data = pane.created_at.strftime("%d/%m/%Y")
-            hora = pane.created_at.strftime("%H:%M")
-            html += f"""
-            <a href='/pane/{pane.id}'>
-                <div class='card'>
-                    <strong>ATA {pane.ata}</strong><br>
-                    <div>{pane.description}</div>
-                    <div class='info'>
-                        Resp: {pane.responsavel}<br>
-                        {data} {hora}<br>
-                        Usuário: {pane.updated_by or '-'}
-                    </div>
-                </div>
-            </a>
-            """
-        html += "</div>"
+    html += f"<div class='column'><h4>{status}</h4>"
+    for pane in grouped_panes[status]:
+        html += f"""
+        <a href='/pane/{pane.id}' style='text-decoration:none;color:white;'>
+            <div class='card'>
+                <strong>ATA {pane.ata} - {pane.tipo}</strong><br>
+                <small>Responsável: {pane.responsavel}</small><br>
+                <small>Usuário: {pane.created_by or '-'}</small>
+                <p>{pane.description}</p>
+                {"<img src='"+pane.photo_url+"' alt='foto da pane'>" if pane.photo_url else ""}
+            </div>
+        </a>
+        """
+    html += "</div>"
 
     html += """
             </div>
@@ -633,6 +650,30 @@ def pane_detail(id):
     </html>
     """
     return html
+
+# ======================
+# PENDENCIAS
+# ======================
+
+@app.route("/add_pendency/<int:aircraft_id>", methods=["POST"])
+@login_required()
+def add_pendency(aircraft_id):
+    pend_desc = request.form["pend_desc"]
+    responsavel = request.form["responsavel"]
+
+    new_pane = Pane(
+        aircraft_id=aircraft_id,
+        description=f"Pendência: {pend_desc}",
+        ata="--",
+        tipo="Pendência",
+        responsavel=responsavel,
+        status="Wait Material",
+        created_by=session.get("username")
+    )
+
+    db.session.add(new_pane)
+    db.session.commit()
+    return redirect(url_for("aircraft_page", id=aircraft_id))
 # ======================
 # LOGIN
 # ======================
@@ -774,6 +815,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
