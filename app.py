@@ -330,7 +330,29 @@ def delete_aircraft(id):
 @login_required()
 def aircraft_page(id):
     aircraft = Aircraft.query.get_or_404(id)
-    panes = Pane.query.filter_by(aircraft_id=id).order_by(Pane.created_at.desc()).all()
+    if request.method == "POST":
+        description = request.form["description"]
+        ata = request.form["ata"]
+        tipo = request.form["tipo"]
+        responsavel = request.form["responsavel"]
+        photo_url = request.form.get("photo_url")
+
+        new_pane = Pane(
+            aircraft_id=aircraft.id,
+            description=description,
+            ata=ata,
+            tipo=tipo,
+            responsavel=responsavel,
+            photo_url=photo_url,
+            status="Pane Lançada"
+        )
+
+        db.session.add(new_pane)
+        db.session.commit()
+
+        return redirect(url_for("aircraft_page", id=aircraft.id))
+
+    panes = Pane.query.filter_by(aircraft_id=aircraft.id).all()
 
     statuses = [
         "Pane Lançada",
@@ -736,6 +758,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
