@@ -1,5 +1,6 @@
 import os
 import re
+from datetime import datetime
 from flask import Flask, request, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -47,8 +48,32 @@ class Pane(db.Model):
     tipo = db.Column(db.String(20), nullable=False)
     responsavel = db.Column(db.String(100), nullable=False)
     photo_url = db.Column(db.String(500))
-    status = db.Column(db.String(50), default="Aberta")
+    status = db.Column(db.String(50), default="Pane Lançada")
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_by = db.Column(db.String(100))
     aircraft = db.relationship("Aircraft", backref="panes")
+
+class Step(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    pane_id = db.Column(db.Integer, db.ForeignKey("pane.id"), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_by = db.Column(db.String(100))
+    pane = db.relationship("Pane", backref="steps")
+
+class Pendencia(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    pane_id = db.Column(db.Integer, db.ForeignKey("pane.id"), nullable=False)
+    tipo_item = db.Column(db.String(20), nullable=False)  # Ferramenta ou Material
+    tipo_aquisicao = db.Column(db.String(20), nullable=False)  # Transferência ou Compra
+    descricao = db.Column(db.Text, nullable=False)
+    pn = db.Column(db.String(50))
+    sms_part_request = db.Column(db.String(20))
+    task_card = db.Column(db.String(20))
+    responsavel = db.Column(db.String(100))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_by = db.Column(db.String(100))
+    pane = db.relationship("Pane", backref="pendencias")
     
 # ======================
 # LOGIN REQUIRED
@@ -320,29 +345,15 @@ def aircraft_page(id):
             tipo=tipo,
             responsavel=responsavel,
             photo_url=photo_url,
-            status="Pane Lançada"
+            status="Pane Lançada",
+            created_by=session.get("username")
         )
 
         db.session.add(new_pane)
         db.session.commit()
-
         return redirect(url_for("aircraft_page", id=aircraft.id))
 
-    panes = Pane.query.filter_by(aircraft_id=aircraft.id).all()
-
-    statuses = [
-        "Pane Lançada",
-        "In Progress Avi",
-        "In Progress Mec",
-        "Wait Material",
-        "Wait Tools",
-        "Wait Transfer",
-        "Finalizadas"
-    ]
-
-    grouped_panes = {status: [] for status in statuses}
-    for pane in panes:
-        grouped_panes[pane.status].append(pane)
+    panes = Pane.query.filter_by(aircraft_id=aircraft.id, status="Pane Lançada").order_by(Pane.created_at.desc()).all()
 
     html = f"""
     <html>
@@ -350,168 +361,69 @@ def aircraft_page(id):
         <title>{aircraft.prefix} - {aircraft.model}</title>
         <style>
             body {{
-                font-family: Arial, sans-serif;
+                font-family: Arial;
                 background-color: #0f172a;
                 color: white;
-                margin: 0;
                 padding: 40px;
             }}
-
-            .container {{
-                max-width: 1200px;
-                margin: 0 auto;
+            .card {{
+                background: #1e293b;
+                padding: 15px;
+                border-radius: 8px;
+                margin-bottom: 10px;
             }}
-
-            .top {{
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 30px;
+            .card small {{
+                color: #94a3b8;
             }}
-
-            .btn {{
-                padding: 10px 20px;
-                background: #2563eb;
-                color: white;
-                border: none;
-                border-radius: 5px;
-                cursor: pointer;
-                font-size: 14px;
-            }}
-
-            .btn:hover {{
-                background: #1d4ed8;
-            }}
-
             .form-box {{
                 background: #1e293b;
                 padding: 25px;
                 border-radius: 10px;
                 margin-bottom: 40px;
             }}
-
-            form {{
-                display: flex;
-                flex-direction: column;
-                gap: 15px;
-            }}
-
-            textarea, input {{
-                width: 100%;
-                padding: 10px;
-                border-radius: 5px;
+            .btn {{
+                background: #2563eb;
+                color: white;
                 border: none;
-                box-sizing: border-box;
-            }}
-
-            .row-flex {{
-                display: flex;
-                gap: 15px;
-                align-items: center;
-            }}
-
-            .radio-group {{
-                display: flex;
-                gap: 20px;
-                align-items: center;
-            }}
-
-            .radio-group label {{
-                display: flex;
-                align-items: center;
-                gap: 6px;
-            }}
-
-            .kanban {{
-                display: grid;
-                grid-template-columns: repeat(7, 1fr);
-                gap: 15px;
-                overflow-x: auto;
-            }}
-
-            .column {{
-                background: #1e293b;
-                border-radius: 8px;
                 padding: 10px;
-                min-width: 200px;
-            }}
-
-            .column h4 {{
-                text-align: center;
-                background: #334155;
-                padding: 8px;
                 border-radius: 5px;
-                margin-bottom: 10px;
-            }}
-
-            .card {{
-                background: #334155;
-                padding: 10px;
-                border-radius: 6px;
-                margin-bottom: 10px;
-            }}
-
-            .card img {{
-                margin-top: 8px;
-                border-radius: 5px;
-                max-width: 100%;
-            }}
-
-            a {{
-                color: #38bdf8;
-                text-decoration: none;
+                cursor: pointer;
             }}
         </style>
     </head>
     <body>
-        <div class="container">
-            <div class="top">
-                <a href="/">← Voltar</a>
-                <h2>🚁 {aircraft.prefix} - {aircraft.model}</h2>
-            </div>
+        <a href="/">← Voltar</a>
+        <h2>🚁 {aircraft.prefix} - {aircraft.model}</h2>
 
-            <div class="form-box">
-                <h3>Registrar Nova Pane</h3>
-                <form method="POST">
-                    <textarea name="description" placeholder="Descrição da Pane" required></textarea>
-                    <div class="row-flex">
-                        <input name="ata" placeholder="ATA (2 dígitos)" type="number" min="0" max="99" required>
-                        <div class="radio-group">
-                            <label><input type="radio" name="tipo" value="Mecânico" required> Mecânico</label>
-                            <label><input type="radio" name="tipo" value="Aviônico" required> Aviônico</label>
-                        </div>
-                    </div>
-                    <input name="responsavel" placeholder="Responsável pela informação" required>
-                    <input name="photo_url" placeholder="URL da Foto (opcional)">
-                    <button type="submit" class="btn">Salvar Pane</button>
-                </form>
-            </div>
-
-            <h3>Kanban de Panes</h3>
-            <div class="kanban">
-    """
-
-    for status in statuses:
-        html += f"<div class='column'><h4>{status}</h4>"
-        for pane in grouped_panes[status]:
-            html += f"""
-            <a href='/pane/{pane.id}' style='text-decoration:none;color:white;'>
-    <div class='card'>
-        <strong>ATA {pane.ata} - {pane.tipo}</strong><br>
-        <small>Responsável: {pane.responsavel}</small>
-        <p>{pane.description}</p>
-        {"<img src='"+pane.photo_url+"' alt='foto da pane'>" if pane.photo_url else ""}
-    </div>
-</a>
-            """
-        html += "</div>"
-
-    html += """
-            </div>
+        <div class="form-box">
+            <h3>Registrar Nova Pane</h3>
+            <form method="POST">
+                <textarea name="description" placeholder="Descrição da Pane" required></textarea><br>
+                <input name="ata" placeholder="ATA (2 dígitos)" required><br>
+                <label><input type="radio" name="tipo" value="Mecânico" required> Mecânico</label>
+                <label><input type="radio" name="tipo" value="Aviônico" required> Aviônico</label><br>
+                <input name="responsavel" placeholder="Responsável" required><br>
+                <input name="photo_url" placeholder="URL da Foto (opcional)"><br>
+                <button type="submit" class="btn">Salvar Pane</button>
+            </form>
         </div>
-    </body>
-    </html>
+
+        <h3>Panes Lançadas</h3>
     """
+
+    for pane in panes:
+        html += f"""
+        <a href='/pane/{pane.id}' style='text-decoration:none;color:white;'>
+            <div class='card'>
+                <strong>ATA {pane.ata}</strong> - {pane.description}<br>
+                <small>Responsável: {pane.responsavel}</small><br>
+                <small>Data: {pane.created_at.strftime('%d/%m/%Y %H:%M')}</small><br>
+                <small>Registrado por: {pane.created_by}</small>
+            </div>
+        </a>
+        """
+
+    html += "</body></html>"
     return html
 
 # ======================
@@ -527,20 +439,26 @@ def pane_detail(id):
         action = request.form.get("action")
 
         if action == "add_step":
-            step_desc = request.form["step_desc"]
-            if not hasattr(pane, "steps"):
-                pane.steps = []
-            if not hasattr(pane, "pendencias"):
-                pane.pendencias = []
-            if not pane.description.endswith("--- ETAPAS ---"):
-                pane.description += "\n\n--- ETAPAS ---\n"
-            pane.description += f"- {step_desc}\n"
+            step = Step(
+                pane_id=pane.id,
+                description=request.form["step_desc"],
+                created_by=session.get("username")
+            )
+            db.session.add(step)
 
         elif action == "add_pendency":
-            pend_desc = request.form["pend_desc"]
-            if not pane.description.endswith("--- PENDÊNCIAS ---"):
-                pane.description += "\n\n--- PENDÊNCIAS ---\n"
-            pane.description += f"- {pend_desc}\n"
+            pend = Pendencia(
+                pane_id=pane.id,
+                tipo_item=request.form["tipo_item"],
+                tipo_aquisicao=request.form["tipo_aquisicao"],
+                descricao=request.form["descricao"],
+                pn=request.form["pn"],
+                sms_part_request=request.form["sms_part_request"],
+                task_card=request.form["task_card"],
+                responsavel=request.form["responsavel"],
+                created_by=session.get("username")
+            )
+            db.session.add(pend)
 
         elif action == "finalize":
             pane.status = "Finalizadas"
@@ -548,8 +466,8 @@ def pane_detail(id):
         db.session.commit()
         return redirect(url_for("pane_detail", id=pane.id))
 
-    # Corrige o problema da barra invertida processando antes
-    description_html = pane.description.replace("\n", "<br>")
+    steps = Step.query.filter_by(pane_id=pane.id).order_by(Step.created_at.asc()).all()
+    pendencias = Pendencia.query.filter_by(pane_id=pane.id).order_by(Pendencia.created_at.asc()).all()
 
     html = f"""
     <html>
@@ -557,102 +475,83 @@ def pane_detail(id):
         <title>Pane {pane.id}</title>
         <style>
             body {{
-                font-family: Arial, sans-serif;
+                font-family: Arial;
                 background-color: #0f172a;
                 color: white;
-                margin: 0;
                 padding: 40px;
             }}
-
-            .container {{
-                max-width: 800px;
-                margin: 0 auto;
-            }}
-
-            .top {{
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 30px;
-            }}
-
-            .btn {{
-                padding: 10px 20px;
-                background: #2563eb;
-                color: white;
-                border: none;
-                border-radius: 5px;
-                cursor: pointer;
-                font-size: 14px;
-            }}
-
-            .btn:hover {{
-                background: #1d4ed8;
-            }}
-
             .card {{
                 background: #1e293b;
                 padding: 20px;
                 border-radius: 10px;
                 margin-bottom: 20px;
             }}
-
-            textarea {{
-                width: 100%;
+            .btn {{
+                background: #2563eb;
+                color: white;
+                border: none;
                 padding: 10px;
                 border-radius: 5px;
-                border: none;
-                box-sizing: border-box;
-                margin-top: 10px;
-            }}
-
-            form {{
-                margin-bottom: 20px;
-            }}
-
-            a {{
-                color: #38bdf8;
-                text-decoration: none;
+                cursor: pointer;
             }}
         </style>
     </head>
     <body>
-        <div class="container">
-            <div class="top">
-                <a href="/aircraft/{pane.aircraft_id}">← Voltar</a>
-                <h2>Detalhes da Pane #{pane.id}</h2>
-            </div>
+        <a href="/aircraft/{pane.aircraft_id}">← Voltar</a>
+        <h2>Pane #{pane.id} - ATA {pane.ata}</h2>
+        <p><strong>Descrição:</strong> {pane.description}</p>
+        <p><strong>Responsável:</strong> {pane.responsavel}</p>
+        <p><strong>Status:</strong> {pane.status}</p>
 
-            <div class="card">
-                <strong>ATA {pane.ata} - {pane.tipo}</strong><br>
-                <small>Responsável: {pane.responsavel}</small>
-                <p>{description_html}</p>
-                {"<img src='"+pane.photo_url+"' alt='foto da pane' style='max-width:200px;border-radius:5px;margin-top:10px;'>" if pane.photo_url else ""}
-                <p><strong>Status:</strong> {pane.status}</p>
-            </div>
+        <div class="card">
+            <h3>Etapas</h3>
+    """
 
-            <div class="card">
-                <h3>Adicionar Etapa</h3>
-                <form method="POST">
-                    <textarea name="step_desc" placeholder="Descreva a etapa realizada" required></textarea>
-                    <button type="submit" name="action" value="add_step" class="btn">Salvar Etapa</button>
-                </form>
-            </div>
+    for step in steps:
+        html += f"<p>🛠 {step.description}<br><small>{step.created_at.strftime('%d/%m/%Y %H:%M')} - {step.created_by}</small></p>"
 
-            <div class="card">
-                <h3>Adicionar Pendência</h3>
-                <form method="POST">
-                    <textarea name="pend_desc" placeholder="Descreva a pendência" required></textarea>
-                    <button type="submit" name="action" value="add_pendency" class="btn" style="background:#f59e0b;">Salvar Pendência</button>
-                </form>
-            </div>
-
-            <div class="card" style="text-align:center;">
-                <form method="POST">
-                    <button type="submit" name="action" value="finalize" class="btn" style="background:#16a34a;">Finalizar Pane</button>
-                </form>
-            </div>
+    html += """
+            <form method="POST">
+                <textarea name="step_desc" placeholder="Descreva a etapa" required></textarea><br>
+                <button type="submit" name="action" value="add_step" class="btn">Salvar Etapa</button>
+            </form>
         </div>
+
+        <div class="card">
+            <h3>Registrar Pendência</h3>
+            <form method="POST">
+                <label>Tipo do Item:</label>
+                <select name="tipo_item" required>
+                    <option>Ferramenta</option>
+                    <option>Material</option>
+                </select><br>
+                <label>Tipo de Aquisição:</label>
+                <select name="tipo_aquisicao" required>
+                    <option>Transferência</option>
+                    <option>Compra</option>
+                </select><br>
+                <input name="descricao" placeholder="Descrição" required><br>
+                <input name="pn" placeholder="P/N"><br>
+                <input name="sms_part_request" placeholder="SMS/Part Request (números e ponto)" pattern="[0-9.]+"><br>
+                <input name="task_card" placeholder="Task Card (números e hífen)" pattern="[0-9-]+"><br>
+                <input name="responsavel" placeholder="Responsável" required><br>
+                <button type="submit" name="action" value="add_pendency" class="btn" style="background:#f59e0b;">Salvar Pendência</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h3>Pendências</h3>
+    """
+
+    for p in pendencias:
+        html += f"<p>📦 {p.tipo_item} - {p.descricao}<br><small>{p.created_at.strftime('%d/%m/%Y %H:%M')} - {p.created_by}</small></p>"
+
+    html += """
+        </div>
+
+        <form method="POST" style="text-align:center;">
+            <button type="submit" name="action" value="finalize" class="btn" style="background:#16a34a;">Finalizar Pane</button>
+        </form>
     </body>
     </html>
     """
@@ -798,3 +697,4 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
