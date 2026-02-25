@@ -654,6 +654,36 @@ def pane_detail(id):
             small {{
                 color: #94a3b8;
             }}
+            .radio-section {{
+                margin-bottom: 20px;
+            }}
+
+            .radio-group {{
+                display: flex;
+                gap: 20px;
+                margin-top: 10px;
+            }}
+
+            .radio-option {{
+                background: #334155;
+                padding: 10px 15px;
+                border-radius: 8px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                cursor: pointer;
+                transition: background 0.3s, transform 0.2s;
+            }}
+
+            .radio-option:hover {{
+                background: #475569;
+                transform: scale(1.03);
+                }}
+
+            .radio-option input[type="radio"] {{
+                accent-color: #38bdf8;
+                transform: scale(1.2);
+            }}
         </style>
     </head>
     <body>
@@ -681,26 +711,44 @@ def pane_detail(id):
         </div>
 
         <div class="card">
-            <h3>Registrar Pendência</h3>
-            <form method="POST">
-                <select name="tipo_item" required>
-                    <option value="">Tipo do Item</option>
-                    <option>Ferramenta</option>
-                    <option>Material</option>
-                </select>
-                <select name="tipo_aquisicao" required>
-                    <option value="">Tipo de Aquisição</option>
-                    <option>Transferência</option>
-                    <option>Compra</option>
-                </select>
-                <input name="descricao" placeholder="Descrição" required>
-                <input name="pn" placeholder="P/N">
-                <input name="sms_part_request" placeholder="SMS/Part Request (números e ponto)" pattern="[0-9.]+">
-                <input name="task_card" placeholder="Task Card (números e hífen)" pattern="[0-9-]+">
-                <input name="responsavel" placeholder="Responsável" required>
-                <button type="submit" name="action" value="add_pendency" class="btn" style="background:#f59e0b;">Salvar Pendência</button>
-            </form>
+    <h3>Registrar Pendência</h3>
+    <form method="POST">
+        <div class="radio-section">
+            <label>Tipo do Item:</label>
+            <div class="radio-group">
+                <label class="radio-option">
+                    <input type="radio" name="tipo_item" value="Ferramenta" required>
+                    <span>🔧 Ferramenta</span>
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="tipo_item" value="Material" required>
+                    <span>📦 Material</span>
+                </label>
+            </div>
         </div>
+
+        <div class="radio-section">
+            <label>Tipo de Aquisição:</label>
+            <div class="radio-group">
+                <label class="radio-option">
+                    <input type="radio" name="tipo_aquisicao" value="Transferência" required>
+                    <span>🔁 Transferência</span>
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="tipo_aquisicao" value="Compra" required>
+                    <span>💰 Compra</span>
+                </label>
+            </div>
+        </div>
+
+        <input name="descricao" placeholder="Descrição" required>
+        <input name="pn" placeholder="P/N">
+        <input name="sms_part_request" placeholder="SMS/Part Request (números e ponto)" pattern="[0-9.]+">
+        <input name="task_card" placeholder="Task Card (números e hífen)" pattern="[0-9-]+">
+        <input name="responsavel" placeholder="Responsável" required>
+        <button type="submit" name="action" value="add_pendency" class="btn" style="background:#f59e0b;">Salvar Pendência</button>
+    </form>
+</div>
 
         <div class="card">
             <h3>Pendências</h3>
@@ -860,6 +908,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
