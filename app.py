@@ -528,13 +528,16 @@ def pane_detail(id):
 
         if action == "add_step":
             step_desc = request.form["step_desc"]
-            if not hasattr(pane, "steps"):
-                pane.steps = []
-            if not hasattr(pane, "pendencias"):
-                pane.pendencias = []
+
             if not pane.description.endswith("--- ETAPAS ---"):
                 pane.description += "\n\n--- ETAPAS ---\n"
             pane.description += f"- {step_desc}\n"
+
+            # Atualiza o status automaticamente conforme o tipo
+            if pane.tipo == "Aviônico":
+                pane.status = "In Progress Avi"
+            elif pane.tipo == "Mecânico":
+                pane.status = "In Progress Mec"
 
         elif action == "add_pendency":
             pend_desc = request.form["pend_desc"]
@@ -542,13 +545,15 @@ def pane_detail(id):
                 pane.description += "\n\n--- PENDÊNCIAS ---\n"
             pane.description += f"- {pend_desc}\n"
 
+            # Quando há pendência, muda o status para "Wait Material"
+            pane.status = "Wait Material"
+
         elif action == "finalize":
             pane.status = "Finalizadas"
 
         db.session.commit()
         return redirect(url_for("pane_detail", id=pane.id))
 
-    # Corrige o problema da barra invertida processando antes
     description_html = pane.description.replace("\n", "<br>")
 
     html = f"""
@@ -798,6 +803,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
