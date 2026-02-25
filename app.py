@@ -326,7 +326,7 @@ def delete_aircraft(id):
 # PAGINA DA AERONAVE
 # ======================
 
-@app.route("/aircraft/<int:id>")
+@app.route("/aircraft/<int:id>", methods=["GET", "POST"])
 @login_required()
 def aircraft_page(id):
     aircraft = Aircraft.query.get_or_404(id)
@@ -736,6 +736,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
