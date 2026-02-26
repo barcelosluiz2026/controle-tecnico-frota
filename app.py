@@ -368,7 +368,7 @@ def aircraft_page(id):
     for pane in panes:
         grouped_panes[pane.status].append(pane)
 
-    html = f"""
+     html = f"""
     <html>
     <head>
         <title>{aircraft.prefix} - {aircraft.model}</title>
@@ -378,7 +378,8 @@ def aircraft_page(id):
                 background-color: #0f172a;
                 color: #f1f5f9;
                 margin: 0;
-                padding: 40px;
+                padding: 20px;
+                overflow-x: hidden;
             }}
 
             h2, h3 {{
@@ -386,7 +387,7 @@ def aircraft_page(id):
             }}
 
             .container {{
-                max-width: 1300px;
+                max-width: 98%;
                 margin: 0 auto;
             }}
 
@@ -441,28 +442,37 @@ def aircraft_page(id):
                 background: linear-gradient(90deg, #1d4ed8, #2563eb);
             }}
 
+            /* ===== KANBAN ===== */
             .kanban {{
                 display: grid;
                 grid-template-columns: repeat(7, 1fr);
-                gap: 15px;
-                overflow-x: auto;
+                gap: 20px;
+                margin-top: 30px;
+                width: 100%;
+                height: calc(100vh - 300px);
             }}
 
             .column {{
                 background: #1e293b;
                 border-radius: 10px;
                 padding: 10px;
-                min-width: 200px;
+                display: flex;
+                flex-direction: column;
+                overflow-y: auto;
                 box-shadow: 0 0 10px rgba(0,0,0,0.2);
             }}
 
             .column h4 {{
                 text-align: center;
                 background: #334155;
-                padding: 8px;
+                padding: 10px;
                 border-radius: 6px;
                 margin-bottom: 10px;
                 color: #38bdf8;
+                font-size: 15px;
+                position: sticky;
+                top: 0;
+                z-index: 1;
             }}
 
             .card {{
@@ -484,6 +494,15 @@ def aircraft_page(id):
             a {{
                 color: #38bdf8;
                 text-decoration: none;
+            }}
+
+            /* Scrollbar personalizada */
+            .column::-webkit-scrollbar {{
+                width: 6px;
+            }}
+            .column::-webkit-scrollbar-thumb {{
+                background-color: #475569;
+                border-radius: 10px;
             }}
         </style>
     </head>
@@ -535,7 +554,6 @@ def aircraft_page(id):
     </html>
     """
     return html
-
 # ======================
 # DETALHES DA PANE
 # ======================
@@ -908,6 +926,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
