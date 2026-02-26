@@ -702,6 +702,59 @@ def pane_detail(id):
                 accent-color: #38bdf8;
                 transform: scale(1.2);
             }}
+            .pane-header {{
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+}}
+
+.pane-photo {{
+    width: 180px;
+    height: 120px;
+    border-radius: 8px;
+    object-fit: cover;
+    cursor: pointer;
+    transition: transform 0.3s;
+}}
+
+.pane-photo:hover {{
+    transform: scale(1.05);
+}}
+
+/* Modal de zoom */
+.modal {{
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    justify-content: center;
+    align-items: center;
+}}
+
+.modal img {{
+    max-width: 90%;
+    max-height: 90%;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+}}
+
+.modal:target {{
+    display: flex;
+}}
+
+.close {{
+    position: absolute;
+    top: 30px;
+    right: 50px;
+    color: white;
+    font-size: 30px;
+    text-decoration: none;
+    font-weight: bold;
+}}
         </style>
     </head>
     <body>
@@ -709,10 +762,15 @@ def pane_detail(id):
         <h2>Pane #{pane.id} - ATA {pane.ata}</h2>
 
         <div class="card">
+    <div class="pane-header">
+        <div style="flex:1;">
             <strong>Descrição:</strong> {pane.description}<br>
             <small>Responsável: {pane.responsavel}</small><br>
             <small>Status atual: {pane.status}</small>
         </div>
+        {"<a href='#zoom'><img src='"+pane.photo_url+"' class='pane-photo' alt='foto da pane'></a>" if pane.photo_url else ""}
+    </div>
+</div>
 
         <div class="card">
             <h3>Etapas</h3>
@@ -926,6 +984,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
