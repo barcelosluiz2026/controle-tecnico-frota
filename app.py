@@ -703,58 +703,58 @@ def pane_detail(id):
                 transform: scale(1.2);
             }}
             .pane-header {{
-    display: flex;
-    align-items: flex-start;
-    gap: 20px;
-}}
+                display: flex;
+                align-items: flex-start;
+                gap: 20px;
+            }}
 
-.pane-photo {{
-    width: 180px;
-    height: 120px;
-    border-radius: 8px;
-    object-fit: cover;
-    cursor: pointer;
-    transition: transform 0.3s;
-}}
+            .pane-photo {{
+                width: 180px;
+                height: 120px;
+                border-radius: 8px;
+                object-fit: cover;
+                cursor: pointer;
+                transition: transform 0.3s;
+            }}
 
-.pane-photo:hover {{
-    transform: scale(1.05);
-}}
+            .pane-photo:hover {{
+                transform: scale(1.05);
+            }}
 
-/* Modal de zoom */
-.modal {{
-    display: none;
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.8);
-    justify-content: center;
-    align-items: center;
-}}
+# /* Modal de zoom */
+            .modal {{
+                display: none;
+                position: fixed;
+                z-index: 1000;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.8);
+                justify-content: center;
+                align-items: center;
+            }}
 
-.modal img {{
-    max-width: 90%;
-    max-height: 90%;
-    border-radius: 10px;
-    box-shadow: 0 0 20px rgba(0,0,0,0.5);
-}}
+            .modal img {{
+                max-width: 90%;
+                max-height: 90%;
+                border-radius: 10px;
+                box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            }}
 
-.modal:target {{
-    display: flex;
-}}
+            .modal:target {{
+                display: flex;
+            }}
 
-.close {{
-    position: absolute;
-    top: 30px;
-    right: 50px;
-    color: white;
-    font-size: 30px;
-    text-decoration: none;
-    font-weight: bold;
-}}
+            .close {{
+                position: absolute;
+                top: 30px;
+                right: 50px;
+                color: white;
+                font-size: 30px;
+                text-decoration: none;
+                font-weight: bold;
+            }}
         </style>
     </head>
     <body>
@@ -984,6 +984,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
