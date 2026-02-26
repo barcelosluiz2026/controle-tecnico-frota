@@ -368,7 +368,7 @@ def aircraft_page(id):
     for pane in panes:
         grouped_panes[pane.status].append(pane)
 
-     html = f"""
+    html = f"""
     <html>
     <head>
         <title>{aircraft.prefix} - {aircraft.model}</title>
@@ -926,6 +926,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
