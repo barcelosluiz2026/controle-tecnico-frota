@@ -771,6 +771,7 @@ def pane_detail(id):
         {"<a href='#zoom'><img src='"+pane.photo_url+"' class='pane-photo' alt='foto da pane'></a>" if pane.photo_url else ""}
     </div>
 </div>
+{"<div id='zoom' class='modal'><a href='#' class='close'>&times;</a><img src='"+pane.photo_url+"' alt='Zoom da foto'></div>" if pane.photo_url else ""}
 
         <div class="card">
             <h3>Etapas</h3>
@@ -984,6 +985,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
