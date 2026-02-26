@@ -768,10 +768,11 @@ def pane_detail(id):
             <small>Responsável: {pane.responsavel}</small><br>
             <small>Status atual: {pane.status}</small>
         </div>
-        {"<a href='#zoom'><img src='"+pane.photo_url+"' class='pane-photo' alt='foto da pane'></a>" if pane.photo_url else ""}
+        {"<img src='"+pane.photo_url+"' class='pane-photo' alt='foto da pane' onclick='openZoom()'>" if pane.photo_url else ""}
     </div>
 </div>
-{"<div id='zoom' class='modal'><a href='#' class='close'>&times;</a><img src='"+pane.photo_url+"' alt='Zoom da foto'></div>" if pane.photo_url else ""}
+
+{"<div id='zoomModal' class='modal'><span class='close' onclick='closeZoom()'>&times;</span><img src='"+pane.photo_url+"' alt='Zoom da foto'></div>" if pane.photo_url else ""}
 
         <div class="card">
             <h3>Etapas</h3>
@@ -840,6 +841,22 @@ def pane_detail(id):
         <form method="POST" style="text-align:center;">
             <button type="submit" name="action" value="finalize" class="btn" style="background:#16a34a;">Finalizar Pane</button>
         </form>
+
+        <script>
+function openZoom() {
+    document.getElementById('zoomModal').style.display = 'flex';
+}
+function closeZoom() {
+    document.getElementById('zoomModal').style.display = 'none';
+}
+window.onclick = function(event) {
+    const modal = document.getElementById('zoomModal');
+    if (event.target === modal) {
+        modal.style.display = 'none';
+    }
+}
+</script>
+
     </body>
     </html>
     """
@@ -985,6 +1002,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
