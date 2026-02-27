@@ -70,6 +70,10 @@ class Step(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     created_by = db.Column(db.String(100))
     pane = db.relationship("Pane", backref="steps")
+    responsavel_info = db.Column(db.String(100), nullable=False)
+    photo1 = db.Column(db.String(500))
+    photo2 = db.Column(db.String(500))
+    photo3 = db.Column(db.String(500))
 
 class Pendencia(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -707,20 +711,30 @@ def pane_detail(id):
     if request.method == "POST":
         action = request.form.get("action")
 
-        # Adicionar etapa
+        # ===============================
+        # ADICIONAR ETAPA
+        # ===============================
         if action == "add_step":
             step = Step(
                 pane_id=pane.id,
                 description=request.form["step_desc"],
+                responsavel_info=request.form["responsavel_info"],
+                photo1=request.form.get("photo1"),
+                photo2=request.form.get("photo2"),
+                photo3=request.form.get("photo3"),
                 created_by=session.get("username")
             )
+
             db.session.add(step)
+
             if pane.tipo == "Aviônico":
                 pane.status = "In Progress Avi"
             elif pane.tipo == "Mecânico":
                 pane.status = "In Progress Mec"
 
-        # Adicionar pendência
+        # ===============================
+        # ADICIONAR PENDÊNCIA
+        # ===============================
         elif action == "add_pendency":
             pend = Pendencia(
                 pane_id=pane.id,
@@ -734,28 +748,42 @@ def pane_detail(id):
                 created_by=session.get("username")
             )
             db.session.add(pend)
+
             if pend.tipo_aquisicao == "Compra":
                 pane.status = "Wait Material"
             elif pend.tipo_aquisicao == "Transferência":
                 pane.status = "Wait Transfer"
 
-        # Finalizar pane
+        # ===============================
+        # FINALIZAR PANE
+        # ===============================
         elif action == "finalize":
             pane.status = "Finalizadas"
 
         db.session.commit()
-        return redirect(url_for("aircraft_page", id=pane.aircraft_id))
+        return redirect(url_for("pane_detail", id=pane.id))
 
-    steps = Step.query.filter_by(pane_id=pane.id).order_by(Step.created_at.desc()).all()
-    pendencias = Pendencia.query.filter_by(pane_id=pane.id).order_by(Pendencia.created_at.desc()).all()
+    # ===============================
+    # LISTAGENS
+    # ===============================
+    steps = Step.query.filter_by(
+        pane_id=pane.id
+    ).order_by(Step.created_at.desc()).all()
 
+    pendencias = Pendencia.query.filter_by(
+        pane_id=pane.id
+    ).order_by(Pendencia.created_at.desc()).all()
+
+    # ===============================
+    # HTML
+    # ===============================
     html = f"""
     <html>
     <head>
         <title>Pane {pane.id}</title>
         <style>
             body {{
-                font-family: 'Segoe UI', Arial, sans-serif;
+                font-family: 'Segoe UI', Arial;
                 background-color: #0f172a;
                 color: #f1f5f9;
                 padding: 40px;
@@ -767,7 +795,7 @@ def pane_detail(id):
                 margin-bottom: 25px;
                 box-shadow: 0 0 10px rgba(0,0,0,0.3);
             }}
-            textarea, input, select {{
+            textarea, input {{
                 background: #0f172a;
                 color: #f1f5f9;
                 border: 1px solid #334155;
@@ -776,11 +804,6 @@ def pane_detail(id):
                 width: 100%;
                 box-sizing: border-box;
                 margin-top: 8px;
-                transition: border-color 0.3s;
-            }}
-            textarea:focus, input:focus, select:focus {{
-                border-color: #38bdf8;
-                outline: none;
             }}
             .btn {{
                 background: linear-gradient(90deg, #2563eb, #1d4ed8);
@@ -790,185 +813,89 @@ def pane_detail(id):
                 border-radius: 6px;
                 cursor: pointer;
                 font-weight: bold;
-                transition: background 0.3s;
-            }}
-            .btn:hover {{
-                background: linear-gradient(90deg, #1d4ed8, #2563eb);
-            }}
-            h3 {{ color: #38bdf8; }}
-            small {{ color: #94a3b8; }}
-            .radio-section {{ margin-bottom: 20px; }}
-            .radio-group {{
-                display: flex;
-                gap: 20px;
                 margin-top: 10px;
             }}
-            .radio-option {{
-                background: #334155;
-                padding: 10px 15px;
-                border-radius: 8px;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                cursor: pointer;
-                transition: background 0.3s, transform 0.2s;
-            }}
-            .radio-option:hover {{
-                background: #475569;
-                transform: scale(1.03);
-            }}
-            .radio-option input[type="radio"] {{
-                accent-color: #38bdf8;
-                transform: scale(1.2);
-            }}
-            .pane-header {{
-                display: flex;
-                align-items: flex-start;
-                gap: 20px;
-            }}
-            .pane-photo {{
-                width: 180px;
-                height: 120px;
-                border-radius: 8px;
-                object-fit: cover;
-                cursor: pointer;
-                transition: transform 0.3s;
-            }}
-            .pane-photo:hover {{
-                transform: scale(1.05);
-            }}
-            .modal {{
-                display: none;
-                position: fixed;
-                z-index: 1000;
-                left: 0;
-                top: 0;
-                width: 100%;
-                height: 100%;
-                background-color: rgba(0, 0, 0, 0.8);
-                justify-content: center;
-                align-items: center;
-            }}
-            .modal img {{
-                max-width: 90%;
-                max-height: 90%;
-                border-radius: 10px;
-                box-shadow: 0 0 20px rgba(0,0,0,0.5);
-            }}
-            .close {{
-                position: absolute;
-                top: 30px;
-                right: 50px;
-                color: white;
-                font-size: 30px;
-                text-decoration: none;
-                font-weight: bold;
-                cursor: pointer;
+            small {{ color: #94a3b8; }}
+            .thumb {{
+                width:90px;
+                height:70px;
+                object-fit:cover;
+                border-radius:6px;
+                cursor:pointer;
             }}
         </style>
     </head>
     <body>
+
         <a href="/aircraft/{pane.aircraft_id}">← Voltar</a>
         <h2>Pane #{pane.id} - ATA {pane.ata}</h2>
 
         <div class="card">
-            <div class="pane-header">
-                <div style="flex:1;">
-                    <strong>Descrição:</strong> {pane.description}<br>
-                    <small>Responsável: {pane.responsavel}</small><br>
-                    <small>Status atual: {pane.status}</small>
-                </div>
-                {"<img src='"+pane.photo_url+"' class='pane-photo' alt='foto da pane' onclick='openZoom()'>" if pane.photo_url else ""}
-            </div>
+            <strong>Descrição:</strong> {pane.description}<br>
+            <small>Responsável: {pane.responsavel}</small><br>
+            <small>Status atual: {pane.status}</small>
         </div>
-
-        {"<div id='zoomModal' class='modal'><span class='close' onclick='closeZoom()'>&times;</span><img src='"+pane.photo_url+"' alt='Zoom da foto'></div>" if pane.photo_url else ""}
 
         <div class="card">
             <h3>Etapas</h3>
     """
 
+    # ===============================
+    # MOSTRAR ETAPAS
+    # ===============================
     for step in steps:
-        html += f"<p>🛠 {step.description}<br><small>{hora_br(step.created_at)} - {step.created_by}</small></p>"
+        html += f"""
+        <div style="background:#334155;padding:15px;border-radius:8px;margin-bottom:15px;">
+            <p>🛠 {step.description}</p>
+            <small>
+                Info: {step.responsavel_info}<br>
+                {hora_br(step.created_at)} - {step.created_by}
+            </small>
 
+            <div style="display:flex; gap:10px; margin-top:10px;">
+        """
+
+        for foto in [step.photo1, step.photo2, step.photo3]:
+            if foto:
+                html += f"""
+                <img src="{foto}" class="thumb"
+                     onclick="window.open('{foto}','_blank')">
+                """
+
+        html += "</div></div>"
+
+    # ===============================
+    # FORM ETAPA
+    # ===============================
     html += """
-            <form method="POST">
-                <textarea name="step_desc" placeholder="Descreva a etapa" required></textarea>
-                <button type="submit" name="action" value="add_step" class="btn">Salvar Etapa</button>
-            </form>
-        </div>
+        <form method="POST">
+            <textarea name="step_desc" placeholder="Descreva a etapa" required></textarea>
 
-        <div class="card">
-            <h3>Registrar Pendência</h3>
-            <form method="POST">
-                <div class="radio-section">
-                    <label>Tipo do Item:</label>
-                    <div class="radio-group">
-                        <label class="radio-option">
-                            <input type="radio" name="tipo_item" value="Ferramenta" required>
-                            <span>🔧 Ferramenta</span>
-                        </label>
-                        <label class="radio-option">
-                            <input type="radio" name="tipo_item" value="Material" required>
-                            <span>📦 Material</span>
-                        </label>
-                    </div>
-                </div>
-                <div class="radio-section">
-                    <label>Tipo de Aquisição:</label>
-                    <div class="radio-group">
-                        <label class="radio-option">
-                            <input type="radio" name="tipo_aquisicao" value="Transferência" required>
-                            <span>🔁 Transferência</span>
-                        </label>
-                        <label class="radio-option">
-                            <input type="radio" name="tipo_aquisicao" value="Compra" required>
-                            <span>💰 Compra</span>
-                        </label>
-                    </div>
-                </div>
-                <input name="descricao" placeholder="Descrição" required>
-                <input name="pn" placeholder="P/N">
-                <input name="sms_part_request" placeholder="SMS/Part Request (números e ponto)" pattern="[0-9.]+">
-                <input name="task_card" placeholder="Task Card (números e hífen)" pattern="[0-9-]+">
-                <input name="responsavel" placeholder="Responsável" required>
-                <button type="submit" name="action" value="add_pendency" class="btn" style="background:#f59e0b;">Salvar Pendência</button>
-            </form>
-        </div>
+            <input name="responsavel_info"
+                   placeholder="Responsável pela informação"
+                   required>
 
-        <div class="card">
-            <h3>Pendências</h3>
-    """
+            <input name="photo1" placeholder="Link Foto 1 (opcional)">
+            <input name="photo2" placeholder="Link Foto 2 (opcional)">
+            <input name="photo3" placeholder="Link Foto 3 (opcional)">
 
-    for p in pendencias:
-        html += f"<p>📦 {p.tipo_item} - {p.descricao}<br><small>{hora_br(p.created_at)} - {p.created_by}</small></p>"
-    html += """
+            <button type="submit" name="action" value="add_step" class="btn">
+                Salvar Etapa
+            </button>
+        </form>
         </div>
 
         <form method="POST" style="text-align:center;">
-            <button type="submit" name="action" value="finalize" class="btn" style="background:#16a34a;">Finalizar Pane</button>
+            <button type="submit" name="action" value="finalize"
+                    class="btn" style="background:#16a34a;">
+                Finalizar Pane
+            </button>
         </form>
-
-        <script>
-        function openZoom() {
-            const modal = document.getElementById('zoomModal');
-            if (modal) modal.style.display = 'flex';
-        }
-        function closeZoom() {
-            const modal = document.getElementById('zoomModal');
-            if (modal) modal.style.display = 'none';
-        }
-        window.addEventListener('click', function(event) {
-            const modal = document.getElementById('zoomModal');
-            if (event.target === modal) {
-                modal.style.display = 'none';
-            }
-        });
-        </script>
 
     </body>
     </html>
     """
+
     return html
 # ======================
 # LOGIN
@@ -1111,6 +1038,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
