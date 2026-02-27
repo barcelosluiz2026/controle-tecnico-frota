@@ -656,31 +656,74 @@ def aircraft_page(id):
             </div>
 
             <h3>Kanban de Panes</h3>
-            <div class="kanban">
+
+# ===== BOTÕES DAS ABAS =====
+html += """
+<div style='display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap;'>
+"""
+
+for status in statuses:
+    quantidade = len(grouped_panes[status])
+    html += f"""
+    <button onclick="abrirAba('{status}')" 
+        style='padding:8px 15px;
+               border:none;
+               border-radius:6px;
+               background:#334155;
+               color:#38bdf8;
+               cursor:pointer;'>
+        {status} ({quantidade})
+    </button>
     """
 
-    for status in statuses:
-        quantidade = len(grouped_panes[status])
-        html += f"<div class='column'><h4>{status} ({quantidade})</h4>"
-        for pane in grouped_panes[status]:
-            html += f"""
-            <a href='/pane/{pane.id}' style='text-decoration:none;color:white;'>
-                <div class='card'>
-                    <strong>ATA {pane.ata}</strong><br>
-                    <p>{pane.description}</p>
-                    <small>Responsável: {pane.responsavel}</small><br>
-                    <small>{hora_br(pane.created_at)} - {pane.created_by}</small>
-                </div>
-            </a>
-            """
-        html += "</div>"
+html += "</div>"
 
-    html += """
+# ===== COLUNAS =====
+html += "<div class='kanban'>"
+
+for status in statuses:
+    quantidade = len(grouped_panes[status])
+
+    html += f"""
+    <div class='column' id='col-{status}' style='display:none;'>
+        <h4>{status} ({quantidade})</h4>
+    """
+
+    for pane in grouped_panes[status]:
+        html += f"""
+        <a href='/pane/{pane.id}' style='text-decoration:none;color:white;'>
+            <div class='card'>
+                <strong>ATA {pane.ata}</strong><br>
+                <p>{pane.description}</p>
+                <small>Responsável: {pane.responsavel}</small><br>
+                <small>{hora_br(pane.created_at)} - {pane.created_by}</small>
             </div>
-        </div>
-    </body>
-    </html>
-    """
+        </a>
+        """
+
+    html += "</div>"
+
+html += "</div>"
+
+# ===== SCRIPT PARA CONTROLAR ABAS =====
+html += """
+<script>
+function abrirAba(status) {
+    const colunas = document.querySelectorAll('.column');
+    colunas.forEach(col => col.style.display = 'none');
+
+    const ativa = document.getElementById('col-' + status);
+    if (ativa) {
+        ativa.style.display = 'flex';
+    }
+}
+
+// Abrir automaticamente na aba "Pane Lançada"
+window.onload = function() {
+    abrirAba('Pane Lançada');
+}
+</script>
+"""
     return html
 # ======================
 # DETALHES DA PANE
@@ -1098,6 +1141,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
