@@ -708,6 +708,20 @@ def aircraft_page(id):
 def pane_detail(id):
     pane = Pane.query.get_or_404(id)
 
+    # ===============================
+    # CONTAR TOTAL DE FOTOS DA PANE
+    # ===============================
+    all_steps = Step.query.filter_by(pane_id=pane.id).all()
+
+    total_fotos = 0
+    for s in all_steps:
+        for f in [s.photo1, s.photo2, s.photo3]:
+            if f:
+                total_fotos += 1
+
+    # ===============================
+    # POST
+    # ===============================
     if request.method == "POST":
         action = request.form.get("action")
 
@@ -715,13 +729,33 @@ def pane_detail(id):
         # ADICIONAR ETAPA
         # ===============================
         if action == "add_step":
+
+            novas_fotos = 0
+            fotos = [
+                request.form.get("photo1"),
+                request.form.get("photo2"),
+                request.form.get("photo3")
+            ]
+
+            for f in fotos:
+                if f:
+                    novas_fotos += 1
+
+            # 🚨 BLOQUEIO SE EXCEDER 4
+            if total_fotos + novas_fotos > 4:
+                return f"""
+                <h2>Limite de 4 fotos por pane atingido.</h2>
+                <p>Esta pane já possui {total_fotos} foto(s).</p>
+                <a href="{url_for('pane_detail', id=pane.id)}">Voltar</a>
+                """
+
             step = Step(
                 pane_id=pane.id,
                 description=request.form["step_desc"],
                 responsavel_info=request.form["responsavel_info"],
-                photo1=request.form.get("photo1"),
-                photo2=request.form.get("photo2"),
-                photo3=request.form.get("photo3"),
+                photo1=fotos[0],
+                photo2=fotos[1],
+                photo3=fotos[2],
                 created_by=session.get("username")
             )
 
@@ -733,29 +767,7 @@ def pane_detail(id):
                 pane.status = "In Progress Mec"
 
         # ===============================
-        # ADICIONAR PENDÊNCIA
-        # ===============================
-        elif action == "add_pendency":
-            pend = Pendencia(
-                pane_id=pane.id,
-                tipo_item=request.form["tipo_item"],
-                tipo_aquisicao=request.form["tipo_aquisicao"],
-                descricao=request.form["descricao"],
-                pn=request.form["pn"],
-                sms_part_request=request.form["sms_part_request"],
-                task_card=request.form["task_card"],
-                responsavel=request.form["responsavel"],
-                created_by=session.get("username")
-            )
-            db.session.add(pend)
-
-            if pend.tipo_aquisicao == "Compra":
-                pane.status = "Wait Material"
-            elif pend.tipo_aquisicao == "Transferência":
-                pane.status = "Wait Transfer"
-
-        # ===============================
-        # FINALIZAR PANE
+        # FINALIZAR
         # ===============================
         elif action == "finalize":
             pane.status = "Finalizadas"
@@ -764,15 +776,11 @@ def pane_detail(id):
         return redirect(url_for("pane_detail", id=pane.id))
 
     # ===============================
-    # LISTAGENS
+    # LISTAR
     # ===============================
     steps = Step.query.filter_by(
         pane_id=pane.id
     ).order_by(Step.created_at.desc()).all()
-
-    pendencias = Pendencia.query.filter_by(
-        pane_id=pane.id
-    ).order_by(Pendencia.created_at.desc()).all()
 
     # ===============================
     # HTML
@@ -815,13 +823,19 @@ def pane_detail(id):
                 font-weight: bold;
                 margin-top: 10px;
             }}
-            small {{ color: #94a3b8; }}
             .thumb {{
                 width:90px;
                 height:70px;
                 object-fit:cover;
                 border-radius:6px;
                 cursor:pointer;
+            }}
+            .contador {{
+                background:#334155;
+                padding:8px 12px;
+                border-radius:6px;
+                display:inline-block;
+                margin-bottom:15px;
             }}
         </style>
     </head>
@@ -830,10 +844,13 @@ def pane_detail(id):
         <a href="/aircraft/{pane.aircraft_id}">← Voltar</a>
         <h2>Pane #{pane.id} - ATA {pane.ata}</h2>
 
+        <div class="contador">
+            📸 Fotos utilizadas: {total_fotos} / 4
+        </div>
+
         <div class="card">
             <strong>Descrição:</strong> {pane.description}<br>
-            <small>Responsável: {pane.responsavel}</small><br>
-            <small>Status atual: {pane.status}</small>
+            <small>Status: {pane.status}</small>
         </div>
 
         <div class="card">
@@ -865,20 +882,31 @@ def pane_detail(id):
         html += "</div></div>"
 
     # ===============================
-    # FORM ETAPA
+    # FORMULÁRIO (só mostra se ainda pode adicionar foto)
     # ===============================
-    html += """
+    html += f"""
         <form method="POST">
             <textarea name="step_desc" placeholder="Descreva a etapa" required></textarea>
 
             <input name="responsavel_info"
                    placeholder="Responsável pela informação"
                    required>
+    """
 
+    if total_fotos < 4:
+        html += """
             <input name="photo1" placeholder="Link Foto 1 (opcional)">
             <input name="photo2" placeholder="Link Foto 2 (opcional)">
             <input name="photo3" placeholder="Link Foto 3 (opcional)">
+        """
+    else:
+        html += """
+            <p style="color:#f87171;">
+            Limite máximo de fotos atingido.
+            </p>
+        """
 
+    html += """
             <button type="submit" name="action" value="add_step" class="btn">
                 Salvar Etapa
             </button>
@@ -1038,6 +1066,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
