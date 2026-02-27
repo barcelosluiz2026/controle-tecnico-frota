@@ -571,14 +571,9 @@ def pane_detail(id):
             step = Step(
                 pane_id=pane.id,
                 description=request.form["step_desc"],
-                created_by=session.get("username"),
-                responsavel=request.form["step_responsavel"],
-                photo1_url=request.form.get("photo1_url"),
-                photo2_url=request.form.get("photo2_url"),
-                photo3_url=request.form.get("photo3_url")
+                created_by=session.get("username")
             )
             db.session.add(step)
-
             if pane.tipo == "Aviônico":
                 pane.status = "In Progress Avi"
             elif pane.tipo == "Mecânico":
@@ -598,7 +593,6 @@ def pane_detail(id):
                 created_by=session.get("username")
             )
             db.session.add(pend)
-
             if pend.tipo_aquisicao == "Compra":
                 pane.status = "Wait Material"
             elif pend.tipo_aquisicao == "Transferência":
@@ -611,9 +605,8 @@ def pane_detail(id):
         db.session.commit()
         return redirect(url_for("aircraft_page", id=pane.aircraft_id))
 
-    # Consulta etapas e pendências (ordem decrescente)
-    steps = Step.query.filter_by(pane_id=pane.id).order_by(Step.created_at.desc()).all()
-    pendencias = Pendencia.query.filter_by(pane_id=pane.id).order_by(Pendencia.created_at.desc()).all()
+    steps = Step.query.filter_by(pane_id=pane.id).order_by(Step.created_at.asc()).all()
+    pendencias = Pendencia.query.filter_by(pane_id=pane.id).order_by(Pendencia.created_at.asc()).all()
 
     html = f"""
     <html>
@@ -663,6 +656,30 @@ def pane_detail(id):
             }}
             h3 {{ color: #38bdf8; }}
             small {{ color: #94a3b8; }}
+            .radio-section {{ margin-bottom: 20px; }}
+            .radio-group {{
+                display: flex;
+                gap: 20px;
+                margin-top: 10px;
+            }}
+            .radio-option {{
+                background: #334155;
+                padding: 10px 15px;
+                border-radius: 8px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                cursor: pointer;
+                transition: background 0.3s, transform 0.2s;
+            }}
+            .radio-option:hover {{
+                background: #475569;
+                transform: scale(1.03);
+            }}
+            .radio-option input[type="radio"] {{
+                accent-color: #38bdf8;
+                transform: scale(1.2);
+            }}
             .pane-header {{
                 display: flex;
                 align-items: flex-start;
@@ -731,18 +748,11 @@ def pane_detail(id):
     """
 
     for step in steps:
-        html += f"<p>🛠 {step.description}<br><small>{step.created_at.strftime('%d/%m/%Y %H:%M')} - {step.created_by} ({step.responsavel})</small></p>"
-        for photo in [step.photo1_url, step.photo2_url, step.photo3_url]:
-            if photo:
-                html += f"<img src='{photo}' style='max-width:150px;border-radius:6px;margin:5px;'>"
+        html += f"<p>🛠 {step.description}<br><small>{step.created_at.strftime('%d/%m/%Y %H:%M')} - {step.created_by}</small></p>"
 
     html += """
             <form method="POST">
                 <textarea name="step_desc" placeholder="Descreva a etapa" required></textarea>
-                <input name="step_responsavel" placeholder="Responsável pela informação" required>
-                <input name="photo1_url" placeholder="URL da Foto 1 (opcional)">
-                <input name="photo2_url" placeholder="URL da Foto 2 (opcional)">
-                <input name="photo3_url" placeholder="URL da Foto 3 (opcional)">
                 <button type="submit" name="action" value="add_step" class="btn">Salvar Etapa</button>
             </form>
         </div>
@@ -790,7 +800,7 @@ def pane_detail(id):
     """
 
     for p in pendencias:
-        html += f"<p>📦 {p.tipo_item} - {p.descricao}<br><small>{p.created_at.strftime('%d/%m/%Y %H:%M')} - {p.created_by} ({p.responsavel})</small></p>"
+        html += f"<p>📦 {p.tipo_item} - {p.descricao}<br><small>{p.created_at.strftime('%d/%m/%Y %H:%M')} - {p.created_by}</small></p>"
 
     html += """
         </div>
@@ -800,20 +810,20 @@ def pane_detail(id):
         </form>
 
         <script>
-        function openZoom() {{
+        function openZoom() {
             const modal = document.getElementById('zoomModal');
             if (modal) modal.style.display = 'flex';
-        }}
-        function closeZoom() {{
+        }
+        function closeZoom() {
             const modal = document.getElementById('zoomModal');
             if (modal) modal.style.display = 'none';
-        }}
-        window.addEventListener('click', function(event) {{
+        }
+        window.addEventListener('click', function(event) {
             const modal = document.getElementById('zoomModal');
-            if (event.target === modal) {{
+            if (event.target === modal) {
                 modal.style.display = 'none';
-            }}
-        }});
+            }
+        });
         </script>
 
     </body>
@@ -961,6 +971,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
