@@ -759,7 +759,7 @@ def pane_detail(id):
         # -------- NOVA PENDÊNCIA --------
         elif action == "add_pendencia":
 
-    pend = Pendencia(
+        pend = Pendencia(
         pane_id=pane.id,
         tipo_item=request.form["tipo_item"],
         tipo_aquisicao=request.form["tipo_aquisicao"],
@@ -1184,6 +1184,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
