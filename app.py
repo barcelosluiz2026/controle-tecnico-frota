@@ -574,8 +574,6 @@ def pane_detail(id):
                 created_by=session.get("username")
             )
             db.session.add(step)
-
-            # Atualiza status automaticamente
             if pane.tipo == "Aviônico":
                 pane.status = "In Progress Avi"
             elif pane.tipo == "Mecânico":
@@ -595,8 +593,6 @@ def pane_detail(id):
                 created_by=session.get("username")
             )
             db.session.add(pend)
-
-            # Atualiza status automaticamente
             if pend.tipo_aquisicao == "Compra":
                 pane.status = "Wait Material"
             elif pend.tipo_aquisicao == "Transferência":
@@ -609,7 +605,6 @@ def pane_detail(id):
         db.session.commit()
         return redirect(url_for("aircraft_page", id=pane.aircraft_id))
 
-    # Consulta etapas e pendências
     steps = Step.query.filter_by(pane_id=pane.id).order_by(Step.created_at.asc()).all()
     pendencias = Pendencia.query.filter_by(pane_id=pane.id).order_by(Pendencia.created_at.asc()).all()
 
@@ -624,7 +619,6 @@ def pane_detail(id):
                 color: #f1f5f9;
                 padding: 40px;
             }}
-
             .card {{
                 background: #1e293b;
                 padding: 25px;
@@ -632,7 +626,6 @@ def pane_detail(id):
                 margin-bottom: 25px;
                 box-shadow: 0 0 10px rgba(0,0,0,0.3);
             }}
-
             textarea, input, select {{
                 background: #0f172a;
                 color: #f1f5f9;
@@ -644,12 +637,10 @@ def pane_detail(id):
                 margin-top: 8px;
                 transition: border-color 0.3s;
             }}
-
             textarea:focus, input:focus, select:focus {{
                 border-color: #38bdf8;
                 outline: none;
             }}
-
             .btn {{
                 background: linear-gradient(90deg, #2563eb, #1d4ed8);
                 color: white;
@@ -660,28 +651,17 @@ def pane_detail(id):
                 font-weight: bold;
                 transition: background 0.3s;
             }}
-
             .btn:hover {{
                 background: linear-gradient(90deg, #1d4ed8, #2563eb);
             }}
-
-            h3 {{
-                color: #38bdf8;
-            }}
-
-            small {{
-                color: #94a3b8;
-            }}
-            .radio-section {{
-                margin-bottom: 20px;
-            }}
-
+            h3 {{ color: #38bdf8; }}
+            small {{ color: #94a3b8; }}
+            .radio-section {{ margin-bottom: 20px; }}
             .radio-group {{
                 display: flex;
                 gap: 20px;
                 margin-top: 10px;
             }}
-
             .radio-option {{
                 background: #334155;
                 padding: 10px 15px;
@@ -692,12 +672,10 @@ def pane_detail(id):
                 cursor: pointer;
                 transition: background 0.3s, transform 0.2s;
             }}
-
             .radio-option:hover {{
                 background: #475569;
                 transform: scale(1.03);
-                }}
-
+            }}
             .radio-option input[type="radio"] {{
                 accent-color: #38bdf8;
                 transform: scale(1.2);
@@ -707,7 +685,6 @@ def pane_detail(id):
                 align-items: flex-start;
                 gap: 20px;
             }}
-
             .pane-photo {{
                 width: 180px;
                 height: 120px;
@@ -716,12 +693,9 @@ def pane_detail(id):
                 cursor: pointer;
                 transition: transform 0.3s;
             }}
-
             .pane-photo:hover {{
                 transform: scale(1.05);
             }}
-
-# /* Modal de zoom */
             .modal {{
                 display: none;
                 position: fixed;
@@ -734,18 +708,12 @@ def pane_detail(id):
                 justify-content: center;
                 align-items: center;
             }}
-
             .modal img {{
                 max-width: 90%;
                 max-height: 90%;
                 border-radius: 10px;
                 box-shadow: 0 0 20px rgba(0,0,0,0.5);
             }}
-
-            .modal:target {{
-                display: flex;
-            }}
-
             .close {{
                 position: absolute;
                 top: 30px;
@@ -754,6 +722,7 @@ def pane_detail(id):
                 font-size: 30px;
                 text-decoration: none;
                 font-weight: bold;
+                cursor: pointer;
             }}
         </style>
     </head>
@@ -762,17 +731,17 @@ def pane_detail(id):
         <h2>Pane #{pane.id} - ATA {pane.ata}</h2>
 
         <div class="card">
-    <div class="pane-header">
-        <div style="flex:1;">
-            <strong>Descrição:</strong> {pane.description}<br>
-            <small>Responsável: {pane.responsavel}</small><br>
-            <small>Status atual: {pane.status}</small>
+            <div class="pane-header">
+                <div style="flex:1;">
+                    <strong>Descrição:</strong> {pane.description}<br>
+                    <small>Responsável: {pane.responsavel}</small><br>
+                    <small>Status atual: {pane.status}</small>
+                </div>
+                {"<img src='"+pane.photo_url+"' class='pane-photo' alt='foto da pane' onclick='openZoom()'>" if pane.photo_url else ""}
+            </div>
         </div>
-        {"<img src='"+pane.photo_url+"' class='pane-photo' alt='foto da pane' onclick='openZoom()'>" if pane.photo_url else ""}
-    </div>
-</div>
 
-{"<div id='zoomModal' class='modal'><span class='close' onclick='closeZoom()'>&times;</span><img src='"+pane.photo_url+"' alt='Zoom da foto'></div>" if pane.photo_url else ""}
+        {"<div id='zoomModal' class='modal'><span class='close' onclick='closeZoom()'>&times;</span><img src='"+pane.photo_url+"' alt='Zoom da foto'></div>" if pane.photo_url else ""}
 
         <div class="card">
             <h3>Etapas</h3>
@@ -789,44 +758,42 @@ def pane_detail(id):
         </div>
 
         <div class="card">
-    <h3>Registrar Pendência</h3>
-    <form method="POST">
-        <div class="radio-section">
-            <label>Tipo do Item:</label>
-            <div class="radio-group">
-                <label class="radio-option">
-                    <input type="radio" name="tipo_item" value="Ferramenta" required>
-                    <span>🔧 Ferramenta</span>
-                </label>
-                <label class="radio-option">
-                    <input type="radio" name="tipo_item" value="Material" required>
-                    <span>📦 Material</span>
-                </label>
-            </div>
+            <h3>Registrar Pendência</h3>
+            <form method="POST">
+                <div class="radio-section">
+                    <label>Tipo do Item:</label>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="tipo_item" value="Ferramenta" required>
+                            <span>🔧 Ferramenta</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="tipo_item" value="Material" required>
+                            <span>📦 Material</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="radio-section">
+                    <label>Tipo de Aquisição:</label>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="tipo_aquisicao" value="Transferência" required>
+                            <span>🔁 Transferência</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="tipo_aquisicao" value="Compra" required>
+                            <span>💰 Compra</span>
+                        </label>
+                    </div>
+                </div>
+                <input name="descricao" placeholder="Descrição" required>
+                <input name="pn" placeholder="P/N">
+                <input name="sms_part_request" placeholder="SMS/Part Request (números e ponto)" pattern="[0-9.]+">
+                <input name="task_card" placeholder="Task Card (números e hífen)" pattern="[0-9-]+">
+                <input name="responsavel" placeholder="Responsável" required>
+                <button type="submit" name="action" value="add_pendency" class="btn" style="background:#f59e0b;">Salvar Pendência</button>
+            </form>
         </div>
-
-        <div class="radio-section">
-            <label>Tipo de Aquisição:</label>
-            <div class="radio-group">
-                <label class="radio-option">
-                    <input type="radio" name="tipo_aquisicao" value="Transferência" required>
-                    <span>🔁 Transferência</span>
-                </label>
-                <label class="radio-option">
-                    <input type="radio" name="tipo_aquisicao" value="Compra" required>
-                    <span>💰 Compra</span>
-                </label>
-            </div>
-        </div>
-
-        <input name="descricao" placeholder="Descrição" required>
-        <input name="pn" placeholder="P/N">
-        <input name="sms_part_request" placeholder="SMS/Part Request (números e ponto)" pattern="[0-9.]+">
-        <input name="task_card" placeholder="Task Card (números e hífen)" pattern="[0-9-]+">
-        <input name="responsavel" placeholder="Responsável" required>
-        <button type="submit" name="action" value="add_pendency" class="btn" style="background:#f59e0b;">Salvar Pendência</button>
-    </form>
-</div>
 
         <div class="card">
             <h3>Pendências</h3>
@@ -843,19 +810,21 @@ def pane_detail(id):
         </form>
 
         <script>
-function openZoom() {
-    document.getElementById('zoomModal').style.display = 'flex';
-}
-function closeZoom() {
-    document.getElementById('zoomModal').style.display = 'none';
-}
-window.onclick = function(event) {
-    const modal = document.getElementById('zoomModal');
-    if (event.target === modal) {
-        modal.style.display = 'none';
-    }
-}
-</script>
+        function openZoom() {
+            const modal = document.getElementById('zoomModal');
+            if (modal) modal.style.display = 'flex';
+        }
+        function closeZoom() {
+            const modal = document.getElementById('zoomModal');
+            if (modal) modal.style.display = 'none';
+        }
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('zoomModal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+        </script>
 
     </body>
     </html>
@@ -1002,6 +971,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
