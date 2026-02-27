@@ -567,17 +567,41 @@ def pane_detail(id):
         action = request.form.get("action")
 
         # Adicionar etapa
-        if action == "add_step":
-            step = Step(
-                pane_id=pane.id,
-                description=request.form["step_desc"],
-                created_by=session.get("username")
-            )
-            db.session.add(step)
-            if pane.tipo == "Aviônico":
-                pane.status = "In Progress Avi"
-            elif pane.tipo == "Mecânico":
-                pane.status = "In Progress Mec"
+if action == "add_step":
+
+    responsavel_info = request.form.get("responsavel_info")
+
+    # Upload das fotos (opcional)
+    foto1 = request.files.get("foto1")
+    foto2 = request.files.get("foto2")
+    foto3 = request.files.get("foto3")
+
+    # Aqui você pode salvar as fotos se quiser (exemplo simples salvando na pasta static/uploads)
+    photo_urls = []
+
+    for foto in [foto1, foto2, foto3]:
+        if foto and foto.filename != "":
+            filename = secure_filename(foto.filename)
+            caminho = os.path.join("static/uploads", filename)
+            foto.save(caminho)
+            photo_urls.append("/" + caminho)
+
+    step = Step(
+        pane_id=pane.id,
+        description=request.form["step_desc"],
+        created_by=session.get("username"),
+        responsavel_info=responsavel_info,
+        foto1=photo_urls[0] if len(photo_urls) > 0 else None,
+        foto2=photo_urls[1] if len(photo_urls) > 1 else None,
+        foto3=photo_urls[2] if len(photo_urls) > 2 else None
+    )
+
+    db.session.add(step)
+
+    if pane.tipo == "Aviônico":
+        pane.status = "In Progress Avi"
+    elif pane.tipo == "Mecânico":
+        pane.status = "In Progress Mec"
 
         # Adicionar pendência
         elif action == "add_pendency":
@@ -971,6 +995,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
