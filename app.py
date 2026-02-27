@@ -104,34 +104,32 @@ def login_required(role=None):
 # HOME
 # ======================
 
-from sqlalchemy import func
-
 @app.route("/")
 @login_required()
 def home():
 
-    # 🔹 TOTAL DE AERONAVES
+    # ======================
+    # DADOS DASHBOARD
+    # ======================
+
     total_aeronaves = Aircraft.query.count()
 
-    # 🔹 AERONAVES POR MODELO
     aeronaves_por_modelo = (
         db.session.query(
-            Aircraft.modelo,
+            Aircraft.model,
             func.count(Aircraft.id)
         )
-        .group_by(Aircraft.modelo)
-        .order_by(Aircraft.modelo)
+        .group_by(Aircraft.model)
+        .order_by(Aircraft.model)
         .all()
     )
 
-    # 🔹 PANES EM ABERTO (todas que não estão Finalizadas)
     total_panes_abertas = (
         Pane.query
         .filter(Pane.status != "Finalizadas")
         .count()
     )
 
-    # 🔹 PANES MECÂNICO EM ABERTO
     panes_mecanico = (
         Pane.query
         .filter(
@@ -141,7 +139,6 @@ def home():
         .count()
     )
 
-    # 🔹 PANES AVIÔNICO EM ABERTO
     panes_avionico = (
         Pane.query
         .filter(
@@ -151,67 +148,174 @@ def home():
         .count()
     )
 
-    return render_template(
-        "home.html",
-        total_aeronaves=total_aeronaves,
-        aeronaves_por_modelo=aeronaves_por_modelo,
-        total_panes_abertas=total_panes_abertas,
-        panes_mecanico=panes_mecanico,
-        panes_avionico=panes_avionico
-    )
-# ======================
-# CADASTRAR AERONAVE
-# ======================
+    # ======================
+    # LISTAGEM DE AERONAVES
+    # ======================
 
-@app.route("/add_aircraft", methods=["GET", "POST"])
-@login_required("Admin")
-def add_aircraft():
+    aircrafts = Aircraft.query.order_by(Aircraft.model, Aircraft.prefix).all()
 
-    if request.method == "POST":
+    grouped = {}
+    for ac in aircrafts:
+        grouped.setdefault(ac.model, []).append(ac)
 
-        model = request.form["model"]
-        prefix = request.form["prefix"].upper()
-        photo_url = request.form["photo_url"]
-        
-        if not re.match(r"^[A-Z]{2}-[A-Z]{3}$", prefix):
-            return "Prefixo inválido. Use formato PR-ABC"
+    html = f"""
+    <html>
+    <head>
+        <title>Controle Técnico</title>
+        <style>
+            body {{
+                font-family: Arial;
+                background-color: #0f172a;
+                color: white;
+                padding: 20px;
+            }}
 
-        if Aircraft.query.filter_by(prefix=prefix).first():
-            return "Aeronave já cadastrada"
+            .dashboard {{
+                background:#1e293b;
+                padding:20px;
+                border-radius:10px;
+                margin-bottom:40px;
+            }}
 
-        new_aircraft = Aircraft(
-            model=model,
-            prefix=prefix,
-            photo_url=photo_url,
-           
-        )
+            .dashboard-cards {{
+                display:flex;
+                gap:20px;
+                flex-wrap:wrap;
+                margin-bottom:20px;
+            }}
 
-        db.session.add(new_aircraft)
-        db.session.commit()
+            .dash-card {{
+                background:#334155;
+                padding:15px;
+                border-radius:8px;
+                flex:1;
+                min-width:200px;
+                text-align:center;
+            }}
 
-        return redirect(url_for("home"))
+            .dash-card h3 {{
+                margin:0;
+                font-size:14px;
+                color:#38bdf8;
+            }}
 
-    return """
-    <h2>Cadastrar Helicóptero 🚁</h2>
-    <form method="POST">
-        Modelo:
-        <select name="model">
-            <option>AW139</option>
-            <option>EC175</option>
-            <option>S-92A</option>
-            <option>H160</option>
-            <option>EC225</option>
-        </select><br><br>
+            .dash-card p {{
+                font-size:26px;
+                font-weight:bold;
+                margin:5px 0 0 0;
+            }}
 
-        Prefixo:
-        <input name="prefix" placeholder="PR-ABC"><br><br>
+            .model-title {{
+                margin-top: 40px;
+                font-size: 24px;
+                border-bottom: 2px solid #1e293b;
+                padding-bottom: 10px;
+            }}
 
-        Link da Foto:
-        <input name="photo_url" placeholder="https://..."><br><br>
+            .grid {{
+                display: grid;
+                grid-template-columns: repeat(7, 1fr);
+                gap: 15px;
+                margin-top: 20px;
+            }}
 
-        <button type="submit">Cadastrar</button>
-    </form>
+            .card {{
+                background: #1e293b;
+                padding: 10px;
+                border-radius: 8px;
+                text-align: center;
+            }}
+
+            .card img {{
+                width: 100%;
+                height: 100px;
+                object-fit: cover;
+                border-radius: 6px;
+            }}
+
+            .prefix {{
+                font-weight: bold;
+                margin-top: 5px;
+            }}
+
+            .top-bar {{
+                display:flex;
+                justify-content: space-between;
+            }}
+
+            a {{
+                color: #38bdf8;
+                text-decoration: none;
+            }}
+        </style>
+    </head>
+    <body>
+
+        <div class="top-bar">
+            <h1>🚁 Controle Técnico de Frota</h1>
+            <div>
+                <a href="/add_aircraft">Cadastrar Helicóptero</a> |
+                <a href="/logout">Sair</a>
+            </div>
+        </div>
+
+        <div class="dashboard">
+            <h2>📊 Dashboard Operacional</h2>
+
+            <div class="dashboard-cards">
+                <div class="dash-card">
+                    <h3>Total de Aeronaves</h3>
+                    <p>{total_aeronaves}</p>
+                </div>
+
+                <div class="dash-card">
+                    <h3>Panes em Aberto</h3>
+                    <p>{total_panes_abertas}</p>
+                </div>
+
+                <div class="dash-card">
+                    <h3>Mecânico</h3>
+                    <p>{panes_mecanico}</p>
+                </div>
+
+                <div class="dash-card">
+                    <h3>Aviônico</h3>
+                    <p>{panes_avionico}</p>
+                </div>
+            </div>
+
+            <h3>Aeronaves por Modelo</h3>
     """
+
+    for modelo, quantidade in aeronaves_por_modelo:
+        html += f"<p>{modelo}: <strong>{quantidade}</strong></p>"
+
+    html += "</div>"
+
+    # ======================
+    # GRID DE AERONAVES
+    # ======================
+
+    for model, items in grouped.items():
+        html += f"<div class='model-title'>🚁 {model}</div>"
+        html += "<div class='grid'>"
+        for ac in items:
+            html += f"""
+            <div class='card'>
+                <img src='{ac.photo_url}' alt='foto'>
+                <div class='prefix'>
+                    <a href='/aircraft/{ac.id}' style='color:white;text-decoration:none;'>
+                        {ac.prefix}
+                    </a>
+                </div>
+                {"<a href='/delete_aircraft/" + str(ac.id) + "' style='color:#f87171;font-size:12px;'>Excluir</a>" if session.get("role") == "Admin" else ""}
+            </div>
+            """
+        html += "</div>"
+
+    html += "</body></html>"
+
+    return html
 
 # ======================
 # EXCLUIR AERONAVE
@@ -937,6 +1041,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
