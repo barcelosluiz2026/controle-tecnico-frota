@@ -6,6 +6,7 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from collections import defaultdict
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
@@ -57,6 +58,10 @@ class Step(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     pane_id = db.Column(db.Integer, db.ForeignKey("pane.id"), nullable=False)
     description = db.Column(db.Text, nullable=False)
+    responsavel_info = db.Column(db.String(100), nullable=False)
+    foto1 = db.Column(db.String(500))
+    foto2 = db.Column(db.String(500))
+    foto3 = db.Column(db.String(500))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     created_by = db.Column(db.String(100))
     pane = db.relationship("Pane", backref="steps")
@@ -568,32 +573,14 @@ def pane_detail(id):
 
         # Adicionar etapa
 if action == "add_step":
-
-    responsavel_info = request.form.get("responsavel_info")
-
-    # Upload das fotos (opcional)
-    foto1 = request.files.get("foto1")
-    foto2 = request.files.get("foto2")
-    foto3 = request.files.get("foto3")
-
-    # Aqui você pode salvar as fotos se quiser (exemplo simples salvando na pasta static/uploads)
-    photo_urls = []
-
-    for foto in [foto1, foto2, foto3]:
-        if foto and foto.filename != "":
-            filename = secure_filename(foto.filename)
-            caminho = os.path.join("static/uploads", filename)
-            foto.save(caminho)
-            photo_urls.append("/" + caminho)
-
     step = Step(
         pane_id=pane.id,
         description=request.form["step_desc"],
-        created_by=session.get("username"),
-        responsavel_info=responsavel_info,
-        foto1=photo_urls[0] if len(photo_urls) > 0 else None,
-        foto2=photo_urls[1] if len(photo_urls) > 1 else None,
-        foto3=photo_urls[2] if len(photo_urls) > 2 else None
+        responsavel_info=request.form["responsavel_info"],
+        foto1=request.form.get("foto1"),
+        foto2=request.form.get("foto2"),
+        foto3=request.form.get("foto3"),
+        created_by=session.get("username")
     )
 
     db.session.add(step)
@@ -772,13 +759,30 @@ if action == "add_step":
     """
 
     for step in steps:
-        html += f"<p>🛠 {step.description}<br><small>{step.created_at.strftime('%d/%m/%Y %H:%M')} - {step.created_by}</small></p>"
+    html += f"""
+    <p>
+        🛠 {step.description}<br>
+        <small>Responsável pela informação: {step.responsavel_info}</small><br>
+        <small>{step.created_at.strftime('%d/%m/%Y %H:%M')} - {step.created_by}</small>
+    </p>
+    """
+
+    for foto in [step.foto1, step.foto2, step.foto3]:
+        if foto:
+            html += f"<img src='{foto}' class='pane-photo' style='margin-bottom:10px;'>"
 
     html += """
             <form method="POST">
-                <textarea name="step_desc" placeholder="Descreva a etapa" required></textarea>
-                <button type="submit" name="action" value="add_step" class="btn">Salvar Etapa</button>
-            </form>
+    <textarea name="step_desc" placeholder="Descreva a etapa" required></textarea>
+
+    <input name="responsavel_info" placeholder="Responsável pela informação" required>
+
+    <input name="foto1" placeholder="URL da Foto 1 (opcional)">
+    <input name="foto2" placeholder="URL da Foto 2 (opcional)">
+    <input name="foto3" placeholder="URL da Foto 3 (opcional)">
+
+    <button type="submit" name="action" value="add_step" class="btn">Salvar Etapa</button>
+</form>
         </div>
 
         <div class="card">
@@ -995,6 +999,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
