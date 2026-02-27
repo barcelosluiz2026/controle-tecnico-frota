@@ -759,17 +759,17 @@ def pane_detail(id):
         # -------- NOVA PENDÊNCIA --------
         elif action == "add_pendencia":
 
-        pend = Pendencia(
-        pane_id=pane.id,
-        tipo_item=request.form["tipo_item"],
-        tipo_aquisicao=request.form["tipo_aquisicao"],
-        descricao=request.form["descricao"],
-        pn=request.form.get("pn"),
-        sms_part_request=request.form.get("sms_part_request"),
-        task_card=request.form.get("task_card"),
-        responsavel=request.form["responsavel"],
-        created_by=session.get("username")
-    )
+            pend = Pendencia(
+                pane_id=pane.id,
+                tipo_item=request.form["tipo_item"],
+                tipo_aquisicao=request.form["tipo_aquisicao"],
+                descricao=request.form["descricao"],
+                pn=request.form.get("pn"),
+                sms_part_request=request.form.get("sms_part_request"),
+                task_card=request.form.get("task_card"),
+                responsavel=request.form["responsavel"],
+                created_by=session.get("username")
+                )
 
     db.session.add(pend)
 
@@ -1184,6 +1184,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
