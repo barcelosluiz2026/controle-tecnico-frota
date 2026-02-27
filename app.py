@@ -660,7 +660,8 @@ def aircraft_page(id):
     """
 
     for status in statuses:
-        html += f"<div class='column'><h4>{status}</h4>"
+        quantidade = len(grouped_panes[status])
+        html += f"<div class='column'><h4>{status} ({quantidade})</h4>"
         for pane in grouped_panes[status]:
             html += f"""
             <a href='/pane/{pane.id}' style='text-decoration:none;color:white;'>
@@ -1097,6 +1098,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
