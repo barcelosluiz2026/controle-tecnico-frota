@@ -706,6 +706,7 @@ def aircraft_page(id):
 @app.route("/pane/<int:id>", methods=["GET", "POST"])
 @login_required()
 def pane_detail(id):
+
     pane = Pane.query.get_or_404(id)
 
     # =============================
@@ -723,11 +724,10 @@ def pane_detail(id):
     # POST
     # =============================
     if request.method == "POST":
+
         action = request.form.get("action")
 
-        # ---------------------------
-        # NOVA ETAPA
-        # ---------------------------
+        # -------- NOVA ETAPA --------
         if action == "add_step":
 
             fotos = [
@@ -756,22 +756,24 @@ def pane_detail(id):
 
             db.session.add(step)
 
-        # ---------------------------
-        # NOVA PENDÊNCIA
-        # ---------------------------
+        # -------- NOVA PENDÊNCIA --------
         elif action == "add_pendencia":
 
             pend = Pendencia(
                 pane_id=pane.id,
-                descricao=request.form["pend_desc"],
+                tipo_item=request.form["tipo_item"],
+                tipo_aquisicao=request.form["tipo_aquisicao"],
+                descricao=request.form["descricao"],
+                pn=request.form.get("pn"),
+                sms_part_request=request.form.get("sms_part_request"),
+                task_card=request.form.get("task_card"),
+                responsavel=request.form["responsavel"],
                 created_by=session.get("username")
             )
 
             db.session.add(pend)
 
-        # ---------------------------
-        # FINALIZAR
-        # ---------------------------
+        # -------- FINALIZAR --------
         elif action == "finalize":
             pane.status = "Finalizadas"
 
@@ -820,6 +822,13 @@ def pane_detail(id):
         border-radius:6px;
     }}
 
+    .radio-group {{
+        display:flex;
+        gap:20px;
+        margin-top:8px;
+        margin-bottom:10px;
+    }}
+
     .btn {{
         background:#2563eb;
         color:white;
@@ -846,7 +855,6 @@ def pane_detail(id):
         margin-bottom:20px;
     }}
 
-    /* MODAL */
     .modal {{
         display:none;
         position:fixed;
@@ -940,29 +948,59 @@ def pane_detail(id):
     </form>
     </div>
 
-    <!-- PENDÊNCIAS -->
+    <!-- REGISTRAR PENDÊNCIA -->
+    <div class="card">
+        <h3>Registrar Pendência</h3>
+        <form method="POST">
+
+            <label>Tipo do Item:</label>
+            <div class="radio-group">
+                <label><input type="radio" name="tipo_item" value="Ferramenta" required> 🔧 Ferramenta</label>
+                <label><input type="radio" name="tipo_item" value="Material" required> 📦 Material</label>
+            </div>
+
+            <label>Tipo de Aquisição:</label>
+            <div class="radio-group">
+                <label><input type="radio" name="tipo_aquisicao" value="Transferência" required> 🔁 Transferência</label>
+                <label><input type="radio" name="tipo_aquisicao" value="Compra" required> 💰 Compra</label>
+            </div>
+
+            <input name="descricao" placeholder="Descrição" required>
+            <input name="pn" placeholder="P/N">
+            <input name="sms_part_request" placeholder="SMS/Part Request" pattern="[0-9.]+">
+            <input name="task_card" placeholder="Task Card" pattern="[0-9-]+">
+            <input name="responsavel" placeholder="Responsável" required>
+
+            <button type="submit" name="action" value="add_pendencia"
+                class="btn" style="background:#f59e0b;">
+                Salvar Pendência
+            </button>
+        </form>
+    </div>
+
+    <!-- LISTAGEM PENDÊNCIAS -->
     <div class="card">
         <h3>Pendências</h3>
     """
 
     for p in pendencias:
         html += f"""
-        <div style="background:#334155;padding:10px;border-radius:6px;margin-bottom:8px;">
-            📦 {p.descricao}<br>
-            <small>{hora_br(p.created_at)} - {p.created_by}</small>
+        <div style="background:#334155;padding:12px;border-radius:8px;margin-bottom:10px;">
+            <strong>{p.tipo_item}</strong> - {p.descricao}<br>
+            <small>
+                Aquisição: {p.tipo_aquisicao}<br>
+                P/N: {p.pn or '-'}<br>
+                SMS/Part: {p.sms_part_request or '-'}<br>
+                Task Card: {p.task_card or '-'}<br>
+                Responsável: {p.responsavel}<br>
+                {hora_br(p.created_at)} - {p.created_by}
+            </small>
         </div>
         """
 
     html += """
-        <form method="POST">
-            <textarea name="pend_desc" placeholder="Nova Pendência" required></textarea>
-            <button type="submit" name="action" value="add_pendencia" class="btn">
-                Adicionar Pendência
-            </button>
-        </form>
     </div>
 
-    <!-- FINALIZAR -->
     <form method="POST" style="text-align:center;">
         <button type="submit" name="action" value="finalize"
                 class="btn" style="background:#16a34a;">
@@ -971,20 +1009,20 @@ def pane_detail(id):
     </form>
 
     <!-- MODAL -->
-    <div id="modal" class="modal" onclick="closeModal()">
+    <div id="modal" class="modal">
         <img id="modal-img">
         <button class="close-btn" onclick="closeModal()">Fechar</button>
     </div>
 
     <script>
-    function openModal(src) {{
+    function openModal(src) {
         document.getElementById("modal-img").src = src;
         document.getElementById("modal").style.display = "flex";
-    }}
+    }
 
-    function closeModal() {{
+    function closeModal() {
         document.getElementById("modal").style.display = "none";
-    }}
+    }
     </script>
 
     </body>
@@ -1133,6 +1171,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
