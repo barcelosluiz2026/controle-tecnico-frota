@@ -759,19 +759,32 @@ def pane_detail(id):
         # -------- NOVA PENDÊNCIA --------
         elif action == "add_pendencia":
 
-            pend = Pendencia(
-                pane_id=pane.id,
-                tipo_item=request.form["tipo_item"],
-                tipo_aquisicao=request.form["tipo_aquisicao"],
-                descricao=request.form["descricao"],
-                pn=request.form.get("pn"),
-                sms_part_request=request.form.get("sms_part_request"),
-                task_card=request.form.get("task_card"),
-                responsavel=request.form["responsavel"],
-                created_by=session.get("username")
-            )
+    pend = Pendencia(
+        pane_id=pane.id,
+        tipo_item=request.form["tipo_item"],
+        tipo_aquisicao=request.form["tipo_aquisicao"],
+        descricao=request.form["descricao"],
+        pn=request.form.get("pn"),
+        sms_part_request=request.form.get("sms_part_request"),
+        task_card=request.form.get("task_card"),
+        responsavel=request.form["responsavel"],
+        created_by=session.get("username")
+    )
 
-            db.session.add(pend)
+    db.session.add(pend)
+
+    # =========================
+    # MOVIMENTAÇÃO AUTOMÁTICA
+    # =========================
+    if pend.tipo_aquisicao == "Compra":
+        pane.status = "Wait Material"
+
+    elif pend.tipo_aquisicao == "Transferência":
+        pane.status = "Wait Transfer"
+
+    # Caso seja ferramenta, pode ir para Wait Tools
+    if pend.tipo_item == "Ferramenta":
+        pane.status = "Wait Tools"
 
         # -------- FINALIZAR --------
         elif action == "finalize":
@@ -1171,6 +1184,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
