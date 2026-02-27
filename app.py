@@ -801,7 +801,7 @@ def pane_detail(id):
     """
 
     for p in pendencias:
-        html += f"<p>📦 {p.tipo_item} - {p.descricao}<br><small>{p.created_at.replace(tzinfo=ZoneInfo('UTC')).astimezone(ZoneInfo("America/Sao_Paulo")).strftime('%d/%m/%Y %H:%M')} - {p.created_by}</small></p>"
+        html += f"<p>📦 {p.tipo_item} - {p.descricao}<br><small>{p.created_at.replace(tzinfo=ZoneInfo('UTC')).astimezone(ZoneInfo('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M')} - {p.created_by}</small></p>"
 
     html += """
         </div>
@@ -972,6 +972,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
