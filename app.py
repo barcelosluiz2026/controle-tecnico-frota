@@ -480,7 +480,9 @@ def aircraft_page(id):
         db.session.commit()
         return redirect(url_for("aircraft_page", id=aircraft.id))
 
-    panes = Pane.query.order_by(Pane.created_at.desc()).all()
+    panes = Pane.query.filter_by(aircraft_id=aircraft.id)\
+                      .order_by(Pane.created_at.desc()).all()
+
     statuses = [
         "Pane Lançada",
         "In Progress Avi",
@@ -493,7 +495,8 @@ def aircraft_page(id):
 
     grouped_panes = {status: [] for status in statuses}
     for pane in panes:
-        grouped_panes[pane.status].append(pane)
+        if pane.status in grouped_panes:
+            grouped_panes[pane.status].append(pane)
 
     html = f"""
     <html>
@@ -506,7 +509,6 @@ def aircraft_page(id):
                 color: #f1f5f9;
                 margin: 0;
                 padding: 20px;
-                overflow-x: hidden;
             }}
 
             h2, h3 {{
@@ -531,21 +533,13 @@ def aircraft_page(id):
                 gap: 15px;
             }}
 
-            textarea, input, select {{
+            textarea, input {{
                 background: #0f172a;
                 color: #f1f5f9;
                 border: 1px solid #334155;
                 border-radius: 6px;
                 padding: 10px;
-                font-size: 14px;
                 width: 100%;
-                box-sizing: border-box;
-                transition: border-color 0.3s;
-            }}
-
-            textarea:focus, input:focus, select:focus {{
-                border-color: #38bdf8;
-                outline: none;
             }}
 
             .radio-group {{
@@ -562,31 +556,18 @@ def aircraft_page(id):
                 border-radius: 6px;
                 cursor: pointer;
                 font-weight: bold;
-                transition: background 0.3s;
             }}
 
-            .btn:hover {{
-                background: linear-gradient(90deg, #1d4ed8, #2563eb);
-            }}
-
-            /* ===== KANBAN ===== */
             .kanban {{
-                display: grid;
-                grid-template-columns: repeat(7, 1fr);
-                gap: 20px;
-                margin-top: 30px;
-                width: 100%;
-                height: calc(100vh - 300px);
+                margin-top: 20px;
             }}
 
             .column {{
                 background: #1e293b;
                 border-radius: 10px;
-                padding: 10px;
-                display: flex;
+                padding: 15px;
+                display: none;
                 flex-direction: column;
-                overflow-y: auto;
-                box-shadow: 0 0 10px rgba(0,0,0,0.2);
             }}
 
             .column h4 {{
@@ -594,12 +575,8 @@ def aircraft_page(id):
                 background: #334155;
                 padding: 10px;
                 border-radius: 6px;
-                margin-bottom: 10px;
+                margin-bottom: 15px;
                 color: #38bdf8;
-                font-size: 15px;
-                position: sticky;
-                top: 0;
-                z-index: 1;
             }}
 
             .card {{
@@ -607,30 +584,28 @@ def aircraft_page(id):
                 padding: 12px;
                 border-radius: 8px;
                 margin-bottom: 10px;
-                transition: transform 0.2s;
-            }}
-
-            .card:hover {{
-                transform: scale(1.02);
             }}
 
             .card small {{
                 color: #94a3b8;
             }}
 
-            a {{
-                color: #38bdf8;
-                text-decoration: none;
+            .tabs {{
+                display:flex;
+                gap:10px;
+                margin-bottom:15px;
+                flex-wrap:wrap;
             }}
 
-            /* Scrollbar personalizada */
-            .column::-webkit-scrollbar {{
-                width: 6px;
+            .tabs button {{
+                padding:8px 15px;
+                border:none;
+                border-radius:6px;
+                background:#334155;
+                color:#38bdf8;
+                cursor:pointer;
             }}
-            .column::-webkit-scrollbar-thumb {{
-                background-color: #475569;
-                border-radius: 10px;
-            }}
+
         </style>
     </head>
     <body>
@@ -656,74 +631,58 @@ def aircraft_page(id):
             </div>
 
             <h3>Kanban de Panes</h3>
-
-# ===== BOTÕES DAS ABAS =====
-html += """
-<div style='display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap;'>
-"""
-
-for status in statuses:
-    quantidade = len(grouped_panes[status])
-    html += f"""
-    <button onclick="abrirAba('{status}')" 
-        style='padding:8px 15px;
-               border:none;
-               border-radius:6px;
-               background:#334155;
-               color:#38bdf8;
-               cursor:pointer;'>
-        {status} ({quantidade})
-    </button>
+            <div class="tabs">
     """
 
-html += "</div>"
+    # ===== BOTÕES =====
+    for status in statuses:
+        quantidade = len(grouped_panes[status])
+        html += f"<button onclick=\"abrirAba('{status}')\">{status} ({quantidade})</button>"
 
-# ===== COLUNAS =====
-html += "<div class='kanban'>"
+    html += "</div><div class='kanban'>"
 
-for status in statuses:
-    quantidade = len(grouped_panes[status])
+    # ===== COLUNAS =====
+    for status in statuses:
+        quantidade = len(grouped_panes[status])
 
-    html += f"""
-    <div class='column' id='col-{status}' style='display:none;'>
-        <h4>{status} ({quantidade})</h4>
-    """
+        html += f"<div class='column' id='col-{status}'>"
+        html += f"<h4>{status} ({quantidade})</h4>"
 
-    for pane in grouped_panes[status]:
-        html += f"""
-        <a href='/pane/{pane.id}' style='text-decoration:none;color:white;'>
-            <div class='card'>
-                <strong>ATA {pane.ata}</strong><br>
-                <p>{pane.description}</p>
-                <small>Responsável: {pane.responsavel}</small><br>
-                <small>{hora_br(pane.created_at)} - {pane.created_by}</small>
+        for pane in grouped_panes[status]:
+            html += f"""
+            <a href='/pane/{pane.id}' style='text-decoration:none;color:white;'>
+                <div class='card'>
+                    <strong>ATA {pane.ata}</strong><br>
+                    <p>{pane.description}</p>
+                    <small>Responsável: {pane.responsavel}</small><br>
+                    <small>{hora_br(pane.created_at)} - {pane.created_by}</small>
+                </div>
+            </a>
+            """
+
+        html += "</div>"
+
+    html += """
             </div>
-        </a>
-        """
+        </div>
 
-    html += "</div>"
+        <script>
+        function abrirAba(status) {
+            const colunas = document.querySelectorAll('.column');
+            colunas.forEach(col => col.style.display = 'none');
 
-html += "</div>"
+            const ativa = document.getElementById('col-' + status);
+            if (ativa) ativa.style.display = 'flex';
+        }
 
-# ===== SCRIPT PARA CONTROLAR ABAS =====
-html += """
-<script>
-function abrirAba(status) {
-    const colunas = document.querySelectorAll('.column');
-    colunas.forEach(col => col.style.display = 'none');
+        window.onload = function() {
+            abrirAba('Pane Lançada');
+        }
+        </script>
+    </body>
+    </html>
+    """
 
-    const ativa = document.getElementById('col-' + status);
-    if (ativa) {
-        ativa.style.display = 'flex';
-    }
-}
-
-// Abrir automaticamente na aba "Pane Lançada"
-window.onload = function() {
-    abrirAba('Pane Lançada');
-}
-</script>
-"""
     return html
 # ======================
 # DETALHES DA PANE
@@ -1141,6 +1100,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
