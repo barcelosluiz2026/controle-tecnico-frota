@@ -708,44 +708,39 @@ def aircraft_page(id):
 def pane_detail(id):
     pane = Pane.query.get_or_404(id)
 
-    # ===============================
-    # CONTAR TOTAL DE FOTOS DA PANE
-    # ===============================
-    all_steps = Step.query.filter_by(pane_id=pane.id).all()
+    # =============================
+    # CONTAR TOTAL DE FOTOS
+    # =============================
+    steps_all = Step.query.filter_by(pane_id=pane.id).all()
 
     total_fotos = 0
-    for s in all_steps:
+    for s in steps_all:
         for f in [s.photo1, s.photo2, s.photo3]:
             if f:
                 total_fotos += 1
 
-    # ===============================
+    # =============================
     # POST
-    # ===============================
+    # =============================
     if request.method == "POST":
         action = request.form.get("action")
 
-        # ===============================
-        # ADICIONAR ETAPA
-        # ===============================
+        # ---------------------------
+        # NOVA ETAPA
+        # ---------------------------
         if action == "add_step":
 
-            novas_fotos = 0
             fotos = [
                 request.form.get("photo1"),
                 request.form.get("photo2"),
                 request.form.get("photo3")
             ]
 
-            for f in fotos:
-                if f:
-                    novas_fotos += 1
+            novas = sum(1 for f in fotos if f)
 
-            # 🚨 BLOQUEIO SE EXCEDER 4
-            if total_fotos + novas_fotos > 4:
+            if total_fotos + novas > 4:
                 return f"""
-                <h2>Limite de 4 fotos por pane atingido.</h2>
-                <p>Esta pane já possui {total_fotos} foto(s).</p>
+                <h2>Limite máximo de 4 fotos por pane.</h2>
                 <a href="{url_for('pane_detail', id=pane.id)}">Voltar</a>
                 """
 
@@ -761,164 +756,236 @@ def pane_detail(id):
 
             db.session.add(step)
 
-            if pane.tipo == "Aviônico":
-                pane.status = "In Progress Avi"
-            elif pane.tipo == "Mecânico":
-                pane.status = "In Progress Mec"
+        # ---------------------------
+        # NOVA PENDÊNCIA
+        # ---------------------------
+        elif action == "add_pendencia":
 
-        # ===============================
+            pend = Pendencia(
+                pane_id=pane.id,
+                descricao=request.form["pend_desc"],
+                created_by=session.get("username")
+            )
+
+            db.session.add(pend)
+
+        # ---------------------------
         # FINALIZAR
-        # ===============================
+        # ---------------------------
         elif action == "finalize":
             pane.status = "Finalizadas"
 
         db.session.commit()
         return redirect(url_for("pane_detail", id=pane.id))
 
-    # ===============================
-    # LISTAR
-    # ===============================
+    # =============================
+    # LISTAS
+    # =============================
     steps = Step.query.filter_by(
         pane_id=pane.id
     ).order_by(Step.created_at.desc()).all()
 
-    # ===============================
+    pendencias = Pendencia.query.filter_by(
+        pane_id=pane.id
+    ).order_by(Pendencia.created_at.desc()).all()
+
+    # =============================
     # HTML
-    # ===============================
+    # =============================
     html = f"""
     <html>
     <head>
-        <title>Pane {pane.id}</title>
-        <style>
-            body {{
-                font-family: 'Segoe UI', Arial;
-                background-color: #0f172a;
-                color: #f1f5f9;
-                padding: 40px;
-            }}
-            .card {{
-                background: #1e293b;
-                padding: 25px;
-                border-radius: 12px;
-                margin-bottom: 25px;
-                box-shadow: 0 0 10px rgba(0,0,0,0.3);
-            }}
-            textarea, input {{
-                background: #0f172a;
-                color: #f1f5f9;
-                border: 1px solid #334155;
-                border-radius: 6px;
-                padding: 10px;
-                width: 100%;
-                box-sizing: border-box;
-                margin-top: 8px;
-            }}
-            .btn {{
-                background: linear-gradient(90deg, #2563eb, #1d4ed8);
-                color: white;
-                border: none;
-                padding: 10px 20px;
-                border-radius: 6px;
-                cursor: pointer;
-                font-weight: bold;
-                margin-top: 10px;
-            }}
-            .thumb {{
-                width:90px;
-                height:70px;
-                object-fit:cover;
-                border-radius:6px;
-                cursor:pointer;
-            }}
-            .contador {{
-                background:#334155;
-                padding:8px 12px;
-                border-radius:6px;
-                display:inline-block;
-                margin-bottom:15px;
-            }}
-        </style>
+    <style>
+    body {{
+        background:#0f172a;
+        color:#f1f5f9;
+        font-family:Segoe UI;
+        padding:40px;
+    }}
+
+    .card {{
+        background:#1e293b;
+        padding:20px;
+        border-radius:10px;
+        margin-bottom:25px;
+    }}
+
+    textarea, input {{
+        width:100%;
+        padding:10px;
+        margin-top:8px;
+        background:#0f172a;
+        color:white;
+        border:1px solid #334155;
+        border-radius:6px;
+    }}
+
+    .btn {{
+        background:#2563eb;
+        color:white;
+        border:none;
+        padding:10px 18px;
+        border-radius:6px;
+        cursor:pointer;
+        margin-top:10px;
+    }}
+
+    .thumb {{
+        width:90px;
+        height:70px;
+        object-fit:cover;
+        border-radius:6px;
+        cursor:pointer;
+    }}
+
+    .contador {{
+        background:#334155;
+        padding:8px 12px;
+        border-radius:6px;
+        display:inline-block;
+        margin-bottom:20px;
+    }}
+
+    /* MODAL */
+    .modal {{
+        display:none;
+        position:fixed;
+        z-index:999;
+        left:0;
+        top:0;
+        width:100%;
+        height:100%;
+        background:rgba(0,0,0,0.85);
+        justify-content:center;
+        align-items:center;
+        flex-direction:column;
+    }}
+
+    .modal img {{
+        max-width:90%;
+        max-height:80%;
+        border-radius:10px;
+    }}
+
+    .close-btn {{
+        margin-top:20px;
+        background:#ef4444;
+        padding:10px 20px;
+        border:none;
+        color:white;
+        border-radius:6px;
+        cursor:pointer;
+    }}
+    </style>
     </head>
     <body>
 
-        <a href="/aircraft/{pane.aircraft_id}">← Voltar</a>
-        <h2>Pane #{pane.id} - ATA {pane.ata}</h2>
+    <a href="/aircraft/{pane.aircraft_id}">← Voltar</a>
+    <h2>Pane #{pane.id} - ATA {pane.ata}</h2>
 
-        <div class="contador">
-            📸 Fotos utilizadas: {total_fotos} / 4
-        </div>
+    <div class="contador">
+        📸 Fotos utilizadas: {total_fotos} / 4
+    </div>
 
-        <div class="card">
-            <strong>Descrição:</strong> {pane.description}<br>
-            <small>Status: {pane.status}</small>
-        </div>
+    <div class="card">
+        <strong>{pane.description}</strong><br>
+        <small>Status: {pane.status}</small>
+    </div>
 
-        <div class="card">
-            <h3>Etapas</h3>
+    <!-- ETAPAS -->
+    <div class="card">
+        <h3>Etapas</h3>
     """
 
-    # ===============================
-    # MOSTRAR ETAPAS
-    # ===============================
     for step in steps:
         html += f"""
-        <div style="background:#334155;padding:15px;border-radius:8px;margin-bottom:15px;">
-            <p>🛠 {step.description}</p>
+        <div style="background:#334155;padding:12px;border-radius:8px;margin-bottom:12px;">
+            🛠 {step.description}<br>
             <small>
                 Info: {step.responsavel_info}<br>
                 {hora_br(step.created_at)} - {step.created_by}
             </small>
 
-            <div style="display:flex; gap:10px; margin-top:10px;">
+            <div style="display:flex;gap:10px;margin-top:10px;">
         """
 
         for foto in [step.photo1, step.photo2, step.photo3]:
             if foto:
                 html += f"""
                 <img src="{foto}" class="thumb"
-                     onclick="window.open('{foto}','_blank')">
+                     onclick="openModal('{foto}')">
                 """
 
         html += "</div></div>"
 
-    # ===============================
-    # FORMULÁRIO (só mostra se ainda pode adicionar foto)
-    # ===============================
-    html += f"""
-        <form method="POST">
-            <textarea name="step_desc" placeholder="Descreva a etapa" required></textarea>
-
-            <input name="responsavel_info"
-                   placeholder="Responsável pela informação"
-                   required>
+    html += """
+    <form method="POST">
+        <textarea name="step_desc" placeholder="Descreva a etapa" required></textarea>
+        <input name="responsavel_info" placeholder="Responsável pela informação" required>
     """
 
     if total_fotos < 4:
         html += """
-            <input name="photo1" placeholder="Link Foto 1 (opcional)">
-            <input name="photo2" placeholder="Link Foto 2 (opcional)">
-            <input name="photo3" placeholder="Link Foto 3 (opcional)">
+        <input name="photo1" placeholder="Link Foto 1 (opcional)">
+        <input name="photo2" placeholder="Link Foto 2 (opcional)">
+        <input name="photo3" placeholder="Link Foto 3 (opcional)">
         """
     else:
-        html += """
-            <p style="color:#f87171;">
-            Limite máximo de fotos atingido.
-            </p>
+        html += "<p style='color:#f87171;'>Limite de fotos atingido.</p>"
+
+    html += """
+        <button type="submit" name="action" value="add_step" class="btn">
+            Salvar Etapa
+        </button>
+    </form>
+    </div>
+
+    <!-- PENDÊNCIAS -->
+    <div class="card">
+        <h3>Pendências</h3>
+    """
+
+    for p in pendencias:
+        html += f"""
+        <div style="background:#334155;padding:10px;border-radius:6px;margin-bottom:8px;">
+            📦 {p.descricao}<br>
+            <small>{hora_br(p.created_at)} - {p.created_by}</small>
+        </div>
         """
 
     html += """
-            <button type="submit" name="action" value="add_step" class="btn">
-                Salvar Etapa
+        <form method="POST">
+            <textarea name="pend_desc" placeholder="Nova Pendência" required></textarea>
+            <button type="submit" name="action" value="add_pendencia" class="btn">
+                Adicionar Pendência
             </button>
         </form>
-        </div>
+    </div>
 
-        <form method="POST" style="text-align:center;">
-            <button type="submit" name="action" value="finalize"
-                    class="btn" style="background:#16a34a;">
-                Finalizar Pane
-            </button>
-        </form>
+    <!-- FINALIZAR -->
+    <form method="POST" style="text-align:center;">
+        <button type="submit" name="action" value="finalize"
+                class="btn" style="background:#16a34a;">
+            Finalizar Pane
+        </button>
+    </form>
+
+    <!-- MODAL -->
+    <div id="modal" class="modal" onclick="closeModal()">
+        <img id="modal-img">
+        <button class="close-btn" onclick="closeModal()">Fechar</button>
+    </div>
+
+    <script>
+    function openModal(src) {{
+        document.getElementById("modal-img").src = src;
+        document.getElementById("modal").style.display = "flex";
+    }}
+
+    function closeModal() {{
+        document.getElementById("modal").style.display = "none";
+    }}
+    </script>
 
     </body>
     </html>
@@ -1066,6 +1133,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
