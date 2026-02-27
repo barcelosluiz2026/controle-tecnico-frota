@@ -749,7 +749,7 @@ def pane_detail(id):
     """
 
     for step in steps:
-        html += f"<p>🛠 {step.description}<br><small>{step.created_at.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo("America/Sao_Paulo")).strftime('%d/%m/%Y %H:%M')} - {step.created_by}</small></p>"
+        html += f"<p>🛠 {step.description}<br><small>{step.created_at.replace(tzinfo=ZoneInfo('UTC')).astimezone(ZoneInfo('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M')} - {step.created_by}</small></p>"
 
     html += """
             <form method="POST">
@@ -972,4 +972,5 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
