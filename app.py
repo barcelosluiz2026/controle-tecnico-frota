@@ -362,7 +362,7 @@ def aircraft_page(id):
         db.session.commit()
         return redirect(url_for("aircraft_page", id=aircraft.id))
 
-    panes = Pane.query.filter_by(aircraft_id=aircraft.id).all()
+    panes = Pane.query.order_by(Pane.created_at.desc()).all()
     statuses = [
         "Pane Lançada",
         "In Progress Avi",
@@ -614,8 +614,8 @@ def pane_detail(id):
         db.session.commit()
         return redirect(url_for("aircraft_page", id=pane.aircraft_id))
 
-    steps = Step.query.filter_by(pane_id=pane.id).order_by(Step.created_at.asc()).all()
-    pendencias = Pendencia.query.filter_by(pane_id=pane.id).order_by(Pendencia.created_at.asc()).all()
+    steps = Step.query.filter_by(pane_id=pane.id).order_by(Step.created_at.desc()).all()
+    pendencias = Pendencia.query.filter_by(pane_id=pane.id).order_by(Pendencia.created_at.desc()).all()
 
     html = f"""
     <html>
@@ -979,6 +979,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
