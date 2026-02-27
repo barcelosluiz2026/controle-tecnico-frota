@@ -725,73 +725,96 @@ def pane_detail(id):
     # =============================
     if request.method == "POST":
 
-        action = request.form.get("action")
+    action = request.form.get("action")
 
-        # -------- NOVA ETAPA --------
-        if action == "add_step":
+    # =========================
+    # NOVA ETAPA
+    # =========================
+    if action == "add_step":
 
-            fotos = [
-                request.form.get("photo1"),
-                request.form.get("photo2"),
-                request.form.get("photo3")
-            ]
+        responsavel_info = request.form.get("responsavel_info")
+        if not responsavel_info:
+            flash("Responsável pela informação é obrigatório.", "danger")
+            return redirect(url_for("pane_detail", id=pane.id))
 
-            novas = sum(1 for f in fotos if f)
+        # Conta total de fotos atuais da pane
+        total_fotos = FotoPane.query.filter_by(pane_id=pane.id).count()
 
-            if total_fotos + novas > 4:
-                return f"""
-                <h2>Limite máximo de 4 fotos por pane.</h2>
-                <a href="{url_for('pane_detail', id=pane.id)}">Voltar</a>
-                """
+        step = Step(
+            pane_id=pane.id,
+            descricao=request.form.get("descricao"),
+            responsavel_info=responsavel_info,
+            created_by=session.get("username")
+        )
 
-            step = Step(
-                pane_id=pane.id,
-                description=request.form["step_desc"],
-                responsavel_info=request.form["responsavel_info"],
-                photo1=fotos[0],
-                photo2=fotos[1],
-                photo3=fotos[2],
-                created_by=session.get("username")
-            )
+        db.session.add(step)
+        db.session.flush()  # gera ID antes de salvar fotos
 
-            db.session.add(step)
+        # =========================
+        # FOTOS DA ETAPA (máx 3)
+        # =========================
+        for i in range(1, 4):
 
-        # -------- NOVA PENDÊNCIA --------
-        elif action == "add_pendencia":
+            link = request.form.get(f"foto_link_{i}")
 
-            pend = Pendencia(
-                pane_id=pane.id,
-                tipo_item=request.form["tipo_item"],
-                tipo_aquisicao=request.form["tipo_aquisicao"],
-                descricao=request.form["descricao"],
-                pn=request.form.get("pn"),
-                sms_part_request=request.form.get("sms_part_request"),
-                task_card=request.form.get("task_card"),
-                responsavel=request.form["responsavel"],
-                created_by=session.get("username")
+            if link and total_fotos < 4:
+
+                foto = FotoPane(
+                    pane_id=pane.id,
+                    step_id=step.id,
+                    caminho=link
                 )
 
-    db.session.add(pend)
+                db.session.add(foto)
+                total_fotos += 1
+
+        # Move automaticamente para Em Atendimento
+        if pane.status == "Abertas":
+            pane.status = "Em Atendimento"
 
     # =========================
-    # MOVIMENTAÇÃO AUTOMÁTICA
+    # NOVA PENDÊNCIA
     # =========================
-    if pend.tipo_aquisicao == "Compra":
-        pane.status = "Wait Material"
+    elif action == "add_pendencia":
 
-    elif pend.tipo_aquisicao == "Transferência":
-        pane.status = "Wait Transfer"
+        pend = Pendencia(
+            pane_id=pane.id,
+            tipo_item=request.form["tipo_item"],
+            tipo_aquisicao=request.form["tipo_aquisicao"],
+            descricao=request.form["descricao"],
+            pn=request.form.get("pn"),
+            sms_part_request=request.form.get("sms_part_request"),
+            task_card=request.form.get("task_card"),
+            responsavel=request.form["responsavel"],
+            created_by=session.get("username")
+        )
 
-    # Caso seja ferramenta, pode ir para Wait Tools
-    if pend.tipo_item == "Ferramenta":
-        pane.status = "Wait Tools"
+        db.session.add(pend)
 
-        # -------- FINALIZAR --------
-        elif action == "finalize":
-            pane.status = "Finalizadas"
+        # =========================
+        # MOVIMENTAÇÃO AUTOMÁTICA
+        # =========================
+        if pend.tipo_item == "Ferramenta":
+            pane.status = "Wait Tools"
 
-        db.session.commit()
-        return redirect(url_for("pane_detail", id=pane.id))
+        elif pend.tipo_aquisicao == "Compra":
+            pane.status = "Wait Material"
+
+        elif pend.tipo_aquisicao == "Transferência":
+            pane.status = "Wait Transfer"
+
+    # =========================
+    # FINALIZAR PANE
+    # =========================
+    elif action == "finalize":
+
+        pane.status = "Finalizadas"
+
+    # =========================
+    # SALVAR ALTERAÇÕES
+    # =========================
+    db.session.commit()
+    return redirect(url_for("pane_detail", id=pane.id))
 
     # =============================
     # LISTAS
@@ -1184,6 +1207,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
