@@ -558,8 +558,27 @@ def aircraft_page(id):
                 font-weight: bold;
             }}
 
-            .kanban {{
-                margin-top: 20px;
+            .tabs {{
+                display:flex;
+                gap:10px;
+                margin-bottom:15px;
+                flex-wrap:wrap;
+            }}
+
+            .tabs button {{
+                padding:8px 15px;
+                border:none;
+                border-radius:6px;
+                background:#334155;
+                color:#38bdf8;
+                cursor:pointer;
+                transition:0.2s;
+            }}
+
+            .tabs button.active {{
+                background:#2563eb;
+                color:white;
+                box-shadow:0 0 8px rgba(37,99,235,0.6);
             }}
 
             .column {{
@@ -589,23 +608,6 @@ def aircraft_page(id):
             .card small {{
                 color: #94a3b8;
             }}
-
-            .tabs {{
-                display:flex;
-                gap:10px;
-                margin-bottom:15px;
-                flex-wrap:wrap;
-            }}
-
-            .tabs button {{
-                padding:8px 15px;
-                border:none;
-                border-radius:6px;
-                background:#334155;
-                color:#38bdf8;
-                cursor:pointer;
-            }}
-
         </style>
     </head>
     <body>
@@ -634,17 +636,16 @@ def aircraft_page(id):
             <div class="tabs">
     """
 
-    # ===== BOTÕES =====
+    # BOTÕES
     for status in statuses:
         quantidade = len(grouped_panes[status])
         html += f"<button onclick=\"abrirAba('{status}')\">{status} ({quantidade})</button>"
 
-    html += "</div><div class='kanban'>"
+    html += "</div>"
 
-    # ===== COLUNAS =====
+    # COLUNAS
     for status in statuses:
         quantidade = len(grouped_panes[status])
-
         html += f"<div class='column' id='col-{status}'>"
         html += f"<h4>{status} ({quantidade})</h4>"
 
@@ -663,22 +664,32 @@ def aircraft_page(id):
         html += "</div>"
 
     html += """
-            </div>
         </div>
 
         <script>
         function abrirAba(status) {
+
             const colunas = document.querySelectorAll('.column');
             colunas.forEach(col => col.style.display = 'none');
 
+            const botoes = document.querySelectorAll('.tabs button');
+            botoes.forEach(btn => btn.classList.remove('active'));
+
             const ativa = document.getElementById('col-' + status);
             if (ativa) ativa.style.display = 'flex';
+
+            botoes.forEach(btn => {
+                if (btn.innerText.startsWith(status)) {
+                    btn.classList.add('active');
+                }
+            });
         }
 
         window.onload = function() {
             abrirAba('Pane Lançada');
         }
         </script>
+
     </body>
     </html>
     """
@@ -1100,6 +1111,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
