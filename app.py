@@ -9,9 +9,13 @@ from collections import defaultdict
 from zoneinfo import ZoneInfo
 
 def hora_br(dt):
+    if not dt:
+        return ""
+        
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=ZoneInfo('UTC'))
-    return dt.astimezone(ZoneInfo('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M')
+        dt = dt.replace(tzinfo=ZoneInfo("UTC"))
+    return dt.astimezone(ZoneInfo("America/Sao_Paulo")).strftime("%d/%m/%Y %H:%M")
+    
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
 
@@ -975,6 +979,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
