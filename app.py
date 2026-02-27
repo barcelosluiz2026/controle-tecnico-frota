@@ -6,6 +6,7 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from collections import defaultdict
+from zoneinfo import ZoneInfo
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
@@ -748,7 +749,7 @@ def pane_detail(id):
     """
 
     for step in steps:
-        html += f"<p>🛠 {step.description}<br><small>{step.created_at.strftime('%d/%m/%Y %H:%M')} - {step.created_by}</small></p>"
+        html += f"<p>🛠 {step.description}<br><small>{step.created_at.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo("America/Sao_Paulo")).strftime('%d/%m/%Y %H:%M')} - {step.created_by}</small></p>"
 
     html += """
             <form method="POST">
@@ -800,7 +801,7 @@ def pane_detail(id):
     """
 
     for p in pendencias:
-        html += f"<p>📦 {p.tipo_item} - {p.descricao}<br><small>{p.created_at.strftime('%d/%m/%Y %H:%M')} - {p.created_by}</small></p>"
+        html += f"<p>📦 {p.tipo_item} - {p.descricao}<br><small>{p.created_at.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo("America/Sao_Paulo")).strftime('%d/%m/%Y %H:%M')} - {p.created_by}</small></p>"
 
     html += """
         </div>
@@ -971,3 +972,4 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
