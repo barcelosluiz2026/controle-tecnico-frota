@@ -546,7 +546,7 @@ def aircraft_page(id):
                     <strong>ATA {pane.ata}</strong><br>
                     <p>{pane.description}</p>
                     <small>Responsável: {pane.responsavel}</small><br>
-                    <small>{pane.created_at.strftime('%d/%m/%Y %H:%M')} - {pane.created_by}</small>
+                    <small>{hora_br(pane.created_at)} - {pane.created_by}</small>
                 </div>
             </a>
             """
@@ -975,6 +975,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
