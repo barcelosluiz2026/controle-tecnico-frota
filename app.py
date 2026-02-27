@@ -104,103 +104,61 @@ def login_required(role=None):
 # HOME
 # ======================
 
+from sqlalchemy import func
+
 @app.route("/")
 @login_required()
 def home():
-    aircrafts = Aircraft.query.order_by(Aircraft.model, Aircraft.prefix).all()
 
-    grouped = {}
-    for ac in aircrafts:
-        grouped.setdefault(ac.model, []).append(ac)
+    # 🔹 TOTAL DE AERONAVES
+    total_aeronaves = Aircraft.query.count()
 
-    html = """
-    <html>
-    <head>
-        <title>Controle Técnico</title>
-        <style>
-            body {
-                font-family: Arial;
-                background-color: #0f172a;
-                color: white;
-                padding: 20px;
-            }
+    # 🔹 AERONAVES POR MODELO
+    aeronaves_por_modelo = (
+        db.session.query(
+            Aircraft.modelo,
+            func.count(Aircraft.id)
+        )
+        .group_by(Aircraft.modelo)
+        .order_by(Aircraft.modelo)
+        .all()
+    )
 
-            .model-title {
-                margin-top: 40px;
-                font-size: 24px;
-                border-bottom: 2px solid #1e293b;
-                padding-bottom: 10px;
-            }
+    # 🔹 PANES EM ABERTO (todas que não estão Finalizadas)
+    total_panes_abertas = (
+        Pane.query
+        .filter(Pane.status != "Finalizadas")
+        .count()
+    )
 
-            .grid {
-                display: grid;
-                grid-template-columns: repeat(7, 1fr);
-                gap: 15px;
-                margin-top: 20px;
-            }
+    # 🔹 PANES MECÂNICO EM ABERTO
+    panes_mecanico = (
+        Pane.query
+        .filter(
+            Pane.status != "Finalizadas",
+            Pane.tipo == "Mecânico"
+        )
+        .count()
+    )
 
-            .card {
-                background: #1e293b;
-                padding: 10px;
-                border-radius: 8px;
-                text-align: center;
-            }
+    # 🔹 PANES AVIÔNICO EM ABERTO
+    panes_avionico = (
+        Pane.query
+        .filter(
+            Pane.status != "Finalizadas",
+            Pane.tipo == "Aviônico"
+        )
+        .count()
+    )
 
-            .card img {
-                width: 100%;
-                height: 100px;
-                object-fit: cover;
-                border-radius: 6px;
-            }
-
-            .prefix {
-                font-weight: bold;
-                margin-top: 5px;
-            }
-
-            .top-bar {
-                display:flex;
-                justify-content: space-between;
-            }
-
-            a {
-                color: #38bdf8;
-                text-decoration: none;
-            }
-
-        </style>
-    </head>
-    <body>
-
-        <div class="top-bar">
-            <h1>🚁 Controle Técnico de Frota</h1>
-            <div>
-                <a href="/add_aircraft">Cadastrar Helicóptero</a> |
-                <a href="/logout">Sair</a>
-            </div>
-        </div>
-    """
-
-    for model, items in grouped.items():
-        html += f"<div class='model-title'>🚁 {model}</div>"
-        html += "<div class='grid'>"
-        for ac in items:
-            html += f"""
-            <div class='card'>
-    <img src='{ac.photo_url}' alt='foto'>
-    <div class='prefix'>
-    <a href='/aircraft/{ac.id}' style='color:white;text-decoration:none;'>
-        {ac.prefix}
-    </a>
-</div>
-    {"<a href='/delete_aircraft/" + str(ac.id) + "' style='color:#f87171;font-size:12px;'>Excluir</a>" if session.get("role") == "Admin" else ""}
-</div>
-            """
-        html += "</div>"
-
-    html += "</body></html>"
-    return html
-
+    return render_template(
+        "home.html",
+        total_aeronaves=total_aeronaves,
+        aeronaves_por_modelo=aeronaves_por_modelo,
+        total_panes_abertas=total_panes_abertas,
+        panes_mecanico=panes_mecanico,
+        panes_avionico=panes_avionico
+    )
 # ======================
 # CADASTRAR AERONAVE
 # ======================
@@ -979,6 +937,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
