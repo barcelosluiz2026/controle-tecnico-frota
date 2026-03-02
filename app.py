@@ -419,11 +419,11 @@ def aircraft_page(id):
 
     statuses = [
         "Pane Lançada",
-        "Aviônicos (Andamento)",
-        "Mecânicos (Andamento)",
-        "Aguardando Material (Compra)",
-        "Aguardando Ferramenta",
-        "Aguardando Material (Transferência)",
+        "In Progress Avi",
+        "In Progress Mec",
+        "Wait Material",
+        "Wait Tools",
+        "Wait Transfer",
         "Finalizadas"
     ]
 
@@ -779,6 +779,49 @@ def pane_detail(id):
                 display:inline-block;
                 margin-bottom:20px;
             }}
+
+            .thumb {{
+                width:90px;
+                height:70px;
+                object-fit:cover;
+                border-radius:6px;
+                cursor:pointer;
+                transition:0.2s;
+            }}
+
+            .thumb:hover {{
+                transform:scale(1.05);
+            }}
+
+            .modal {{
+                display:none;
+                position:fixed;
+                z-index:999;
+                left:0;
+                top:0;
+                width:100%;
+                height:100%;
+                background:rgba(0,0,0,0.85);
+                justify-content:center;
+                align-items:center;
+                flex-direction:column;
+            }}
+
+            .modal img {{
+                max-width:90%;
+                max-height:80%;
+                border-radius:10px;
+            }}
+
+            .close-btn {{
+                margin-top:20px;
+                background:#ef4444;
+                padding:10px 20px;
+                border:none;
+                color:white;
+                border-radius:6px;
+                cursor:pointer;
+            }}
         </style>
     </head>
     <body>
@@ -795,15 +838,11 @@ def pane_detail(id):
         <small>Status: {pane.status}</small>
     </div>
 
-    <!-- ================= BOTÕES SUPERIORES ================= -->
-
     <div class="top-actions">
         <button class="btn" onclick="toggle('formStep')">➕ Adicionar Etapa</button>
         <button class="btn" onclick="toggle('formPend')">➕ Registrar Pendência</button>
         <button class="btn btn-green" onclick="confirmarFinalizacao()">✅ Finalizar Pane</button>
     </div>
-
-    <!-- ================= FORM ETAPA ================= -->
 
     <div id="formStep" class="card hidden">
         <h3>Nova Etapa</h3>
@@ -812,17 +851,11 @@ def pane_detail(id):
             <input name="responsavel_info" placeholder="Responsável pela informação" required>
 
             <div style="margin-top:15px;">
-                <button type="submit" name="action" value="add_step" class="btn">
-                    Salvar
-                </button>
-                <button type="button" class="btn btn-red" onclick="toggle('formStep')">
-                    Cancelar
-                </button>
+                <button type="submit" name="action" value="add_step" class="btn">Salvar</button>
+                <button type="button" class="btn btn-red" onclick="toggle('formStep')">Cancelar</button>
             </div>
         </form>
     </div>
-
-    <!-- ================= FORM PENDÊNCIA ================= -->
 
     <div id="formPend" class="card hidden">
         <h3>Nova Pendência</h3>
@@ -844,34 +877,37 @@ def pane_detail(id):
             <input name="responsavel" placeholder="Responsável" required>
 
             <div style="margin-top:15px;">
-                <button type="submit" name="action" value="add_pendencia" class="btn">
-                    Salvar
-                </button>
-                <button type="button" class="btn btn-red" onclick="toggle('formPend')">
-                    Cancelar
-                </button>
+                <button type="submit" name="action" value="add_pendencia" class="btn">Salvar</button>
+                <button type="button" class="btn btn-red" onclick="toggle('formPend')">Cancelar</button>
             </div>
         </form>
     </div>
-
-    <!-- ================= LISTAGENS ================= -->
 
     <div class="card">
         <h3>Etapas</h3>
     """
 
     for step in steps:
+
         html += f"""
-        <div style="background:#334155;padding:12px;border-radius:8px;margin-bottom:12px;">
-            🛠 {step.description}<br>
-            <small>
-                Info: {step.responsavel_info}<br>
-                {hora_br(step.created_at)} - {step.created_by}
-            </small>
-        </div>
+        <div style="background:#334155;padding:12px;border-radius:8px;margin-bottom:12px;display:flex;justify-content:space-between;gap:15px;">
+            <div style="flex:1;">
+                🛠 {step.description}<br>
+                <small>
+                    Info: {step.responsavel_info}<br>
+                    {hora_br(step.created_at)} - {step.created_by}
+                </small>
+            </div>
+            <div style="display:flex;gap:8px;">
         """
 
-    html += "</div><div class='card'><h3>Pendências</h3>"
+        for foto in [step.photo1, step.photo2, step.photo3]:
+            if foto:
+                html += f'<img src="{foto}" class="thumb" onclick="abrirModal(\'{foto}\')">'
+
+        html += "</div></div>"
+
+    html += "<div class='card'><h3>Pendências</h3>"
 
     for p in pendencias:
         html += f"""
@@ -888,25 +924,38 @@ def pane_detail(id):
         </div>
         """
 
-    html += f"""
-        </div>
+    html += """
+    </div>
 
-        <form method="POST" id="formFinalize" class="hidden">
-            <input type="hidden" name="action" value="finalize">
-        </form>
+    <form method="POST" id="formFinalize" class="hidden">
+        <input type="hidden" name="action" value="finalize">
+    </form>
 
-        <script>
-            function toggle(id) {{
-                const el = document.getElementById(id);
-                el.classList.toggle("hidden");
-            }}
+    <div id="modal" class="modal">
+        <img id="modalImg">
+        <button class="close-btn" onclick="fecharModal()">Fechar</button>
+    </div>
 
-            function confirmarFinalizacao() {{
-                if (confirm("Tem certeza que deseja finalizar esta pane?")) {{
-                    document.getElementById("formFinalize").submit();
-                }}
-            }}
-        </script>
+    <script>
+        function toggle(id) {
+            document.getElementById(id).classList.toggle("hidden");
+        }
+
+        function confirmarFinalizacao() {
+            if (confirm("Tem certeza que deseja finalizar esta pane?")) {
+                document.getElementById("formFinalize").submit();
+            }
+        }
+
+        function abrirModal(src) {
+            document.getElementById("modal").style.display = "flex";
+            document.getElementById("modalImg").src = src;
+        }
+
+        function fecharModal() {
+            document.getElementById("modal").style.display = "none";
+        }
+    </script>
 
     </body>
     </html>
@@ -1008,5 +1057,6 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
