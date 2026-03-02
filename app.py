@@ -8,6 +8,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from zoneinfo import ZoneInfo
 
+# ======================
+# HORA BRASIL
+# ======================
+
 def hora_br(dt):
     if not dt:
         return ""
@@ -104,6 +108,90 @@ def login_required(role=None):
     return decorator
 
 # ======================
+# HOME (ORIGINAL)
+# ======================
+
+@app.route("/")
+@login_required()
+def home():
+
+    total_aeronaves = Aircraft.query.count()
+
+    aeronaves_por_modelo = (
+        db.session.query(
+            Aircraft.model,
+            func.count(Aircraft.id)
+        )
+        .group_by(Aircraft.model)
+        .order_by(Aircraft.model)
+        .all()
+    )
+
+    total_panes_abertas = Pane.query.filter(Pane.status != "Finalizadas").count()
+    panes_mecanico = Pane.query.filter(Pane.status != "Finalizadas", Pane.tipo == "Mecânico").count()
+    panes_avionico = Pane.query.filter(Pane.status != "Finalizadas", Pane.tipo == "Aviônico").count()
+
+    aircrafts = Aircraft.query.order_by(Aircraft.model, Aircraft.prefix).all()
+
+    grouped = {}
+    for ac in aircrafts:
+        grouped.setdefault(ac.model, []).append(ac)
+
+    html = f"""
+    <html>
+    <head>
+        <title>Controle Técnico</title>
+        <style>
+            body {{
+                font-family: Arial;
+                background-color: #0f172a;
+                color: white;
+                padding: 20px;
+            }}
+
+            .grid {{
+                display: grid;
+                grid-template-columns: repeat(7, 1fr);
+                gap: 15px;
+                margin-top: 20px;
+            }}
+
+            .card {{
+                background: #1e293b;
+                padding: 10px;
+                border-radius: 8px;
+                text-align: center;
+            }}
+
+            .card img {{
+                width: 100%;
+                height: 100px;
+                object-fit: cover;
+                border-radius: 6px;
+            }}
+
+            a {{ color: #38bdf8; text-decoration: none; }}
+        </style>
+    </head>
+    <body>
+        <h1>🚁 Controle Técnico de Frota</h1>
+    """
+
+    for model, items in grouped.items():
+        html += f"<h2>{model}</h2><div class='grid'>"
+        for ac in items:
+            html += f"""
+            <div class='card'>
+                <img src='{ac.photo_url}'>
+                <a href='/aircraft/{ac.id}'>{ac.prefix}</a>
+            </div>
+            """
+        html += "</div>"
+
+    html += "</body></html>"
+    return html
+
+# ======================
 # PANE DETAIL CORRIGIDO
 # ======================
 
@@ -113,21 +201,16 @@ def pane_detail(id):
 
     pane = Pane.query.get_or_404(id)
 
-    # Contar fotos totais
     total_fotos = 0
     for s in Step.query.filter_by(pane_id=pane.id).all():
         for f in [s.photo1, s.photo2, s.photo3]:
             if f:
                 total_fotos += 1
 
-    # ======================
-    # POST
-    # ======================
     if request.method == "POST":
 
         action = request.form.get("action")
 
-        # NOVA ETAPA
         if action == "add_step":
 
             step = Step(
@@ -145,7 +228,6 @@ def pane_detail(id):
             if pane.status == "Pane Lançada":
                 pane.status = "In Progress Mec"
 
-        # NOVA PENDÊNCIA
         elif action == "add_pendencia":
 
             pend = Pendencia(
@@ -169,87 +251,52 @@ def pane_detail(id):
             elif pend.tipo_aquisicao == "Transferência":
                 pane.status = "Wait Transfer"
 
-        # FINALIZAR
         elif action == "finalize":
             pane.status = "Finalizadas"
 
         db.session.commit()
         return redirect(url_for("pane_detail", id=pane.id))
 
-    # ======================
-    # LISTAS
-    # ======================
+    steps = Step.query.filter_by(pane_id=pane.id).order_by(Step.created_at.desc()).all()
+    pendencias = Pendencia.query.filter_by(pane_id=pane.id).order_by(Pendencia.created_at.desc()).all()
 
-    steps = Step.query.filter_by(
-        pane_id=pane.id
-    ).order_by(Step.created_at.desc()).all()
-
-    pendencias = Pendencia.query.filter_by(
-        pane_id=pane.id
-    ).order_by(Pendencia.created_at.desc()).all()
-
-    # HTML SIMPLES FUNCIONAL
-    html = f"""
-    <h2>Pane #{pane.id} - ATA {pane.ata}</h2>
-    <p>Status: {pane.status}</p>
-    <p>Fotos: {total_fotos}/4</p>
-    <hr>
-
-    <h3>Etapas</h3>
-    """
+    html = f"<h2>Pane #{pane.id}</h2><p>Status: {pane.status}</p>"
 
     for s in steps:
-        html += f"""
-        <div>
-            <b>{s.description}</b><br>
-            {hora_br(s.created_at)} - {s.created_by}
-            <hr>
-        </div>
-        """
-
-    html += f"""
-    <form method="POST">
-        <textarea name="step_desc" placeholder="Descrever etapa" required></textarea><br>
-        <input name="responsavel_info" placeholder="Responsável" required><br>
-        <input name="photo1" placeholder="Foto 1"><br>
-        <input name="photo2" placeholder="Foto 2"><br>
-        <input name="photo3" placeholder="Foto 3"><br>
-        <button type="submit" name="action" value="add_step">Salvar Etapa</button>
-    </form>
-    <hr>
-
-    <h3>Pendências</h3>
-    """
-
-    for p in pendencias:
-        html += f"""
-        <div>
-            <b>{p.tipo_item}</b> - {p.descricao}<br>
-            {hora_br(p.created_at)} - {p.created_by}
-            <hr>
-        </div>
-        """
-
-    html += """
-    <form method="POST">
-        <input name="descricao" placeholder="Descrição" required><br>
-        <input name="responsavel" placeholder="Responsável" required><br>
-        <input type="radio" name="tipo_item" value="Ferramenta" required> Ferramenta
-        <input type="radio" name="tipo_item" value="Material" required> Material<br>
-        <input type="radio" name="tipo_aquisicao" value="Transferência" required> Transferência
-        <input type="radio" name="tipo_aquisicao" value="Compra" required> Compra<br>
-        <button type="submit" name="action" value="add_pendencia">Salvar Pendência</button>
-    </form>
-
-    <form method="POST">
-        <button type="submit" name="action" value="finalize">Finalizar Pane</button>
-    </form>
-    """
+        html += f"<p>{s.description}</p>"
 
     return html
 
 # ======================
-# CRIAR TABELAS
+# LOGIN
+# ======================
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        user = User.query.filter_by(username=request.form["username"]).first()
+        if user and check_password_hash(user.password, request.form["password"]):
+            session["user_id"] = user.id
+            session["username"] = user.username
+            session["role"] = user.role
+            return redirect(url_for("home"))
+        return "Login inválido"
+
+    return """
+    <form method="POST">
+        <input name="username">
+        <input type="password" name="password">
+        <button>Entrar</button>
+    </form>
+    """
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
+
+# ======================
+# INIT
 # ======================
 
 with app.app_context():
