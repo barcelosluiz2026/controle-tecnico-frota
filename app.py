@@ -653,8 +653,7 @@ def pane_detail(id):
     # =============================
 
     if request.method == "POST":
-
-    action = request.form.get("action")
+        action = request.form.get("action")
 
     # =========================
     # NOVA ETAPA
@@ -1032,6 +1031,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
