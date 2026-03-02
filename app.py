@@ -653,56 +653,46 @@ def pane_detail(id):
     # =============================
 
     if request.method == "POST":
-
         action = request.form.get("action")
 
+        # Adicionar etapa
         if action == "add_step":
-
-            responsavel_info = request.form.get("responsavel_info")
-
-            if not responsavel_info:
-                return redirect(url_for("pane_detail", id=pane.id))
-
             step = Step(
                 pane_id=pane.id,
-                description=request.form.get("step_desc"),
-                responsavel_info=responsavel_info,
+                description=request.form["step_desc"],
                 created_by=session.get("username")
             )
-
             db.session.add(step)
+            if pane.tipo == "Aviônico":
+                pane.status = "In Progress Avi"
+            elif pane.tipo == "Mecânico":
+                pane.status = "In Progress Mec"
 
-            if pane.status == "Abertas":
-                pane.status = "Em Atendimento"
-
-        elif action == "add_pendencia":
-
+        # Adicionar pendência
+        elif action == "add_pendency":
             pend = Pendencia(
                 pane_id=pane.id,
                 tipo_item=request.form["tipo_item"],
                 tipo_aquisicao=request.form["tipo_aquisicao"],
                 descricao=request.form["descricao"],
-                pn=request.form.get("pn"),
-                sms_part_request=request.form.get("sms_part_request"),
-                task_card=request.form.get("task_card"),
+                pn=request.form["pn"],
+                sms_part_request=request.form["sms_part_request"],
+                task_card=request.form["task_card"],
                 responsavel=request.form["responsavel"],
                 created_by=session.get("username")
             )
-
             db.session.add(pend)
-
-            if pend.tipo_item == "Ferramenta":
-                pane.status = "Wait Tools"
-            elif pend.tipo_aquisicao == "Compra":
+            if pend.tipo_aquisicao == "Compra":
                 pane.status = "Wait Material"
             elif pend.tipo_aquisicao == "Transferência":
                 pane.status = "Wait Transfer"
 
+        # Finalizar pane
         elif action == "finalize":
             pane.status = "Finalizadas"
 
         db.session.commit()
-        return redirect(url_for("pane_detail", id=pane.id))
+        return redirect(url_for("aircraft_page", id=pane.aircraft_id))
 
     # =============================
     # LISTAS
@@ -1011,4 +1001,5 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
