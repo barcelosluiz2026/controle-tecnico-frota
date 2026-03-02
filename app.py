@@ -656,10 +656,6 @@ def pane_detail(id):
 
         action = request.form.get("action")
 
-        # =========================
-        # NOVA ETAPA
-        # =========================
-
         if action == "add_step":
 
             responsavel_info = request.form.get("responsavel_info")
@@ -679,10 +675,6 @@ def pane_detail(id):
             if pane.status == "Abertas":
                 pane.status = "Em Atendimento"
 
-        # =========================
-        # NOVA PENDÊNCIA
-        # =========================
-
         elif action == "add_pendencia":
 
             pend = Pendencia(
@@ -699,10 +691,6 @@ def pane_detail(id):
 
             db.session.add(pend)
 
-            # =========================
-            # MOVIMENTAÇÃO AUTOMÁTICA
-            # =========================
-
             if pend.tipo_item == "Ferramenta":
                 pane.status = "Wait Tools"
             elif pend.tipo_aquisicao == "Compra":
@@ -710,15 +698,10 @@ def pane_detail(id):
             elif pend.tipo_aquisicao == "Transferência":
                 pane.status = "Wait Transfer"
 
-        # =========================
-        # FINALIZAR PANE
-        # =========================
-
         elif action == "finalize":
             pane.status = "Finalizadas"
 
         db.session.commit()
-
         return redirect(url_for("pane_detail", id=pane.id))
 
     # =============================
@@ -748,15 +731,54 @@ def pane_detail(id):
     <head>
         <style>
             body {{ background:#0f172a; color:#f1f5f9; font-family:Segoe UI; padding:40px; }}
+
             .card {{ background:#1e293b; padding:20px; border-radius:10px; margin-bottom:25px; }}
-            textarea, input {{ width:100%; padding:10px; margin-top:8px; background:#0f172a; color:white; border:1px solid #334155; border-radius:6px; }}
-            .radio-group {{ display:flex; gap:20px; margin-top:8px; margin-bottom:10px; }}
-            .btn {{ background:#2563eb; color:white; border:none; padding:10px 18px; border-radius:6px; cursor:pointer; margin-top:10px; }}
-            .thumb {{ width:90px; height:70px; object-fit:cover; border-radius:6px; cursor:pointer; }}
-            .contador {{ background:#334155; padding:8px 12px; border-radius:6px; display:inline-block; margin-bottom:20px; }}
-            .modal {{ display:none; position:fixed; z-index:999; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.85); justify-content:center; align-items:center; flex-direction:column; }}
-            .modal img {{ max-width:90%; max-height:80%; border-radius:10px; }}
-            .close-btn {{ margin-top:20px; background:#ef4444; padding:10px 20px; border:none; color:white; border-radius:6px; cursor:pointer; }}
+
+            textarea, input {{
+                width:100%;
+                padding:10px;
+                margin-top:8px;
+                background:#0f172a;
+                color:white;
+                border:1px solid #334155;
+                border-radius:6px;
+            }}
+
+            .radio-group {{
+                display:flex;
+                gap:20px;
+                margin-top:8px;
+                margin-bottom:10px;
+            }}
+
+            .btn {{
+                background:#2563eb;
+                color:white;
+                border:none;
+                padding:10px 18px;
+                border-radius:6px;
+                cursor:pointer;
+            }}
+
+            .btn-green {{ background:#16a34a; }}
+            .btn-red {{ background:#ef4444; }}
+
+            .top-actions {{
+                display:flex;
+                gap:15px;
+                margin-bottom:25px;
+                flex-wrap:wrap;
+            }}
+
+            .hidden {{ display:none; }}
+
+            .contador {{
+                background:#334155;
+                padding:8px 12px;
+                border-radius:6px;
+                display:inline-block;
+                margin-bottom:20px;
+            }}
         </style>
     </head>
     <body>
@@ -773,33 +795,37 @@ def pane_detail(id):
         <small>Status: {pane.status}</small>
     </div>
 
-    <div class="card">
-        <h3>Etapas</h3>
-    """
+    <!-- ================= BOTÕES SUPERIORES ================= -->
 
-    for step in steps:
-        html += f"""
-        <div style="background:#334155;padding:12px;border-radius:8px;margin-bottom:12px;">
-            🛠 {step.description}<br>
-            <small>
-                Info: {step.responsavel_info}<br>
-                {hora_br(step.created_at)} - {step.created_by}
-            </small>
-        </div>
-        """
+    <div class="top-actions">
+        <button class="btn" onclick="toggle('formStep')">➕ Adicionar Etapa</button>
+        <button class="btn" onclick="toggle('formPend')">➕ Registrar Pendência</button>
+        <button class="btn btn-green" onclick="confirmarFinalizacao()">✅ Finalizar Pane</button>
+    </div>
 
-    html += """
+    <!-- ================= FORM ETAPA ================= -->
+
+    <div id="formStep" class="card hidden">
+        <h3>Nova Etapa</h3>
         <form method="POST">
             <textarea name="step_desc" placeholder="Descreva a etapa" required></textarea>
             <input name="responsavel_info" placeholder="Responsável pela informação" required>
-            <button type="submit" name="action" value="add_step" class="btn">
-                Salvar Etapa
-            </button>
+
+            <div style="margin-top:15px;">
+                <button type="submit" name="action" value="add_step" class="btn">
+                    Salvar
+                </button>
+                <button type="button" class="btn btn-red" onclick="toggle('formStep')">
+                    Cancelar
+                </button>
+            </div>
         </form>
     </div>
 
-    <div class="card">
-        <h3>Registrar Pendência</h3>
+    <!-- ================= FORM PENDÊNCIA ================= -->
+
+    <div id="formPend" class="card hidden">
+        <h3>Nova Pendência</h3>
         <form method="POST">
             <div class="radio-group">
                 <label><input type="radio" name="tipo_item" value="Ferramenta" required> Ferramenta</label>
@@ -817,16 +843,39 @@ def pane_detail(id):
             <input name="task_card" placeholder="Task Card">
             <input name="responsavel" placeholder="Responsável" required>
 
-            <button type="submit" name="action" value="add_pendencia" class="btn">
-                Salvar Pendência
-            </button>
+            <div style="margin-top:15px;">
+                <button type="submit" name="action" value="add_pendencia" class="btn">
+                    Salvar
+                </button>
+                <button type="button" class="btn btn-red" onclick="toggle('formPend')">
+                    Cancelar
+                </button>
+            </div>
         </form>
     </div>
+
+    <!-- ================= LISTAGENS ================= -->
+
+    <div class="card">
+        <h3>Etapas</h3>
     """
+
+    for step in steps:
+        html += f"""
+        <div style="background:#334155;padding:12px;border-radius:8px;margin-bottom:12px;">
+            🛠 {step.description}<br>
+            <small>
+                Info: {step.responsavel_info}<br>
+                {hora_br(step.created_at)} - {step.created_by}
+            </small>
+        </div>
+        """
+
+    html += "</div><div class='card'><h3>Pendências</h3>"
 
     for p in pendencias:
         html += f"""
-        <div class="card">
+        <div style="background:#334155;padding:12px;border-radius:8px;margin-bottom:12px;">
             <strong>{p.tipo_item}</strong> - {p.descricao}<br>
             <small>
                 Aquisição: {p.tipo_aquisicao}<br>
@@ -839,19 +888,31 @@ def pane_detail(id):
         </div>
         """
 
-    html += """
-    <form method="POST" style="text-align:center;">
-        <button type="submit" name="action" value="finalize" class="btn" style="background:#16a34a;">
-            Finalizar Pane
-        </button>
-    </form>
+    html += f"""
+        </div>
+
+        <form method="POST" id="formFinalize" class="hidden">
+            <input type="hidden" name="action" value="finalize">
+        </form>
+
+        <script>
+            function toggle(id) {{
+                const el = document.getElementById(id);
+                el.classList.toggle("hidden");
+            }}
+
+            function confirmarFinalizacao() {{
+                if (confirm("Tem certeza que deseja finalizar esta pane?")) {{
+                    document.getElementById("formFinalize").submit();
+                }}
+            }}
+        </script>
 
     </body>
     </html>
     """
 
     return html
-
 
 # ======================
 # LOGIN
@@ -950,3 +1011,4 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
