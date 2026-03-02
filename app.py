@@ -731,14 +731,54 @@ def pane_detail(id):
     <head>
         <style>
             body {{ background:#0f172a; color:#f1f5f9; font-family:Segoe UI; padding:40px; }}
+
             .card {{ background:#1e293b; padding:20px; border-radius:10px; margin-bottom:25px; }}
-            textarea, input {{ width:100%; padding:10px; margin-top:8px; background:#0f172a; color:white; border:1px solid #334155; border-radius:6px; }}
-            .radio-group {{ display:flex; gap:20px; margin-top:8px; margin-bottom:10px; }}
-            .btn {{ background:#2563eb; color:white; border:none; padding:10px 18px; border-radius:6px; cursor:pointer; margin-top:10px; }}
+
+            textarea, input {{
+                width:100%;
+                padding:10px;
+                margin-top:8px;
+                background:#0f172a;
+                color:white;
+                border:1px solid #334155;
+                border-radius:6px;
+            }}
+
+            .radio-group {{
+                display:flex;
+                gap:20px;
+                margin-top:8px;
+                margin-bottom:10px;
+            }}
+
+            .btn {{
+                background:#2563eb;
+                color:white;
+                border:none;
+                padding:10px 18px;
+                border-radius:6px;
+                cursor:pointer;
+            }}
+
             .btn-green {{ background:#16a34a; }}
             .btn-red {{ background:#ef4444; }}
+
+            .top-actions {{
+                display:flex;
+                gap:15px;
+                margin-bottom:25px;
+                flex-wrap:wrap;
+            }}
+
             .hidden {{ display:none; }}
-            .contador {{ background:#334155; padding:8px 12px; border-radius:6px; display:inline-block; margin-bottom:20px; }}
+
+            .contador {{
+                background:#334155;
+                padding:8px 12px;
+                border-radius:6px;
+                display:inline-block;
+                margin-bottom:20px;
+            }}
         </style>
     </head>
     <body>
@@ -755,60 +795,38 @@ def pane_detail(id):
         <small>Status: {pane.status}</small>
     </div>
 
-    <!-- ================= ETAPAS ================= -->
+    <!-- ================= BOTÕES SUPERIORES ================= -->
 
-    <div class="card">
-        <h3>Etapas</h3>
-    """
-
-    for step in steps:
-        html += f"""
-        <div style="background:#334155;padding:12px;border-radius:8px;margin-bottom:12px;">
-            🛠 {step.description}<br>
-            <small>
-                Info: {step.responsavel_info}<br>
-                {hora_br(step.created_at)} - {step.created_by}
-            </small>
-        </div>
-        """
-
-    html += """
+    <div class="top-actions">
         <button class="btn" onclick="toggle('formStep')">➕ Adicionar Etapa</button>
+        <button class="btn" onclick="toggle('formPend')">➕ Registrar Pendência</button>
+        <button class="btn btn-green" onclick="confirmarFinalizacao()">✅ Finalizar Pane</button>
+    </div>
 
-        <form method="POST" id="formStep" class="hidden">
+    <!-- ================= FORM ETAPA ================= -->
+
+    <div id="formStep" class="card hidden">
+        <h3>Nova Etapa</h3>
+        <form method="POST">
             <textarea name="step_desc" placeholder="Descreva a etapa" required></textarea>
             <input name="responsavel_info" placeholder="Responsável pela informação" required>
-            <button type="submit" name="action" value="add_step" class="btn">
-                Salvar Etapa
-            </button>
+
+            <div style="margin-top:15px;">
+                <button type="submit" name="action" value="add_step" class="btn">
+                    Salvar
+                </button>
+                <button type="button" class="btn btn-red" onclick="toggle('formStep')">
+                    Cancelar
+                </button>
+            </div>
         </form>
     </div>
 
-    <!-- ================= PENDÊNCIAS ================= -->
+    <!-- ================= FORM PENDÊNCIA ================= -->
 
-    <div class="card">
-        <h3>Pendências</h3>
-    """
-
-    for p in pendencias:
-        html += f"""
-        <div style="background:#334155;padding:12px;border-radius:8px;margin-bottom:12px;">
-            <strong>{p.tipo_item}</strong> - {p.descricao}<br>
-            <small>
-                Aquisição: {p.tipo_aquisicao}<br>
-                P/N: {p.pn or '-'}<br>
-                SMS/Part: {p.sms_part_request or '-'}<br>
-                Task Card: {p.task_card or '-'}<br>
-                Responsável: {p.responsavel}<br>
-                {hora_br(p.created_at)} - {p.created_by}
-            </small>
-        </div>
-        """
-
-    html += """
-        <button class="btn" onclick="toggle('formPend')">➕ Registrar Pendência</button>
-
-        <form method="POST" id="formPend" class="hidden">
+    <div id="formPend" class="card hidden">
+        <h3>Nova Pendência</h3>
+        <form method="POST">
             <div class="radio-group">
                 <label><input type="radio" name="tipo_item" value="Ferramenta" required> Ferramenta</label>
                 <label><input type="radio" name="tipo_item" value="Material" required> Material</label>
@@ -825,36 +843,70 @@ def pane_detail(id):
             <input name="task_card" placeholder="Task Card">
             <input name="responsavel" placeholder="Responsável" required>
 
-            <button type="submit" name="action" value="add_pendencia" class="btn">
-                Salvar Pendência
-            </button>
+            <div style="margin-top:15px;">
+                <button type="submit" name="action" value="add_pendencia" class="btn">
+                    Salvar
+                </button>
+                <button type="button" class="btn btn-red" onclick="toggle('formPend')">
+                    Cancelar
+                </button>
+            </div>
         </form>
     </div>
 
-    <!-- ================= FINALIZAR ================= -->
+    <!-- ================= LISTAGENS ================= -->
 
-    <div style="text-align:center;">
-        <button class="btn btn-green" onclick="confirmarFinalizacao()">
-            ✅ Finalizar Pane
-        </button>
+    <div class="card">
+        <h3>Etapas</h3>
+    """
+
+    for step in steps:
+        html += f"""
+        <div style="background:#334155;padding:12px;border-radius:8px;margin-bottom:12px;">
+            🛠 {step.description}<br>
+            <small>
+                Info: {step.responsavel_info}<br>
+                {hora_br(step.created_at)} - {step.created_by}
+            </small>
+        </div>
+        """
+
+    html += "</div><div class='card'><h3>Pendências</h3>"
+
+    for p in pendencias:
+        html += f"""
+        <div style="background:#334155;padding:12px;border-radius:8px;margin-bottom:12px;">
+            <strong>{p.tipo_item}</strong> - {p.descricao}<br>
+            <small>
+                Aquisição: {p.tipo_aquisicao}<br>
+                P/N: {p.pn or '-'}<br>
+                SMS/Part: {p.sms_part_request or '-'}<br>
+                Task Card: {p.task_card or '-'}<br>
+                Responsável: {p.responsavel}<br>
+                {hora_br(p.created_at)} - {p.created_by}
+            </small>
+        </div>
+        """
+
+    html += f"""
+        </div>
 
         <form method="POST" id="formFinalize" class="hidden">
             <input type="hidden" name="action" value="finalize">
         </form>
-    </div>
 
-    <script>
-        function toggle(id) {
-            const el = document.getElementById(id);
-            el.classList.toggle("hidden");
-        }
+        <script>
+            function toggle(id) {{
+                const el = document.getElementById(id);
+                el.classList.toggle("hidden");
+            }}
 
-        function confirmarFinalizacao() {
-            if (confirm("Tem certeza que deseja finalizar esta pane?")) {
-                document.getElementById("formFinalize").submit();
-            }
-        }
-    </script>
+            function confirmarFinalizacao() {{
+                if (confirm("Tem certeza que deseja finalizar esta pane?")) {{
+                    document.getElementById("formFinalize").submit();
+                }}
+            }}
+        </script>
 
     </body>
     </html>
@@ -956,3 +1008,4 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
