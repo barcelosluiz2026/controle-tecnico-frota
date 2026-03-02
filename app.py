@@ -643,10 +643,6 @@ def pane_detail(id):
     steps_all = Step.query.filter_by(pane_id=pane.id).all()
 
     total_fotos = 0
-
-    if pane.photo_url:
-        total_fotos += 1
-
     for s in steps_all:
         for f in [s.photo1, s.photo2, s.photo3]:
             if f:
@@ -660,9 +656,9 @@ def pane_detail(id):
 
         action = request.form.get("action")
 
-        # =============================
-        # ADICIONAR ETAPA
-        # =============================
+        # =========================
+        # NOVA ETAPA
+        # =========================
 
         if action == "add_step":
 
@@ -680,15 +676,12 @@ def pane_detail(id):
 
             db.session.add(step)
 
-            # 🔥 MOVIMENTAÇÃO AUTOMÁTICA CORRETA
-            if pane.tipo == "Aviônico":
-                pane.status = "In Progress Avi"
-            else:
-                pane.status = "In Progress Mec"
+            if pane.status == "Abertas":
+                pane.status = "Em Atendimento"
 
-        # =============================
-        # ADICIONAR PENDÊNCIA
-        # =============================
+        # =========================
+        # NOVA PENDÊNCIA
+        # =========================
 
         elif action == "add_pendencia":
 
@@ -706,6 +699,10 @@ def pane_detail(id):
 
             db.session.add(pend)
 
+            # =========================
+            # MOVIMENTAÇÃO AUTOMÁTICA
+            # =========================
+
             if pend.tipo_item == "Ferramenta":
                 pane.status = "Wait Tools"
             elif pend.tipo_aquisicao == "Compra":
@@ -713,14 +710,15 @@ def pane_detail(id):
             elif pend.tipo_aquisicao == "Transferência":
                 pane.status = "Wait Transfer"
 
-        # =============================
-        # FINALIZAR
-        # =============================
+        # =========================
+        # FINALIZAR PANE
+        # =========================
 
         elif action == "finalize":
             pane.status = "Finalizadas"
 
         db.session.commit()
+
         return redirect(url_for("pane_detail", id=pane.id))
 
     # =============================
@@ -750,49 +748,15 @@ def pane_detail(id):
     <head>
         <style>
             body {{ background:#0f172a; color:#f1f5f9; font-family:Segoe UI; padding:40px; }}
-
             .card {{ background:#1e293b; padding:20px; border-radius:10px; margin-bottom:25px; }}
-
-            .thumb {{
-                width:100px;
-                height:80px;
-                object-fit:cover;
-                border-radius:8px;
-                cursor:pointer;
-                transition:0.2s;
-            }}
-
-            .thumb:hover {{ transform:scale(1.05); }}
-
-            .modal {{
-                display:none;
-                position:fixed;
-                z-index:999;
-                left:0;
-                top:0;
-                width:100%;
-                height:100%;
-                background:rgba(0,0,0,0.85);
-                justify-content:center;
-                align-items:center;
-                flex-direction:column;
-            }}
-
-            .modal img {{
-                max-width:90%;
-                max-height:80%;
-                border-radius:10px;
-            }}
-
-            .close-btn {{
-                margin-top:20px;
-                background:#ef4444;
-                padding:10px 20px;
-                border:none;
-                color:white;
-                border-radius:6px;
-                cursor:pointer;
-            }}
+            textarea, input {{ width:100%; padding:10px; margin-top:8px; background:#0f172a; color:white; border:1px solid #334155; border-radius:6px; }}
+            .radio-group {{ display:flex; gap:20px; margin-top:8px; margin-bottom:10px; }}
+            .btn {{ background:#2563eb; color:white; border:none; padding:10px 18px; border-radius:6px; cursor:pointer; margin-top:10px; }}
+            .thumb {{ width:90px; height:70px; object-fit:cover; border-radius:6px; cursor:pointer; }}
+            .contador {{ background:#334155; padding:8px 12px; border-radius:6px; display:inline-block; margin-bottom:20px; }}
+            .modal {{ display:none; position:fixed; z-index:999; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.85); justify-content:center; align-items:center; flex-direction:column; }}
+            .modal img {{ max-width:90%; max-height:80%; border-radius:10px; }}
+            .close-btn {{ margin-top:20px; background:#ef4444; padding:10px 20px; border:none; color:white; border-radius:6px; cursor:pointer; }}
         </style>
     </head>
     <body>
@@ -800,28 +764,20 @@ def pane_detail(id):
     <a href="/aircraft/{pane.aircraft_id}">← Voltar</a>
     <h2>Pane #{pane.id} - ATA {pane.ata}</h2>
 
+    <div class="contador">
+        📸 Fotos utilizadas: {total_fotos} / 4
+    </div>
+
     <div class="card">
         <strong>{pane.description}</strong><br>
-        <small>Status: {pane.status}</small><br><br>
+        <small>Status: {pane.status}</small>
+    </div>
+
+    <div class="card">
+        <h3>Etapas</h3>
     """
 
-    # 🔥 FOTO PRINCIPAL DA PANE
-    if pane.photo_url:
-        html += f"""
-        <img src="{pane.photo_url}" class="thumb"
-        onclick="abrirModal('{pane.photo_url}')">
-        """
-
-    html += "</div>"
-
-    # =============================
-    # ETAPAS
-    # =============================
-
-    html += "<div class='card'><h3>Etapas</h3>"
-
     for step in steps:
-
         html += f"""
         <div style="background:#334155;padding:12px;border-radius:8px;margin-bottom:12px;">
             🛠 {step.description}<br>
@@ -829,43 +785,73 @@ def pane_detail(id):
                 Info: {step.responsavel_info}<br>
                 {hora_br(step.created_at)} - {step.created_by}
             </small>
-            <div style="display:flex;gap:8px;margin-top:10px;">
+        </div>
         """
 
-        for foto in [step.photo1, step.photo2, step.photo3]:
-            if foto:
-                html += f'<img src="{foto}" class="thumb" onclick="abrirModal(\'{foto}\')">'
-
-        html += "</div></div>"
-
-    html += "</div>"
-
-    # =============================
-    # MODAL
-    # =============================
-
     html += """
-    <div id="modal" class="modal">
-        <img id="modalImg">
-        <button class="close-btn" onclick="fecharModal()">Fechar</button>
+        <form method="POST">
+            <textarea name="step_desc" placeholder="Descreva a etapa" required></textarea>
+            <input name="responsavel_info" placeholder="Responsável pela informação" required>
+            <button type="submit" name="action" value="add_step" class="btn">
+                Salvar Etapa
+            </button>
+        </form>
     </div>
 
-    <script>
-        function abrirModal(src) {
-            document.getElementById("modal").style.display = "flex";
-            document.getElementById("modalImg").src = src;
-        }
+    <div class="card">
+        <h3>Registrar Pendência</h3>
+        <form method="POST">
+            <div class="radio-group">
+                <label><input type="radio" name="tipo_item" value="Ferramenta" required> Ferramenta</label>
+                <label><input type="radio" name="tipo_item" value="Material" required> Material</label>
+            </div>
 
-        function fecharModal() {
-            document.getElementById("modal").style.display = "none";
-        }
-    </script>
+            <div class="radio-group">
+                <label><input type="radio" name="tipo_aquisicao" value="Transferência" required> Transferência</label>
+                <label><input type="radio" name="tipo_aquisicao" value="Compra" required> Compra</label>
+            </div>
+
+            <input name="descricao" placeholder="Descrição" required>
+            <input name="pn" placeholder="P/N">
+            <input name="sms_part_request" placeholder="SMS/Part Request">
+            <input name="task_card" placeholder="Task Card">
+            <input name="responsavel" placeholder="Responsável" required>
+
+            <button type="submit" name="action" value="add_pendencia" class="btn">
+                Salvar Pendência
+            </button>
+        </form>
+    </div>
+    """
+
+    for p in pendencias:
+        html += f"""
+        <div class="card">
+            <strong>{p.tipo_item}</strong> - {p.descricao}<br>
+            <small>
+                Aquisição: {p.tipo_aquisicao}<br>
+                P/N: {p.pn or '-'}<br>
+                SMS/Part: {p.sms_part_request or '-'}<br>
+                Task Card: {p.task_card or '-'}<br>
+                Responsável: {p.responsavel}<br>
+                {hora_br(p.created_at)} - {p.created_by}
+            </small>
+        </div>
+        """
+
+    html += """
+    <form method="POST" style="text-align:center;">
+        <button type="submit" name="action" value="finalize" class="btn" style="background:#16a34a;">
+            Finalizar Pane
+        </button>
+    </form>
 
     </body>
     </html>
     """
 
     return html
+
 
 # ======================
 # LOGIN
@@ -910,6 +896,7 @@ def register():
     </form>
     """
 
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
 
@@ -937,10 +924,12 @@ def login():
     </form>
     """
 
+
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect(url_for("login"))
+
 
 # ======================
 # CRIAR TABELAS
@@ -961,7 +950,3 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
-
-
-
-
