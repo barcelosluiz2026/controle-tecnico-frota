@@ -855,7 +855,8 @@ def logout():
 
 with app.app_context():
     db.create_all()
-    if __name__ == "__main__":
+
+if __name__ == "__main__":
     app.run()
 
 # ======================
@@ -867,5 +868,6 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
