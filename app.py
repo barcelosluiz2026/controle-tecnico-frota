@@ -653,46 +653,77 @@ def pane_detail(id):
     # =============================
 
     if request.method == "POST":
-        action = request.form.get("action")
 
-        # Adicionar etapa
-        if action == "add_step":
-            step = Step(
-                pane_id=pane.id,
-                description=request.form["step_desc"],
-                created_by=session.get("username")
-            )
-            db.session.add(step)
-            if pane.tipo == "Aviônico":
-                pane.status = "In Progress Avi"
-            elif pane.tipo == "Mecânico":
-                pane.status = "In Progress Mec"
+    action = request.form.get("action")
 
-        # Adicionar pendência
-        elif action == "add_pendency":
-            pend = Pendencia(
-                pane_id=pane.id,
-                tipo_item=request.form["tipo_item"],
-                tipo_aquisicao=request.form["tipo_aquisicao"],
-                descricao=request.form["descricao"],
-                pn=request.form["pn"],
-                sms_part_request=request.form["sms_part_request"],
-                task_card=request.form["task_card"],
-                responsavel=request.form["responsavel"],
-                created_by=session.get("username")
-            )
-            db.session.add(pend)
+    # =========================
+    # NOVA ETAPA
+    # =========================
+    if action == "add_step":
+
+        descricao = request.form.get("step_desc", "").strip()
+        responsavel_info = request.form.get("responsavel_info", "").strip()
+
+        if not descricao or not responsavel_info:
+            return redirect(url_for("pane_detail", id=pane.id))
+
+        step = Step(
+            pane_id=pane.id,
+            description=descricao,
+            responsavel_info=responsavel_info,
+            created_by=session.get("username"),
+            photo1=None,
+            photo2=None,
+            photo3=None
+        )
+
+        db.session.add(step)
+
+        # 🔥 MOVIMENTAÇÃO AUTOMÁTICA CORRETA
+        if pane.tipo and pane.tipo.strip().lower() == "aviônico":
+            pane.status = "In Progress Avi"
+        else:
+            pane.status = "In Progress Mec"
+
+    # =========================
+    # NOVA PENDÊNCIA
+    # =========================
+    elif action == "add_pendencia":
+
+        pend = Pendencia(
+            pane_id=pane.id,
+            tipo_item=request.form.get("tipo_item"),
+            tipo_aquisicao=request.form.get("tipo_aquisicao"),
+            descricao=request.form.get("descricao"),
+            pn=request.form.get("pn"),
+            sms_part_request=request.form.get("sms_part_request"),
+            task_card=request.form.get("task_card"),
+            responsavel=request.form.get("responsavel"),
+            created_by=session.get("username")
+        )
+
+        db.session.add(pend)
+
+        # 🔥 MOVIMENTAÇÃO AUTOMÁTICA CORRIGIDA
+        if pend.tipo_item == "Ferramenta":
+            pane.status = "Wait Tools"
+
+        elif pend.tipo_item == "Material":
+
             if pend.tipo_aquisicao == "Compra":
                 pane.status = "Wait Material"
+
             elif pend.tipo_aquisicao == "Transferência":
                 pane.status = "Wait Transfer"
 
-        # Finalizar pane
-        elif action == "finalize":
-            pane.status = "Finalizadas"
+    # =========================
+    # FINALIZAR
+    # =========================
+    elif action == "finalize":
+        pane.status = "Finalizadas"
 
-        db.session.commit()
-        return redirect(url_for("aircraft_page", id=pane.aircraft_id))
+    db.session.commit()
+    return redirect(url_for("pane_detail", id=pane.id))
 
     # =============================
     # LISTAS
@@ -1001,5 +1032,6 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
