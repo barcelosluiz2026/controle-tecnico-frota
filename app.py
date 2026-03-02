@@ -653,11 +653,12 @@ def pane_detail(id):
     # =============================
 
     if request.method == "POST":
+
         action = request.form.get("action")
 
-    # =========================
-    # NOVA ETAPA
-    # =========================
+        # =========================
+        # NOVA ETAPA
+        # =========================
         if action == "add_step":
 
             descricao = request.form.get("step_desc", "").strip()
@@ -678,15 +679,14 @@ def pane_detail(id):
 
             db.session.add(step)
 
-        # 🔥 MOVIMENTAÇÃO AUTOMÁTICA CORRETA
             if pane.tipo and pane.tipo.strip().lower() == "aviônico":
                 pane.status = "In Progress Avi"
             else:
                 pane.status = "In Progress Mec"
 
-    # =========================
-    # NOVA PENDÊNCIA
-    # =========================
+        # =========================
+        # NOVA PENDÊNCIA
+        # =========================
         elif action == "add_pendencia":
 
             pend = Pendencia(
@@ -701,28 +701,27 @@ def pane_detail(id):
                 created_by=session.get("username")
             )
 
-        db.session.add(pend)
+            db.session.add(pend)
 
-        # 🔥 MOVIMENTAÇÃO AUTOMÁTICA CORRIGIDA
-        if pend.tipo_item == "Ferramenta":
-            pane.status = "Wait Tools"
+            if pend.tipo_item == "Ferramenta":
+                pane.status = "Wait Tools"
 
-        elif pend.tipo_item == "Material":
+            elif pend.tipo_item == "Material":
 
-            if pend.tipo_aquisicao == "Compra":
-                pane.status = "Wait Material"
+                if pend.tipo_aquisicao == "Compra":
+                    pane.status = "Wait Material"
 
-            elif pend.tipo_aquisicao == "Transferência":
-                pane.status = "Wait Transfer"
+                elif pend.tipo_aquisicao == "Transferência":
+                    pane.status = "Wait Transfer"
 
-    # =========================
-    # FINALIZAR
-    # =========================
-    elif action == "finalize":
-        pane.status = "Finalizadas"
+        # =========================
+        # FINALIZAR
+        # =========================
+        elif action == "finalize":
+            pane.status = "Finalizadas"
 
-    db.session.commit()
-    return redirect(url_for("pane_detail", id=pane.id))
+        db.session.commit()
+        return redirect(url_for("pane_detail", id=pane.id))
 
     # =============================
     # LISTAS
@@ -815,15 +814,11 @@ def pane_detail(id):
         <small>Status: {pane.status}</small>
     </div>
 
-    <!-- ================= BOTÕES SUPERIORES ================= -->
-
     <div class="top-actions">
         <button class="btn" onclick="toggle('formStep')">➕ Adicionar Etapa</button>
         <button class="btn" onclick="toggle('formPend')">➕ Registrar Pendência</button>
         <button class="btn btn-green" onclick="confirmarFinalizacao()">✅ Finalizar Pane</button>
     </div>
-
-    <!-- ================= FORM ETAPA ================= -->
 
     <div id="formStep" class="card hidden">
         <h3>Nova Etapa</h3>
@@ -841,8 +836,6 @@ def pane_detail(id):
             </div>
         </form>
     </div>
-
-    <!-- ================= FORM PENDÊNCIA ================= -->
 
     <div id="formPend" class="card hidden">
         <h3>Nova Pendência</h3>
@@ -873,8 +866,6 @@ def pane_detail(id):
             </div>
         </form>
     </div>
-
-    <!-- ================= LISTAGENS ================= -->
 
     <div class="card">
         <h3>Etapas</h3>
@@ -1031,6 +1022,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
