@@ -419,11 +419,11 @@ def aircraft_page(id):
 
     statuses = [
         "Pane Lançada",
-        "In Progress Avi",
-        "In Progress Mec",
-        "Wait Material",
-        "Wait Tools",
-        "Wait Transfer",
+        "Aviônicos (Andamento)",
+        "Mecânicos (Andamento)",
+        "Aguardando Material (Compra)",
+        "Aguardando Ferramenta",
+        "Aguardando Material (Transferência)",
         "Finalizadas"
     ]
 
@@ -1008,4 +1008,5 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
