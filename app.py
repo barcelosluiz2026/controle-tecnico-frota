@@ -441,17 +441,92 @@ def aircraft_page(id):
             body {{ font-family: 'Segoe UI', Arial, sans-serif; background-color: #0f172a; color: #f1f5f9; margin: 0; padding: 20px; }}
             h2, h3 {{ color: #38bdf8; }}
             .container {{ max-width: 98%; margin: 0 auto; }}
-            .form-box {{ background: #1e293b; padding: 30px; border-radius: 12px; box-shadow: 0 0 15px rgba(0,0,0,0.3); margin-bottom: 40px; }}
+
+            .btn-add {{
+                background: linear-gradient(90deg, #2563eb, #1d4ed8);
+                color: white;
+                border: none;
+                padding: 12px 18px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-weight: bold;
+                margin-bottom: 20px;
+            }}
+
+            .form-box {{
+                background: #1e293b;
+                padding: 30px;
+                border-radius: 12px;
+                box-shadow: 0 0 15px rgba(0,0,0,0.3);
+                margin-bottom: 40px;
+                display: none;
+            }}
+
             form {{ display: grid; gap: 15px; }}
-            textarea, input {{ background: #0f172a; color: #f1f5f9; border: 1px solid #334155; border-radius: 6px; padding: 10px; width: 100%; }}
+
+            textarea, input {{
+                background: #0f172a;
+                color: #f1f5f9;
+                border: 1px solid #334155;
+                border-radius: 6px;
+                padding: 10px;
+                width: 100%;
+            }}
+
             .radio-group {{ display: flex; gap: 20px; align-items: center; }}
-            .btn {{ background: linear-gradient(90deg, #2563eb, #1d4ed8); color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold; }}
+
+            .btn {{
+                background: linear-gradient(90deg, #2563eb, #1d4ed8);
+                color: white;
+                border: none;
+                padding: 12px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-weight: bold;
+            }}
+
             .tabs {{ display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap; }}
-            .tabs button {{ padding:8px 15px; border:none; border-radius:6px; background:#334155; color:#38bdf8; cursor:pointer; transition:0.2s; }}
-            .tabs button.active {{ background:#2563eb; color:white; box-shadow:0 0 8px rgba(37,99,235,0.6); }}
-            .column {{ background: #1e293b; border-radius: 10px; padding: 15px; display: none; flex-direction: column; }}
-            .column h4 {{ text-align: center; background: #334155; padding: 10px; border-radius: 6px; margin-bottom: 15px; color: #38bdf8; }}
-            .card {{ background: #334155; padding: 12px; border-radius: 8px; margin-bottom: 10px; }}
+
+            .tabs button {{
+                padding:8px 15px;
+                border:none;
+                border-radius:6px;
+                background:#334155;
+                color:#38bdf8;
+                cursor:pointer;
+                transition:0.2s;
+            }}
+
+            .tabs button.active {{
+                background:#2563eb;
+                color:white;
+                box-shadow:0 0 8px rgba(37,99,235,0.6);
+            }}
+
+            .column {{
+                background: #1e293b;
+                border-radius: 10px;
+                padding: 15px;
+                display: none;
+                flex-direction: column;
+            }}
+
+            .column h4 {{
+                text-align: center;
+                background: #334155;
+                padding: 10px;
+                border-radius: 6px;
+                margin-bottom: 15px;
+                color: #38bdf8;
+            }}
+
+            .card {{
+                background: #334155;
+                padding: 12px;
+                border-radius: 8px;
+                margin-bottom: 10px;
+            }}
+
             .card small {{ color: #94a3b8; }}
         </style>
     </head>
@@ -460,7 +535,9 @@ def aircraft_page(id):
             <a href="/">← Voltar</a>
             <h2>🚁 {aircraft.prefix} - {aircraft.model}</h2>
 
-            <div class="form-box">
+            <button class="btn-add" onclick="toggleForm()">➕ Adicionar Pane</button>
+
+            <div class="form-box" id="formPane">
                 <h3>Registrar Nova Pane</h3>
                 <form method="POST">
                     <textarea name="description" placeholder="Descrição da Pane" required></textarea>
@@ -478,6 +555,7 @@ def aircraft_page(id):
                     <input name="photo_url" placeholder="URL da Foto (opcional)">
 
                     <button type="submit" class="btn">Salvar Pane</button>
+                    <button type="button" class="btn" onclick="toggleForm()">Cancelar</button>
                 </form>
             </div>
 
@@ -485,15 +563,14 @@ def aircraft_page(id):
             <div class="tabs">
     """
 
-    # BOTÕES
     for status in statuses:
         quantidade = len(grouped_panes[status])
         html += f"<button onclick=\"abrirAba('{status}')\">{status} ({quantidade})</button>"
 
     html += "</div>"
 
-    # COLUNAS
     for status in statuses:
+
         quantidade = len(grouped_panes[status])
 
         html += f"<div class='column' id='col-{status}'>"
@@ -517,6 +594,11 @@ def aircraft_page(id):
         </div>
 
         <script>
+            function toggleForm() {
+                const form = document.getElementById("formPane");
+                form.style.display = form.style.display === "none" ? "block" : "none";
+            }
+
             function abrirAba(status) {
                 const colunas = document.querySelectorAll('.column');
                 colunas.forEach(col => col.style.display = 'none');
@@ -868,6 +950,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
