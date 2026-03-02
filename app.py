@@ -658,31 +658,31 @@ def pane_detail(id):
     # =========================
     # NOVA ETAPA
     # =========================
-    if action == "add_step":
+        if action == "add_step":
 
-        descricao = request.form.get("step_desc", "").strip()
-        responsavel_info = request.form.get("responsavel_info", "").strip()
+            descricao = request.form.get("step_desc", "").strip()
+            responsavel_info = request.form.get("responsavel_info", "").strip()
 
-        if not descricao or not responsavel_info:
-            return redirect(url_for("pane_detail", id=pane.id))
+            if not descricao or not responsavel_info:
+                return redirect(url_for("pane_detail", id=pane.id))
 
-        step = Step(
-            pane_id=pane.id,
-            description=descricao,
-            responsavel_info=responsavel_info,
-            created_by=session.get("username"),
-            photo1=None,
-            photo2=None,
-            photo3=None
-        )
+            step = Step(
+                pane_id=pane.id,
+                description=descricao,
+                responsavel_info=responsavel_info,
+                created_by=session.get("username"),
+                photo1=None,
+                photo2=None,
+                photo3=None
+            )
 
-        db.session.add(step)
+            db.session.add(step)
 
         # 🔥 MOVIMENTAÇÃO AUTOMÁTICA CORRETA
-        if pane.tipo and pane.tipo.strip().lower() == "aviônico":
-            pane.status = "In Progress Avi"
-        else:
-            pane.status = "In Progress Mec"
+            if pane.tipo and pane.tipo.strip().lower() == "aviônico":
+                pane.status = "In Progress Avi"
+            else:
+                pane.status = "In Progress Mec"
 
     # =========================
     # NOVA PENDÊNCIA
@@ -1031,6 +1031,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
