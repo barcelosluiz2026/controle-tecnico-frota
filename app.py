@@ -723,38 +723,38 @@ def pane_detail(id):
     }}
     /* ===== FORM PENDENCIA MELHORADO ===== */
 
-    .radio-group {
+    .radio-group {{
         margin-bottom:15px;
-    }
+    }}
 
-    .radio-title {
+    .radio-title {{
         font-weight:600;
         margin-bottom:6px;
         display:block;
-    }
+    }}
 
-    .radio-row {
+    .radio-row {{
         display:flex;
         gap:25px;
-    }
+    }}
 
-    .radio-row label {
+    .radio-row label {{
         display:flex;
         align-items:center;
         gap:6px;
         cursor:pointer;
-    }
+    }}
 
-    .form-grid {
+    .form-grid {{
         display:grid;
         grid-template-columns:1fr 1fr;
         gap:12px;
         margin-top:10px;
-    }
+    }}
 
-    .form-grid input {
+    .form-grid input {{
         margin-top:6px;
-    }
+    }}
     </style>
     </head>
     <body>
@@ -1020,6 +1020,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
