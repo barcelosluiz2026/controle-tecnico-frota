@@ -633,37 +633,17 @@ def aircraft_page(id):
 @app.route("/pane/<int:id>", methods=["GET", "POST"])
 @login_required()
 def pane_detail(id):
-
     pane = Pane.query.get_or_404(id)
 
-    # =============================
-    # CONTAR TOTAL DE FOTOS
-    # =============================
-
     steps_all = Step.query.filter_by(pane_id=pane.id).all()
-
-    total_fotos = 0
-    for s in steps_all:
-        for f in [s.photo1, s.photo2, s.photo3]:
-            if f:
-                total_fotos += 1
-
-    # =============================
-    # POST
-    # =============================
+    total_fotos = sum(1 for s in steps_all for f in [s.photo1, s.photo2, s.photo3] if f)
 
     if request.method == "POST":
-
         action = request.form.get("action")
 
-        # =========================
-        # NOVA ETAPA
-        # =========================
         if action == "add_step":
-
             descricao = request.form.get("step_desc", "").strip()
             responsavel_info = request.form.get("responsavel_info", "").strip()
-
             if not descricao or not responsavel_info:
                 return redirect(url_for("pane_detail", id=pane.id))
 
@@ -672,23 +652,12 @@ def pane_detail(id):
                 description=descricao,
                 responsavel_info=responsavel_info,
                 created_by=session.get("username"),
-                photo1=None,
-                photo2=None,
-                photo3=None
+                photo1=None, photo2=None, photo3=None
             )
-
             db.session.add(step)
+            pane.status = "In Progress Avi" if pane.tipo and pane.tipo.strip().lower() == "aviônico" else "In Progress Mec"
 
-            if pane.tipo and pane.tipo.strip().lower() == "aviônico":
-                pane.status = "In Progress Avi"
-            else:
-                pane.status = "In Progress Mec"
-
-        # =========================
-        # NOVA PENDÊNCIA
-        # =========================
         elif action == "add_pendencia":
-
             pend = Pendencia(
                 pane_id=pane.id,
                 tipo_item=request.form.get("tipo_item"),
@@ -700,114 +669,66 @@ def pane_detail(id):
                 responsavel=request.form.get("responsavel"),
                 created_by=session.get("username")
             )
-
             db.session.add(pend)
-
             if pend.tipo_item == "Ferramenta":
                 pane.status = "Wait Tools"
-
             elif pend.tipo_item == "Material":
-
                 if pend.tipo_aquisicao == "Compra":
                     pane.status = "Wait Material"
-
                 elif pend.tipo_aquisicao == "Transferência":
                     pane.status = "Wait Transfer"
 
-        # =========================
-        # FINALIZAR
-        # =========================
         elif action == "finalize":
             pane.status = "Finalizadas"
 
         db.session.commit()
         return redirect(url_for("pane_detail", id=pane.id))
 
-    # =============================
-    # LISTAS
-    # =============================
-
-    steps = (
-        Step.query
-        .filter_by(pane_id=pane.id)
-        .order_by(Step.created_at.desc())
-        .all()
-    )
-
-    pendencias = (
-        Pendencia.query
-        .filter_by(pane_id=pane.id)
-        .order_by(Pendencia.created_at.desc())
-        .all()
-    )
-
-    # =============================
-    # HTML
-    # =============================
+    steps = Step.query.filter_by(pane_id=pane.id).order_by(Step.created_at.desc()).all()
+    pendencias = Pendencia.query.filter_by(pane_id=pane.id).order_by(Pendencia.created_at.desc()).all()
 
     html = f"""
     <html>
     <head>
-        <style>
-            body {{ background:#0f172a; color:#f1f5f9; font-family:Segoe UI; padding:40px; }}
+    <style>
+    body {{ background:#0f172a; color:#f1f5f9; font-family:Segoe UI; padding:40px; }}
+    .card {{ background:#1e293b; padding:20px; border-radius:10px; margin-bottom:25px; }}
+    textarea, input {{
+        width:100%; padding:10px; margin-top:8px;
+        background:#0f172a; color:white; border:1px solid #334155; border-radius:6px;
+    }}
+    .btn {{
+        background:#2563eb; color:white; border:none; padding:10px 18px;
+        border-radius:6px; cursor:pointer;
+    }}
+    .btn-green {{ background:#16a34a; }}
+    .btn-red {{ background:#ef4444; }}
+    .top-actions {{ display:flex; gap:15px; margin-bottom:25px; flex-wrap:wrap; }}
+    .contador {{ background:#334155; padding:8px 12px; border-radius:6px; display:inline-block; margin-bottom:20px; }}
 
-            .card {{ background:#1e293b; padding:20px; border-radius:10px; margin-bottom:25px; }}
-
-            textarea, input {{
-                width:100%;
-                padding:10px;
-                margin-top:8px;
-                background:#0f172a;
-                color:white;
-                border:1px solid #334155;
-                border-radius:6px;
-            }}
-
-            .radio-group {{
-                display:flex;
-                gap:20px;
-                margin-top:8px;
-                margin-bottom:10px;
-            }}
-
-            .btn {{
-                background:#2563eb;
-                color:white;
-                border:none;
-                padding:10px 18px;
-                border-radius:6px;
-                cursor:pointer;
-            }}
-
-            .btn-green {{ background:#16a34a; }}
-            .btn-red {{ background:#ef4444; }}
-
-            .top-actions {{
-                display:flex;
-                gap:15px;
-                margin-bottom:25px;
-                flex-wrap:wrap;
-            }}
-
-            .hidden {{ display:none; }}
-
-            .contador {{
-                background:#334155;
-                padding:8px 12px;
-                border-radius:6px;
-                display:inline-block;
-                margin-bottom:20px;
-            }}
-        </style>
+    /* === MODAL ESTILO === */
+    .modal {{
+        display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+        background:rgba(0,0,0,0.6); justify-content:center; align-items:center;
+        z-index:1000;
+    }}
+    .modal-content {{
+        background:#1e293b; padding:25px; border-radius:10px; width:90%; max-width:500px;
+        box-shadow:0 0 20px rgba(0,0,0,0.4);
+        animation: pop 0.2s ease-out;
+    }}
+    @keyframes pop {{
+        from {{ transform:scale(0.9); opacity:0; }}
+        to {{ transform:scale(1); opacity:1; }}
+    }}
+    </style>
     </head>
     <body>
 
     <a href="/aircraft/{pane.aircraft_id}">← Voltar</a>
     <h2>Pane #{pane.id} - ATA {pane.ata}</h2>
 
-    <div class="contador">
-        📸 Fotos utilizadas: {total_fotos} / 4
-    </div>
+    <div class="contador">📸 Fotos utilizadas: {total_fotos} / 4</div>
 
     <div class="card">
         <strong>{pane.description}</strong><br>
@@ -815,56 +736,50 @@ def pane_detail(id):
     </div>
 
     <div class="top-actions">
-        <button class="btn" onclick="toggle('formStep')">➕ Adicionar Etapa</button>
-        <button class="btn" onclick="toggle('formPend')">➕ Registrar Pendência</button>
+        <button class="btn" onclick="openModal('modalStep')">➕ Adicionar Etapa (E)</button>
+        <button class="btn" onclick="openModal('modalPend')">➕ Registrar Pendência (P)</button>
         <button class="btn btn-green" onclick="confirmarFinalizacao()">✅ Finalizar Pane</button>
     </div>
 
-    <div id="formStep" class="card hidden">
-        <h3>Nova Etapa</h3>
-        <form method="POST">
-            <textarea name="step_desc" placeholder="Descreva a etapa" required></textarea>
-            <input name="responsavel_info" placeholder="Responsável pela informação" required>
-
-            <div style="margin-top:15px;">
-                <button type="submit" name="action" value="add_step" class="btn">
-                    Salvar
-                </button>
-                <button type="button" class="btn btn-red" onclick="toggle('formStep')">
-                    Cancelar
-                </button>
-            </div>
-        </form>
+    <!-- MODAL ETAPA -->
+    <div id="modalStep" class="modal">
+        <div class="modal-content">
+            <h3>Nova Etapa</h3>
+            <form method="POST">
+                <textarea name="step_desc" placeholder="Descreva a etapa" required></textarea>
+                <input name="responsavel_info" placeholder="Responsável pela informação" required>
+                <div style="margin-top:15px;">
+                    <button type="submit" name="action" value="add_step" class="btn">Salvar</button>
+                    <button type="button" class="btn btn-red" onclick="closeModal('modalStep')">Cancelar</button>
+                </div>
+            </form>
+        </div>
     </div>
 
-    <div id="formPend" class="card hidden">
-        <h3>Nova Pendência</h3>
-        <form method="POST">
-            <div class="radio-group">
-                <label><input type="radio" name="tipo_item" value="Ferramenta" required> Ferramenta</label>
-                <label><input type="radio" name="tipo_item" value="Material" required> Material</label>
-            </div>
-
-            <div class="radio-group">
-                <label><input type="radio" name="tipo_aquisicao" value="Transferência" required> Transferência</label>
-                <label><input type="radio" name="tipo_aquisicao" value="Compra" required> Compra</label>
-            </div>
-
-            <input name="descricao" placeholder="Descrição" required>
-            <input name="pn" placeholder="P/N">
-            <input name="sms_part_request" placeholder="SMS/Part Request">
-            <input name="task_card" placeholder="Task Card">
-            <input name="responsavel" placeholder="Responsável" required>
-
-            <div style="margin-top:15px;">
-                <button type="submit" name="action" value="add_pendencia" class="btn">
-                    Salvar
-                </button>
-                <button type="button" class="btn btn-red" onclick="toggle('formPend')">
-                    Cancelar
-                </button>
-            </div>
-        </form>
+    <!-- MODAL PENDÊNCIA -->
+    <div id="modalPend" class="modal">
+        <div class="modal-content">
+            <h3>Nova Pendência</h3>
+            <form method="POST">
+                <div class="radio-group">
+                    <label><input type="radio" name="tipo_item" value="Ferramenta" required> Ferramenta</label>
+                    <label><input type="radio" name="tipo_item" value="Material" required> Material</label>
+                </div>
+                <div class="radio-group">
+                    <label><input type="radio" name="tipo_aquisicao" value="Transferência" required> Transferência</label>
+                    <label><input type="radio" name="tipo_aquisicao" value="Compra" required> Compra</label>
+                </div>
+                <input name="descricao" placeholder="Descrição" required>
+                <input name="pn" placeholder="P/N">
+                <input name="sms_part_request" placeholder="SMS/Part Request">
+                <input name="task_card" placeholder="Task Card">
+                <input name="responsavel" placeholder="Responsável" required>
+                <div style="margin-top:15px;">
+                    <button type="submit" name="action" value="add_pendencia" class="btn">Salvar</button>
+                    <button type="button" class="btn btn-red" onclick="closeModal('modalPend')">Cancelar</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <div class="card">
@@ -874,50 +789,58 @@ def pane_detail(id):
     for step in steps:
         html += f"""
         <div style="background:#334155;padding:12px;border-radius:8px;margin-bottom:12px;">
-            🛠 {step.description}<br>
-            <small>
-                Info: {step.responsavel_info}<br>
-                {hora_br(step.created_at)} - {step.created_by}
-            </small>
+        🛠 {step.description}<br>
+        <small>Info: {step.responsavel_info}<br>{hora_br(step.created_at)} - {step.created_by}</small>
         </div>
         """
 
-    html += "</div><div class='card'><h3>Pendências</h3>"
+    html += "<div class='card'><h3>Pendências</h3>"
 
     for p in pendencias:
         html += f"""
         <div style="background:#334155;padding:12px;border-radius:8px;margin-bottom:12px;">
-            <strong>{p.tipo_item}</strong> - {p.descricao}<br>
-            <small>
-                Aquisição: {p.tipo_aquisicao}<br>
-                P/N: {p.pn or '-'}<br>
-                SMS/Part: {p.sms_part_request or '-'}<br>
-                Task Card: {p.task_card or '-'}<br>
-                Responsável: {p.responsavel}<br>
-                {hora_br(p.created_at)} - {p.created_by}
-            </small>
+        <strong>{p.tipo_item}</strong> - {p.descricao}<br>
+        <small>
+        Aquisição: {p.tipo_aquisicao}<br>
+        P/N: {p.pn or '-'}<br>
+        SMS/Part: {p.sms_part_request or '-'}<br>
+        Task Card: {p.task_card or '-'}<br>
+        Responsável: {p.responsavel}<br>
+        {hora_br(p.created_at)} - {p.created_by}
+        </small>
         </div>
         """
 
-    html += f"""
-        </div>
+    html += """
+    </div>
 
-        <form method="POST" id="formFinalize" class="hidden">
-            <input type="hidden" name="action" value="finalize">
-        </form>
+    <form method="POST" id="formFinalize" class="hidden">
+        <input type="hidden" name="action" value="finalize">
+    </form>
 
-        <script>
-            function toggle(id) {{
-                const el = document.getElementById(id);
-                el.classList.toggle("hidden");
-            }}
+    <script>
+    function openModal(id) {
+        document.getElementById(id).style.display = "flex";
+    }
+    function closeModal(id) {
+        document.getElementById(id).style.display = "none";
+    }
+    function confirmarFinalizacao() {
+        if (confirm("Tem certeza que deseja finalizar esta pane?")) {
+            document.getElementById("formFinalize").submit();
+        }
+    }
 
-            function confirmarFinalizacao() {{
-                if (confirm("Tem certeza que deseja finalizar esta pane?")) {{
-                    document.getElementById("formFinalize").submit();
-                }}
-            }}
-        </script>
+    // Atalhos de teclado
+    document.addEventListener("keydown", function(e) {
+        if (e.key === "e" || e.key === "E") openModal("modalStep");
+        if (e.key === "p" || e.key === "P") openModal("modalPend");
+        if (e.key === "Escape") {
+            closeModal("modalStep");
+            closeModal("modalPend");
+        }
+    });
+    </script>
 
     </body>
     </html>
@@ -1022,4 +945,5 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
