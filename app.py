@@ -781,15 +781,7 @@ def pane_detail(id):
                 <form method="POST" style="position:absolute;top:-6px;right:-6px;">
                     <input type="hidden" name="action" value="delete_photo">
                     <input type="hidden" name="photo" value="{foto}">
-                    <button style="
-                        background:#ef4444;
-                        border:none;
-                        color:white;
-                        width:22px;
-                        height:22px;
-                        border-radius:50%;
-                        cursor:pointer;
-                        font-size:12px;">✕</button>
+                    <button style="background:#ef4444;border:none;color:white;width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:12px;">✕</button>
                 </form>
             </div>
             """
@@ -797,16 +789,17 @@ def pane_detail(id):
 
     html += "</div>"
 
+    # BOTÕES
     html += """
     <div class="top-actions">
-        <button class="btn" onclick="openModal('modalStep')">➕ Adicionar Etapa</button>
-        <button class="btn" onclick="openModal('modalPend')">➕ Registrar Pendência</button>
-        <button class="btn btn-green" onclick="confirmarFinalizacao()">✅ Finalizar Pane</button>
+        <button class="btn" type="button" onclick="openModal('modalStep')">➕ Adicionar Etapa</button>
+        <button class="btn" type="button" onclick="openModal('modalPend')">➕ Registrar Pendência</button>
+        <button class="btn btn-green" type="button" onclick="confirmarFinalizacao()">✅ Finalizar Pane</button>
     </div>
     """
 
+    # ETAPAS
     html += "<div class='card'><h3>Etapas</h3>"
-
     for step in steps:
         html += f"""
         <div style="background:#334155;padding:12px;border-radius:8px;margin-bottom:12px;">
@@ -814,11 +807,10 @@ def pane_detail(id):
         <small>{step.responsavel_info}<br>{hora_br(step.created_at)} - {step.created_by}</small>
         </div>
         """
-
     html += "</div>"
 
+    # PENDÊNCIAS
     html += "<div class='card'><h3>Pendências</h3>"
-
     for p in pendencias:
         html += f"""
         <div style="background:#334155;padding:12px;border-radius:8px;margin-bottom:12px;">
@@ -833,61 +825,74 @@ def pane_detail(id):
         </small>
         </div>
         """
+    html += "</div>"
 
+    # MODAIS
     html += """
+<div class="modal" id="modalStep">
+    <div class="modal-content">
+        <h3>Adicionar Etapa</h3>
+        <form method="POST">
+            <input type="hidden" name="action" value="add_step">
+            <textarea name="step_desc" placeholder="Descrição da etapa"></textarea>
+            <input name="responsavel_info" placeholder="Responsável">
+            <input name="photo1" placeholder="URL Foto 1">
+            <input name="photo2" placeholder="URL Foto 2">
+            <input name="photo3" placeholder="URL Foto 3">
+            <br><br>
+            <button class="btn">Salvar</button>
+            <button type="button" class="btn btn-red" onclick="closeModal('modalStep')">Cancelar</button>
+        </form>
     </div>
+</div>
+
+<div class="modal" id="modalPend">
+    <div class="modal-content">
+        <h3>Registrar Pendência</h3>
+        <form method="POST">
+            <input type="hidden" name="action" value="add_pendencia">
+            <input name="tipo_item" placeholder="Tipo Item">
+            <input name="tipo_aquisicao" placeholder="Tipo Aquisição">
+            <textarea name="descricao" placeholder="Descrição"></textarea>
+            <input name="pn" placeholder="PN">
+            <input name="sms_part_request" placeholder="SMS / Part Request">
+            <input name="task_card" placeholder="Task Card">
+            <input name="responsavel" placeholder="Responsável">
+            <br><br>
+            <button class="btn">Salvar</button>
+            <button type="button" class="btn btn-red" onclick="closeModal('modalPend')">Cancelar</button>
+        </form>
+    </div>
+</div>
 
 <form method="POST" id="formFinalize">
     <input type="hidden" name="action" value="finalize">
 </form>
 
-<div id="imageModal" style="
-    display:none;
-    position:fixed;
-    top:0;
-    left:0;
-    width:100%;
-    height:100%;
-    background:rgba(0,0,0,0.85);
-    justify-content:center;
-    align-items:center;
-    z-index:2000;">
-    <img id="zoomedImage" style="
-        max-width:90%;
-        max-height:90%;
-        border-radius:10px;
-        box-shadow:0 0 40px rgba(0,0,0,0.7);">
+<div id="imageModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);justify-content:center;align-items:center;z-index:2000;">
+    <img id="zoomedImage" style="max-width:90%;max-height:90%;border-radius:10px;box-shadow:0 0 40px rgba(0,0,0,0.7);">
 </div>
 
 <script>
-function openModal(id) {{
-    document.getElementById(id).style.display = "flex";
-}}
-
-function closeModal(id) {{
-    document.getElementById(id).style.display = "none";
-}}
-
-function confirmarFinalizacao() {{
-    if (confirm("Tem certeza que deseja finalizar esta pane?")) {{
+function openModal(id){ document.getElementById(id).style.display = "flex"; }
+function closeModal(id){ document.getElementById(id).style.display = "none"; }
+function confirmarFinalizacao(){
+    if(confirm("Tem certeza que deseja finalizar esta pane?")){
         document.getElementById("formFinalize").submit();
-    }}
-}}
-
-function openImage(src) {{
+    }
+}
+function openImage(src){
     document.getElementById("zoomedImage").src = src;
     document.getElementById("imageModal").style.display = "flex";
-}}
-
-document.getElementById("imageModal").addEventListener("click", function() {{
+}
+document.getElementById("imageModal").addEventListener("click", function(){
     this.style.display = "none";
-}});
-
-document.addEventListener("keydown", function(e) {{
-    if (e.key === "Escape") {{
+});
+document.addEventListener("keydown", function(e){
+    if(e.key === "Escape"){
         document.getElementById("imageModal").style.display = "none";
-    }}
-}});
+    }
+});
 </script>
 
 </body>
@@ -992,6 +997,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
