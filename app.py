@@ -833,19 +833,43 @@ def pane_detail(id):
 
     <!-- MODAL PENDÊNCIA -->
     <div id="modalPend" class="modal">
-        <div class="modal-content">
-            <h3>Nova Pendência</h3>
-            <form method="POST">
-                <input type="hidden" name="action" value="add_pendencia">
-                <input name="descricao" placeholder="Descrição" required>
-                <input name="responsavel" placeholder="Responsável" required>
-                <div style="margin-top:15px;">
-                    <button type="submit" class="btn">Salvar</button>
-                    <button type="button" class="btn btn-red" onclick="closeModal('modalPend')">Cancelar</button>
+    <div class="modal-content">
+        <h3>Nova Pendência</h3>
+        <form method="POST">
+            <input type="hidden" name="action" value="add_pendencia">
+
+            <div class="radio-group">
+                <span class="radio-title">Tipo de Item *</span>
+                <div class="radio-row">
+                    <label><input type="radio" name="tipo_item" value="Ferramenta" required> 🔧 Ferramenta</label>
+                    <label><input type="radio" name="tipo_item" value="Material" required> 📋 Material</label>
                 </div>
-            </form>
-        </div>
+            </div>
+
+            <div class="radio-group">
+                <span class="radio-title">Tipo de Aquisição *</span>
+                <div class="radio-row">
+                    <label><input type="radio" name="tipo_aquisicao" value="Transferência" required> 🔄 Transferência</label>
+                    <label><input type="radio" name="tipo_aquisicao" value="Compra" required> 🛒 Compra</label>
+                </div>
+            </div>
+
+            <input name="descricao" placeholder="Descrição" required>
+
+            <div class="form-grid">
+                <input name="pn" placeholder="P/N">
+                <input name="sms_part_request" placeholder="SMS/Part Request">
+                <input name="task_card" placeholder="Task Card">
+                <input name="responsavel" placeholder="Responsável" required>
+            </div>
+
+            <div style="margin-top:15px; display:flex; gap:12px;">
+                <button type="submit" class="btn">Salvar</button>
+                <button type="button" class="btn btn-red" onclick="closeModal('modalPend')">Cancelar</button>
+            </div>
+        </form>
     </div>
+</div>
 
     <form method="POST" id="formFinalize">
         <input type="hidden" name="action" value="finalize">
@@ -1005,4 +1029,5 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
