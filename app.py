@@ -635,48 +635,32 @@ def aircraft_page(id):
 def pane_detail(id):
     pane = Pane.query.get_or_404(id)
 
+    steps_all = Step.query.filter_by(pane_id=pane.id).all()
+
+    # Todas as fotos da pane (de todas as etapas)
+    todas_fotos = []
+
+# Foto principal da pane
+    if pane.photo_url:
+        todas_fotos.append(pane.photo_url)
+
+# Fotos das etapas
+    for s in steps_all:
+        for f in [s.photo1, s.photo2, s.photo3]:
+            if f:
+                todas_fotos.append(f)
+
+    total_fotos = len(todas_fotos)
+
     if request.method == "POST":
         action = request.form.get("action")
 
-        # =========================
-        # ADICIONAR ETAPA
-        # =========================
         if action == "add_step":
             descricao = request.form.get("step_desc", "").strip()
             responsavel_info = request.form.get("responsavel_info", "").strip()
 
             if not descricao or not responsavel_info:
                 return redirect(url_for("pane_detail", id=pane.id))
-
-            # ===== CONTAR FOTOS ATUAIS =====
-            fotos_atuais = 0
-
-            if pane.photo_url:
-                fotos_atuais += 1
-
-            steps_existentes = Step.query.filter_by(pane_id=pane.id).all()
-
-            for s in steps_existentes:
-                for f in [s.photo1, s.photo2, s.photo3]:
-                    if f:
-                        fotos_atuais += 1
-
-            # ===== CONTAR NOVAS FOTOS =====
-            novas_fotos = [
-                request.form.get("photo1"),
-                request.form.get("photo2"),
-                request.form.get("photo3")
-            ]
-
-            novas_fotos_validas = [f for f in novas_fotos if f]
-
-            if fotos_atuais + len(novas_fotos_validas) > 4:
-                return f"""
-                <script>
-                alert("Limite máximo de 4 fotos por pane atingido.");
-                window.location.href = "{url_for('pane_detail', id=pane.id)}";
-                </script>
-                """
 
             step = Step(
                 pane_id=pane.id,
@@ -687,14 +671,10 @@ def pane_detail(id):
                 photo2=request.form.get("photo2"),
                 photo3=request.form.get("photo3")
             )
-
             db.session.add(step)
 
             pane.status = "In Progress Avi" if pane.tipo and pane.tipo.strip().lower() == "aviônico" else "In Progress Mec"
 
-        # =========================
-        # REGISTRAR PENDÊNCIA
-        # =========================
         elif action == "add_pendencia":
             pend = Pendencia(
                 pane_id=pane.id,
@@ -702,123 +682,254 @@ def pane_detail(id):
                 tipo_aquisicao=request.form.get("tipo_aquisicao"),
                 descricao=request.form.get("descricao"),
                 pn=request.form.get("pn"),
-                sn=request.form.get("sn"),
-                quantidade=request.form.get("quantidade"),
+                sms_part_request=request.form.get("sms_part_request"),
+                task_card=request.form.get("task_card"),
+                responsavel=request.form.get("responsavel"),
                 created_by=session.get("username")
             )
             db.session.add(pend)
 
-        # =========================
-        # FINALIZAR PANE
-        # =========================
+            if pend.tipo_item == "Ferramenta":
+                pane.status = "Wait Tools"
+            elif pend.tipo_item == "Material":
+                if pend.tipo_aquisicao == "Compra":
+                    pane.status = "Wait Material"
+                elif pend.tipo_aquisicao == "Transferência":
+                    pane.status = "Wait Transfer"
+
         elif action == "finalize":
-            pane.status = "Finalizada"
-            pane.finalizado_por = session.get("username")
-            pane.data_finalizacao = datetime.now()
+            pane.status = "Finalizadas"
 
         db.session.commit()
         return redirect(url_for("pane_detail", id=pane.id))
 
-    # =========================
-    # LISTAGENS
-    # =========================
-    steps = Step.query.filter_by(pane_id=pane.id).all()
-    pendencias = Pendencia.query.filter_by(pane_id=pane.id).all()
+    steps = Step.query.filter_by(pane_id=pane.id).order_by(Step.created_at.desc()).all()
+    pendencias = Pendencia.query.filter_by(pane_id=pane.id).order_by(Pendencia.created_at.desc()).all()
 
-    # =========================
-    # COLETAR TODAS AS FOTOS
-    # =========================
-    todas_fotos = []
-
-    if pane.photo_url:
-        todas_fotos.append(pane.photo_url)
-
-    for s in steps:
-        for f in [s.photo1, s.photo2, s.photo3]:
-            if f:
-                todas_fotos.append(f)
-
-    total_fotos = len(todas_fotos)
-
-    # =========================
-    # HTML
-    # =========================
     html = f"""
-    <h2>Pane {pane.id}</h2>
-    <p>Status: {pane.status}</p>
+    <html>
+    <head>
+    <style>
+    body {{ background:#0f172a; color:#f1f5f9; font-family:Segoe UI; padding:40px; }}
+    .card {{ background:#1e293b; padding:20px; border-radius:10px; margin-bottom:25px; }}
+    textarea, input {{
+        width:100%; padding:10px; margin-top:8px;
+        background:#0f172a; color:white; border:1px solid #334155; border-radius:6px;
+    }}
+    .btn {{ background:#2563eb; color:white; border:none; padding:10px 18px; border-radius:6px; cursor:pointer; }}
+    .btn-green {{ background:#16a34a; }}
+    .btn-red {{ background:#ef4444; }}
+    .top-actions {{ display:flex; gap:15px; margin-bottom:25px; flex-wrap:wrap; }}
+    .contador {{ background:#334155; padding:8px 12px; border-radius:6px; display:inline-block; margin-bottom:20px; }}
 
-    <h3>Fotos ({total_fotos}/4)</h3>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+    .modal {{
+        display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+        background:rgba(0,0,0,0.6); justify-content:center; align-items:center;
+        z-index:1000;
+    }}
+    .modal-content {{
+        background:#1e293b; padding:25px; border-radius:10px; width:90%; max-width:500px;
+        box-shadow:0 0 20px rgba(0,0,0,0.4);
+    }}
+    </style>
+    </head>
+    <body>
+
+    <a href="/aircraft/{pane.aircraft_id}">← Voltar</a>
+    <h2>Pane #{pane.id} - ATA {pane.ata}</h2>
+
+    <div class="contador">📸 Fotos utilizadas: {total_fotos}</div>
+
+    <div class="card">
+        <strong>{pane.description}</strong><br>
+        <small>Status: {pane.status}</small>
     """
 
-    for foto in todas_fotos:
-        html += f"""
-        <div style="position:relative;">
+    # Fotos no topo
+    if todas_fotos:
+        html += "<div style='margin-top:15px; display:flex; gap:12px; flex-wrap:wrap;'>"
+        for foto in todas_fotos:
+            html += f"""
             <img src="{foto}"
                  style="width:110px;height:110px;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid #475569;"
                  onclick="openImage('{foto}')">
+            """
+        html += "</div>"
 
-            <button onclick="confirmarExclusaoFoto('{foto}')"
-                    style="position:absolute;top:4px;right:4px;background:#ef4444;border:none;color:white;border-radius:50%;width:22px;height:22px;cursor:pointer;">
-                ✕
-            </button>
+    html += "</div>"
+
+    html += """
+    <div class="top-actions">
+        <button class="btn" onclick="openModal('modalStep')">➕ Adicionar Etapa</button>
+        <button class="btn" onclick="openModal('modalPend')">➕ Registrar Pendência</button>
+        <button class="btn btn-green" onclick="confirmarFinalizacao()">✅ Finalizar Pane</button>
+    </div>
+    """
+
+    html += "<div class='card'><h3>Etapas</h3>"
+
+    for step in steps:
+        html += f"""
+        <div style="background:#334155;padding:12px;border-radius:8px;margin-bottom:12px;">
+        🛠 {step.description}<br>
+        <small>{step.responsavel_info}<br>{hora_br(step.created_at)} - {step.created_by}</small>
+        </div>
+        """
+
+    html += "</div>"
+
+    html += "<div class='card'><h3>Pendências</h3>"
+
+    for p in pendencias:
+        html += f"""
+        <div style="background:#334155;padding:12px;border-radius:8px;margin-bottom:12px;">
+        <strong>{p.tipo_item}</strong> - {p.descricao}<br>
+        <small>
+        Aquisição: {p.tipo_aquisicao}<br>
+        P/N: {p.pn or '-'}<br>
+        SMS/Part: {p.sms_part_request or '-'}<br>
+        Task Card: {p.task_card or '-'}<br>
+        Responsável: {p.responsavel}<br>
+        {hora_br(p.created_at)} - {p.created_by}
+        </small>
         </div>
         """
 
     html += """
     </div>
+    <!-- MODAL ETAPA -->
+<div id="modalStep" class="modal">
+    <div class="modal-content">
+        <h3>Nova Etapa</h3>
+        <form method="POST" class="step-form">
+            <input type="hidden" name="action" value="add_step">
+
+            <label>Descrição *</label>
+            <textarea name="step_desc" required></textarea>
+
+            <label style="margin-top:12px; display:block;">Responsável *</label>
+            <input name="responsavel_info" required>
+
+            <div class="photo-group">
+                <label>📷 Fotos (até 3)</label>
+                <input name="photo1" placeholder="https://exemplo.com/foto1.jpg">
+                <input name="photo2" placeholder="https://exemplo.com/foto2.jpg">
+                <input name="photo3" placeholder="https://exemplo.com/foto3.jpg">
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn">Salvar</button>
+                <button type="button" class="btn btn-red" onclick="closeModal('modalStep')">Cancelar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL PENDÊNCIA -->
+<div id="modalPend" class="modal">
+    <div class="modal-content">
+        <h3>Nova Pendência</h3>
+        <form method="POST">
+            <input type="hidden" name="action" value="add_pendencia">
+
+            <div class="radio-group">
+                <span class="radio-title">Tipo de Item *</span>
+                <div class="radio-row">
+                    <label><input type="radio" name="tipo_item" value="Ferramenta" required> 🔧 Ferramenta</label>
+                    <label><input type="radio" name="tipo_item" value="Material" required> 📋 Material</label>
+                </div>
+            </div>
+
+            <div class="radio-group">
+                <span class="radio-title">Tipo de Aquisição *</span>
+                <div class="radio-row">
+                    <label><input type="radio" name="tipo_aquisicao" value="Transferência" required> 🔄 Transferência</label>
+                    <label><input type="radio" name="tipo_aquisicao" value="Compra" required> 🛒 Compra</label>
+                </div>
+            </div>
+
+            <input name="descricao" placeholder="Descrição" required>
+
+            <div class="form-grid">
+                <input name="pn" placeholder="P/N">
+                <input name="sms_part_request" placeholder="SMS/Part Request">
+                <input name="task_card" placeholder="Task Card">
+                <input name="responsavel" placeholder="Responsável" required>
+            </div>
+
+            <div style="margin-top:15px; display:flex; gap:12px;">
+                <button type="submit" class="btn">Salvar</button>
+                <button type="button" class="btn btn-red" onclick="closeModal('modalPend')">Cancelar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- FORM FINALIZAR -->
+<form method="POST" id="formFinalize">
+    <input type="hidden" name="action" value="finalize">
+</form>
+
+    <!-- MODAL ZOOM IMAGEM -->
+    <div id="imageModal" style="
+        display:none;
+        position:fixed;
+        top:0;
+        left:0;
+        width:100%;
+        height:100%;
+        background:rgba(0,0,0,0.85);
+        justify-content:center;
+        align-items:center;
+        z-index:2000;
+    ">
+        <img id="zoomedImage" style="
+            max-width:90%;
+            max-height:90%;
+            border-radius:10px;
+            box-shadow:0 0 40px rgba(0,0,0,0.7);
+        ">
+    </div>
 
     <script>
-    function confirmarExclusaoFoto(foto) {
-        if (confirm("Deseja realmente excluir esta foto?")) {
-            const form = document.createElement("form");
-            form.method = "POST";
-            form.action = "/delete_photo/""" + str(pane.id) + """"";
+function openModal(id) {
+    document.getElementById(id).style.display = "flex";
+}
 
-            const input = document.createElement("input");
-            input.type = "hidden";
-            input.name = "foto";
-            input.value = foto;
+function closeModal(id) {
+    document.getElementById(id).style.display = "none";
+}
 
-            form.appendChild(input);
-            document.body.appendChild(form);
-            form.submit();
-        }
+function confirmarFinalizacao() {
+    if (confirm("Tem certeza que deseja finalizar esta pane?")) {
+        document.getElementById("formFinalize").submit();
     }
+}
 
-    function openImage(url) {
-        window.open(url, "_blank");
+/* ===== ZOOM IMAGEM ===== */
+function openImage(src) {
+    document.getElementById("zoomedImage").src = src;
+    document.getElementById("imageModal").style.display = "flex";
+}
+
+document.getElementById("imageModal").addEventListener("click", function() {
+    this.style.display = "none";
+});
+
+document.addEventListener("keydown", function(e) {
+    if (e.key === "Escape") {
+        closeModal("modalStep");
+        closeModal("modalPend");
+        document.getElementById("imageModal").style.display = "none";
     }
-    </script>
+});
+</script>
+
+    </body>
+    </html>
     """
 
     return html
-
-# ======================
-# EXCLUIR FOTOS
-# ======================
-
-@app.route("/delete_photo/<int:pane_id>", methods=["POST"])
-@login_required()
-def delete_photo(pane_id):
-    pane = Pane.query.get_or_404(pane_id)
-    foto = request.form.get("foto")
-
-    if pane.photo_url == foto:
-        pane.photo_url = None
-
-    steps = Step.query.filter_by(pane_id=pane.id).all()
-
-    for s in steps:
-        if s.photo1 == foto:
-            s.photo1 = None
-        if s.photo2 == foto:
-            s.photo2 = None
-        if s.photo3 == foto:
-            s.photo3 = None
-
-    db.session.commit()
-    return redirect(url_for("pane_detail", id=pane.id))
 
 # ======================
 # LOGIN
@@ -917,4 +1028,3 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
-
