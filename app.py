@@ -755,6 +755,36 @@ def pane_detail(id):
     .form-grid input {{
         margin-top:6px;
     }}
+    /* ===== FORM ETAPA MELHORADO ===== */
+
+    .step-form textarea {{
+        height:90px;
+    }}
+
+    .photo-group {{
+        margin-top:15px;
+    }}
+
+    .photo-group label {{
+        display:block;
+        font-weight:600;
+        margin-bottom:6px;
+    }}
+
+    .photo-group input {{
+        margin-bottom:8px;
+    }}
+
+    .photo-help {{
+        font-size:12px;
+        color:#94a3b8;
+    }}
+
+    .form-actions {{
+        margin-top:18px;
+        display:flex;
+        gap:12px;
+    }}
     </style>
     </head>
     <body>
@@ -779,14 +809,34 @@ def pane_detail(id):
     <div id="modalStep" class="modal">
         <div class="modal-content">
             <h3>Nova Etapa</h3>
-            <form method="POST">
-                <textarea name="step_desc" placeholder="Descreva a etapa" required></textarea>
-                <input name="responsavel_info" placeholder="Responsável pela informação" required>
-                <div style="margin-top:15px;">
-                    <button type="submit" name="action" value="add_step" class="btn">Salvar</button>
-                    <button type="button" class="btn btn-red" onclick="closeModal('modalStep')">Cancelar</button>
-                </div>
-            </form>
+            <form method="POST" class="step-form">
+
+    <input type="hidden" name="action" value="add_step">
+
+    <label>Descrição *</label>
+    <textarea name="step_desc" required></textarea>
+
+    <label style="margin-top:12px; display:block;">Responsável *</label>
+    <input name="responsavel_info" required>
+
+    <div class="photo-group">
+        <label>📷 Fotos (até 3)</label>
+
+        <input name="photo1" placeholder="https://exemplo.com/foto1.jpg">
+        <input name="photo2" placeholder="https://exemplo.com/foto2.jpg">
+        <input name="photo3" placeholder="https://exemplo.com/foto3.jpg">
+
+        <div class="photo-help">
+            Cole as URLs das fotos (opcional)
+        </div>
+    </div>
+
+    <div class="form-actions">
+        <button type="submit" class="btn">Salvar</button>
+        <button type="button" class="btn btn-red" onclick="closeModal('modalStep')">Cancelar</button>
+    </div>
+
+</form>
         </div>
     </div>
 
@@ -1020,6 +1070,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
