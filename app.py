@@ -637,25 +637,38 @@ def pane_detail(id):
 
     steps_all = Step.query.filter_by(pane_id=pane.id).all()
 
-    # Todas as fotos da pane (de todas as etapas)
+    # =========================
+    # MONTAGEM DAS FOTOS
+    # =========================
     todas_fotos = []
 
-# Foto principal da pane
+    # Foto principal da pane
     if pane.photo_url:
         todas_fotos.append(pane.photo_url)
 
-# Fotos das etapas
+    # Fotos das etapas
     for s in steps_all:
         for f in [s.photo1, s.photo2, s.photo3]:
             if f:
                 todas_fotos.append(f)
 
+    MAX_FOTOS = 4
+    if len(todas_fotos) > MAX_FOTOS:
+        todas_fotos = todas_fotos[:MAX_FOTOS]
+
     total_fotos = len(todas_fotos)
 
+    # =========================
+    # POST
+    # =========================
     if request.method == "POST":
         action = request.form.get("action")
 
         if action == "add_step":
+
+            if len(todas_fotos) >= 4:
+                return redirect(url_for("pane_detail", id=pane.id))
+
             descricao = request.form.get("step_desc", "").strip()
             responsavel_info = request.form.get("responsavel_info", "").strip()
 
@@ -676,6 +689,7 @@ def pane_detail(id):
             pane.status = "In Progress Avi" if pane.tipo and pane.tipo.strip().lower() == "aviônico" else "In Progress Mec"
 
         elif action == "add_pendencia":
+
             pend = Pendencia(
                 pane_id=pane.id,
                 tipo_item=request.form.get("tipo_item"),
@@ -697,6 +711,30 @@ def pane_detail(id):
                 elif pend.tipo_aquisicao == "Transferência":
                     pane.status = "Wait Transfer"
 
+        elif action == "edit_step":
+
+            step_id = request.form.get("step_id")
+            step = Step.query.get(step_id)
+
+            if step and step.pane_id == pane.id:
+                step.description = request.form.get("step_desc")
+                step.responsavel_info = request.form.get("responsavel_info")
+
+        elif action == "delete_photo":
+
+            photo = request.form.get("photo")
+
+            if pane.photo_url == photo:
+                pane.photo_url = None
+
+            for s in steps_all:
+                if s.photo1 == photo:
+                    s.photo1 = None
+                if s.photo2 == photo:
+                    s.photo2 = None
+                if s.photo3 == photo:
+                    s.photo3 = None
+
         elif action == "finalize":
             pane.status = "Finalizadas"
 
@@ -706,6 +744,9 @@ def pane_detail(id):
     steps = Step.query.filter_by(pane_id=pane.id).order_by(Step.created_at.desc()).all()
     pendencias = Pendencia.query.filter_by(pane_id=pane.id).order_by(Pendencia.created_at.desc()).all()
 
+    # =========================
+    # HTML
+    # =========================
     html = f"""
     <html>
     <head>
@@ -721,16 +762,6 @@ def pane_detail(id):
     .btn-red {{ background:#ef4444; }}
     .top-actions {{ display:flex; gap:15px; margin-bottom:25px; flex-wrap:wrap; }}
     .contador {{ background:#334155; padding:8px 12px; border-radius:6px; display:inline-block; margin-bottom:20px; }}
-
-    .modal {{
-        display:none; position:fixed; top:0; left:0; width:100%; height:100%;
-        background:rgba(0,0,0,0.6); justify-content:center; align-items:center;
-        z-index:1000;
-    }}
-    .modal-content {{
-        background:#1e293b; padding:25px; border-radius:10px; width:90%; max-width:500px;
-        box-shadow:0 0 20px rgba(0,0,0,0.4);
-    }}
     </style>
     </head>
     <body>
@@ -738,192 +769,82 @@ def pane_detail(id):
     <a href="/aircraft/{pane.aircraft_id}">← Voltar</a>
     <h2>Pane #{pane.id} - ATA {pane.ata}</h2>
 
-    <div class="contador">📸 Fotos utilizadas: {total_fotos}</div>
+    <div class="contador">📸 Fotos utilizadas: {total_fotos}/4</div>
 
     <div class="card">
         <strong>{pane.description}</strong><br>
         <small>Status: {pane.status}</small>
     """
 
-    # Fotos no topo
     if todas_fotos:
         html += "<div style='margin-top:15px; display:flex; gap:12px; flex-wrap:wrap;'>"
         for foto in todas_fotos:
             html += f"""
-            <img src="{foto}"
-                 style="width:110px;height:110px;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid #475569;"
-                 onclick="openImage('{foto}')">
+            <div style="position:relative;">
+                <img draggable="true"
+                     src="{foto}"
+                     style="width:110px;height:110px;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid #475569;"
+                     onclick="openImage('{foto}')">
+
+                <form method="POST" style="position:absolute;top:-6px;right:-6px;">
+                    <input type="hidden" name="action" value="delete_photo">
+                    <input type="hidden" name="photo" value="{foto}">
+                    <button style="
+                        background:#ef4444;
+                        border:none;
+                        color:white;
+                        width:22px;
+                        height:22px;
+                        border-radius:50%;
+                        cursor:pointer;
+                        font-size:12px;">✕</button>
+                </form>
+            </div>
             """
         html += "</div>"
 
     html += "</div>"
-
-    html += """
-    <div class="top-actions">
-        <button class="btn" onclick="openModal('modalStep')">➕ Adicionar Etapa</button>
-        <button class="btn" onclick="openModal('modalPend')">➕ Registrar Pendência</button>
-        <button class="btn btn-green" onclick="confirmarFinalizacao()">✅ Finalizar Pane</button>
-    </div>
-    """
 
     html += "<div class='card'><h3>Etapas</h3>"
 
     for step in steps:
         html += f"""
         <div style="background:#334155;padding:12px;border-radius:8px;margin-bottom:12px;">
-        🛠 {step.description}<br>
-        <small>{step.responsavel_info}<br>{hora_br(step.created_at)} - {step.created_by}</small>
+            <form method="POST">
+                <input type="hidden" name="action" value="edit_step">
+                <input type="hidden" name="step_id" value="{step.id}">
+
+                <textarea name="step_desc">{step.description}</textarea>
+                <input name="responsavel_info" value="{step.responsavel_info}">
+
+                <button class="btn" style="margin-top:8px;">Salvar Alteração</button>
+            </form>
+
+            <small>{hora_br(step.created_at)} - {step.created_by}</small>
         </div>
         """
-
     html += "</div>"
 
-    html += "<div class='card'><h3>Pendências</h3>"
-
-    for p in pendencias:
-        html += f"""
-        <div style="background:#334155;padding:12px;border-radius:8px;margin-bottom:12px;">
-        <strong>{p.tipo_item}</strong> - {p.descricao}<br>
-        <small>
-        Aquisição: {p.tipo_aquisicao}<br>
-        P/N: {p.pn or '-'}<br>
-        SMS/Part: {p.sms_part_request or '-'}<br>
-        Task Card: {p.task_card or '-'}<br>
-        Responsável: {p.responsavel}<br>
-        {hora_br(p.created_at)} - {p.created_by}
-        </small>
-        </div>
-        """
-
     html += """
-    </div>
-    <!-- MODAL ETAPA -->
-<div id="modalStep" class="modal">
-    <div class="modal-content">
-        <h3>Nova Etapa</h3>
-        <form method="POST" class="step-form">
-            <input type="hidden" name="action" value="add_step">
-
-            <label>Descrição *</label>
-            <textarea name="step_desc" required></textarea>
-
-            <label style="margin-top:12px; display:block;">Responsável *</label>
-            <input name="responsavel_info" required>
-
-            <div class="photo-group">
-                <label>📷 Fotos (até 3)</label>
-                <input name="photo1" placeholder="https://exemplo.com/foto1.jpg">
-                <input name="photo2" placeholder="https://exemplo.com/foto2.jpg">
-                <input name="photo3" placeholder="https://exemplo.com/foto3.jpg">
-            </div>
-
-            <div class="form-actions">
-                <button type="submit" class="btn">Salvar</button>
-                <button type="button" class="btn btn-red" onclick="closeModal('modalStep')">Cancelar</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- MODAL PENDÊNCIA -->
-<div id="modalPend" class="modal">
-    <div class="modal-content">
-        <h3>Nova Pendência</h3>
-        <form method="POST">
-            <input type="hidden" name="action" value="add_pendencia">
-
-            <div class="radio-group">
-                <span class="radio-title">Tipo de Item *</span>
-                <div class="radio-row">
-                    <label><input type="radio" name="tipo_item" value="Ferramenta" required> 🔧 Ferramenta</label>
-                    <label><input type="radio" name="tipo_item" value="Material" required> 📋 Material</label>
-                </div>
-            </div>
-
-            <div class="radio-group">
-                <span class="radio-title">Tipo de Aquisição *</span>
-                <div class="radio-row">
-                    <label><input type="radio" name="tipo_aquisicao" value="Transferência" required> 🔄 Transferência</label>
-                    <label><input type="radio" name="tipo_aquisicao" value="Compra" required> 🛒 Compra</label>
-                </div>
-            </div>
-
-            <input name="descricao" placeholder="Descrição" required>
-
-            <div class="form-grid">
-                <input name="pn" placeholder="P/N">
-                <input name="sms_part_request" placeholder="SMS/Part Request">
-                <input name="task_card" placeholder="Task Card">
-                <input name="responsavel" placeholder="Responsável" required>
-            </div>
-
-            <div style="margin-top:15px; display:flex; gap:12px;">
-                <button type="submit" class="btn">Salvar</button>
-                <button type="button" class="btn btn-red" onclick="closeModal('modalPend')">Cancelar</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- FORM FINALIZAR -->
-<form method="POST" id="formFinalize">
-    <input type="hidden" name="action" value="finalize">
-</form>
-
-    <!-- MODAL ZOOM IMAGEM -->
-    <div id="imageModal" style="
-        display:none;
-        position:fixed;
-        top:0;
-        left:0;
-        width:100%;
-        height:100%;
-        background:rgba(0,0,0,0.85);
-        justify-content:center;
-        align-items:center;
-        z-index:2000;
-    ">
-        <img id="zoomedImage" style="
-            max-width:90%;
-            max-height:90%;
-            border-radius:10px;
-            box-shadow:0 0 40px rgba(0,0,0,0.7);
-        ">
-    </div>
-
     <script>
-function openModal(id) {
-    document.getElementById(id).style.display = "flex";
-}
+    let dragged;
 
-function closeModal(id) {
-    document.getElementById(id).style.display = "none";
-}
+    document.addEventListener("dragstart", function(e) {
+        dragged = e.target.closest("div");
+    });
 
-function confirmarFinalizacao() {
-    if (confirm("Tem certeza que deseja finalizar esta pane?")) {
-        document.getElementById("formFinalize").submit();
-    }
-}
+    document.addEventListener("dragover", function(e) {
+        e.preventDefault();
+    });
 
-/* ===== ZOOM IMAGEM ===== */
-function openImage(src) {
-    document.getElementById("zoomedImage").src = src;
-    document.getElementById("imageModal").style.display = "flex";
-}
-
-document.getElementById("imageModal").addEventListener("click", function() {
-    this.style.display = "none";
-});
-
-document.addEventListener("keydown", function(e) {
-    if (e.key === "Escape") {
-        closeModal("modalStep");
-        closeModal("modalPend");
-        document.getElementById("imageModal").style.display = "none";
-    }
-});
-</script>
+    document.addEventListener("drop", function(e) {
+        e.preventDefault();
+        if (e.target.tagName === "IMG") {
+            let container = e.target.closest("div").parentNode;
+            container.insertBefore(dragged, e.target.closest("div"));
+        }
+    });
+    </script>
 
     </body>
     </html>
@@ -1028,6 +949,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
