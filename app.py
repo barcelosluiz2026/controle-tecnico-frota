@@ -637,16 +637,11 @@ def pane_detail(id):
 
     steps_all = Step.query.filter_by(pane_id=pane.id).all()
 
-    # =========================
-    # MONTAGEM DAS FOTOS
-    # =========================
     todas_fotos = []
 
-    # Foto principal da pane
     if pane.photo_url:
         todas_fotos.append(pane.photo_url)
 
-    # Fotos das etapas
     for s in steps_all:
         for f in [s.photo1, s.photo2, s.photo3]:
             if f:
@@ -658,9 +653,6 @@ def pane_detail(id):
 
     total_fotos = len(todas_fotos)
 
-    # =========================
-    # POST
-    # =========================
     if request.method == "POST":
         action = request.form.get("action")
 
@@ -726,14 +718,17 @@ def pane_detail(id):
 
             if pane.photo_url == photo:
                 pane.photo_url = None
-
-            for s in steps_all:
-                if s.photo1 == photo:
-                    s.photo1 = None
-                if s.photo2 == photo:
-                    s.photo2 = None
-                if s.photo3 == photo:
-                    s.photo3 = None
+            else:
+                for s in steps_all:
+                    if s.photo1 == photo:
+                        s.photo1 = None
+                        break
+                    if s.photo2 == photo:
+                        s.photo2 = None
+                        break
+                    if s.photo3 == photo:
+                        s.photo3 = None
+                        break
 
         elif action == "finalize":
             pane.status = "Finalizadas"
@@ -744,16 +739,13 @@ def pane_detail(id):
     steps = Step.query.filter_by(pane_id=pane.id).order_by(Step.created_at.desc()).all()
     pendencias = Pendencia.query.filter_by(pane_id=pane.id).order_by(Pendencia.created_at.desc()).all()
 
-    # =========================
-    # HTML
-    # =========================
     html = f"""
     <html>
     <head>
     <style>
     body {{ background:#0f172a; color:#f1f5f9; font-family:Segoe UI; padding:40px; }}
     .card {{ background:#1e293b; padding:20px; border-radius:10px; margin-bottom:25px; }}
-    textarea, input {{
+    textarea, input, select {{
         width:100%; padding:10px; margin-top:8px;
         background:#0f172a; color:white; border:1px solid #334155; border-radius:6px;
     }}
@@ -771,84 +763,82 @@ def pane_detail(id):
 
     <div class="contador">📸 Fotos utilizadas: {total_fotos}/4</div>
 
+    <div class="top-actions">
+        <form method="POST">
+            <input type="hidden" name="action" value="finalize">
+            <button class="btn-green">Finalizar Pane</button>
+        </form>
+    </div>
+
     <div class="card">
         <strong>{pane.description}</strong><br>
         <small>Status: {pane.status}</small>
+    </div>
     """
 
-    if todas_fotos:
-        html += "<div style='margin-top:15px; display:flex; gap:12px; flex-wrap:wrap;'>"
-        for foto in todas_fotos:
-            html += f"""
-            <div style="position:relative;">
-                <img draggable="true"
-                     src="{foto}"
-                     style="width:110px;height:110px;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid #475569;"
-                     onclick="openImage('{foto}')">
+    # FORM NOVA ETAPA
+    html += """
+    <div class='card'>
+        <h3>Nova Etapa</h3>
+        <form method='POST'>
+            <input type='hidden' name='action' value='add_step'>
+            <textarea name='step_desc' placeholder='Descrição'></textarea>
+            <input name='responsavel_info' placeholder='Responsável'>
+            <input name='photo1' placeholder='URL Foto 1'>
+            <input name='photo2' placeholder='URL Foto 2'>
+            <input name='photo3' placeholder='URL Foto 3'>
+            <button class='btn'>Adicionar Etapa</button>
+        </form>
+    </div>
+    """
 
-                <form method="POST" style="position:absolute;top:-6px;right:-6px;">
-                    <input type="hidden" name="action" value="delete_photo">
-                    <input type="hidden" name="photo" value="{foto}">
-                    <button style="
-                        background:#ef4444;
-                        border:none;
-                        color:white;
-                        width:22px;
-                        height:22px;
-                        border-radius:50%;
-                        cursor:pointer;
-                        font-size:12px;">✕</button>
-                </form>
-            </div>
-            """
-        html += "</div>"
-
-    html += "</div>"
-
+    # LISTAGEM ETAPAS
     html += "<div class='card'><h3>Etapas</h3>"
-
     for step in steps:
         html += f"""
         <div style="background:#334155;padding:12px;border-radius:8px;margin-bottom:12px;">
             <form method="POST">
                 <input type="hidden" name="action" value="edit_step">
                 <input type="hidden" name="step_id" value="{step.id}">
-
                 <textarea name="step_desc">{step.description}</textarea>
                 <input name="responsavel_info" value="{step.responsavel_info}">
-
-                <button class="btn" style="margin-top:8px;">Salvar Alteração</button>
+                <button class="btn">Salvar Alteração</button>
             </form>
-
             <small>{hora_br(step.created_at)} - {step.created_by}</small>
         </div>
         """
     html += "</div>"
 
+    # FORM NOVA PENDÊNCIA
     html += """
-    <script>
-    let dragged;
-
-    document.addEventListener("dragstart", function(e) {
-        dragged = e.target.closest("div");
-    });
-
-    document.addEventListener("dragover", function(e) {
-        e.preventDefault();
-    });
-
-    document.addEventListener("drop", function(e) {
-        e.preventDefault();
-        if (e.target.tagName === "IMG") {
-            let container = e.target.closest("div").parentNode;
-            container.insertBefore(dragged, e.target.closest("div"));
-        }
-    });
-    </script>
-
-    </body>
-    </html>
+    <div class='card'>
+        <h3>Nova Pendência</h3>
+        <form method='POST'>
+            <input type='hidden' name='action' value='add_pendencia'>
+            <input name='tipo_item' placeholder='Tipo Item'>
+            <input name='tipo_aquisicao' placeholder='Tipo Aquisição'>
+            <input name='descricao' placeholder='Descrição'>
+            <input name='pn' placeholder='PN'>
+            <input name='sms_part_request' placeholder='SMS Part Request'>
+            <input name='task_card' placeholder='Task Card'>
+            <input name='responsavel' placeholder='Responsável'>
+            <button class='btn'>Adicionar Pendência</button>
+        </form>
+    </div>
     """
+
+    # LISTAGEM PENDÊNCIAS
+    html += "<div class='card'><h3>Pendências</h3>"
+    for p in pendencias:
+        html += f"""
+        <div style="background:#334155;padding:10px;border-radius:8px;margin-bottom:10px;">
+            <strong>{p.tipo_item}</strong> - {p.descricao}<br>
+            <small>{p.responsavel}</small>
+        </div>
+        """
+    html += "</div>"
+
+    html += "</body></html>"
 
     return html
 
@@ -949,6 +939,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
