@@ -825,10 +825,14 @@ def pane_detail(id):
                 width:100%;
                 height:100%;
                 background:rgba(0,0,0,0.65);
-                display:flex;
+                display:none;   /* começa escondido */
                 justify-content:center;
                 align-items:center;
                 z-index:1000;
+            }}
+
+            .modal.show {
+                display:flex;
             }}
 
             .modal-box {{
@@ -966,12 +970,11 @@ def pane_detail(id):
         <script>
             function toggle(id) {
                 const el = document.getElementById(id);
-                el.classList.toggle("hidden");
-            }
 
-            function confirmarFinalizacao() {
-                if (confirm("Tem certeza que deseja finalizar esta pane?")) {
-                    document.getElementById("formFinalize").submit();
+                if (el.classList.contains("show")) {
+                    el.classList.remove("show");
+                } else {
+                    el.classList.add("show");
                 }
             }
         </script>
@@ -1075,6 +1078,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
