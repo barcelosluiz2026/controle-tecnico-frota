@@ -639,6 +639,12 @@ def pane_detail(id):
 
     # Todas as fotos da pane (de todas as etapas)
     todas_fotos = []
+
+# Foto principal da pane
+    if pane.photo_url:
+        todas_fotos.append(pane.photo_url)
+
+# Fotos das etapas
     for s in steps_all:
         for f in [s.photo1, s.photo2, s.photo3]:
             if f:
@@ -1022,6 +1028,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
