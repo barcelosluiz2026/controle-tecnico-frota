@@ -744,239 +744,252 @@ def pane_detail(id):
     # =============================
     # HTML
     # =============================
+html = f"""
+<html>
+<head>
+    <style>
+        body {{ background:#0f172a; color:#f1f5f9; font-family:Segoe UI; padding:40px; }}
 
-    html = f"""
-    <html>
-    <head>
-        <style>
-            body {{ background:#0f172a; color:#f1f5f9; font-family:Segoe UI; padding:40px; }}
+        .card {{ background:#1e293b; padding:20px; border-radius:10px; margin-bottom:25px; }}
 
-            .card {{ background:#1e293b; padding:20px; border-radius:10px; margin-bottom:25px; }}
+        textarea, input {{
+            width:100%;
+            padding:10px;
+            margin-top:8px;
+            background:#0f172a;
+            color:white;
+            border:1px solid #334155;
+            border-radius:6px;
+        }}
 
-            textarea, input {{
-                width:100%;
-                padding:10px;
-                margin-top:8px;
-                background:#0f172a;
-                color:white;
-                border:1px solid #334155;
-                border-radius:6px;
-            }}
+        .radio-group {{
+            display:flex;
+            gap:20px;
+            margin-top:8px;
+            margin-bottom:10px;
+        }}
 
-            .radio-group {{
-                display:flex;
-                gap:20px;
-                margin-top:8px;
-                margin-bottom:10px;
-            }}
+        .btn {{
+            background:#2563eb;
+            color:white;
+            border:none;
+            padding:10px 18px;
+            border-radius:6px;
+            cursor:pointer;
+        }}
 
-            .btn {{
-                background:#2563eb;
-                color:white;
-                border:none;
-                padding:10px 18px;
-                border-radius:6px;
-                cursor:pointer;
-            }}
+        .btn-green {{ background:#16a34a; }}
+        .btn-red {{ background:#ef4444; }}
 
-            .btn-green {{ background:#16a34a; }}
-            .btn-red {{ background:#ef4444; }}
+        .top-actions {{
+            display:flex;
+            gap:15px;
+            margin-bottom:25px;
+            flex-wrap:wrap;
+        }}
 
-            .top-actions {{
-                display:flex;
-                gap:15px;
-                margin-bottom:25px;
-                flex-wrap:wrap;
-            }}
+        .hidden {{ display:none; }}
 
-            .hidden {{ display:none; }}
+        .contador {{
+            background:#334155;
+            padding:8px 12px;
+            border-radius:6px;
+            display:inline-block;
+            margin-bottom:20px;
+        }}
 
-            .contador {{
-                background:#334155;
-                padding:8px 12px;
-                border-radius:6px;
-                display:inline-block;
-                margin-bottom:20px;
-            }}
-            label {{
-                display:block;
-                margin-top:18px;
-                margin-bottom:6px;
-            }}
+        label {{
+            display:block;
+            margin-top:18px;
+            margin-bottom:6px;
+        }}
 
-            .radio-group label {{
-                display:flex;
-                align-items:center;
-                gap:6px;
-                font-weight:500;
-            }}
+        .radio-group label {{
+            display:flex;
+            align-items:center;
+            gap:6px;
+            font-weight:500;
+        }}
 
-            small {{
-                display:block;
-                margin-top:4px;
-                font-size:12px;
-            }}
-        </style>
-    </head>
-    <body>
+        small {{
+            display:block;
+            margin-top:4px;
+            font-size:12px;
+        }}
 
-    <a href="/aircraft/{pane.aircraft_id}">← Voltar</a>
-    <h2>Pane #{pane.id} - ATA {pane.ata}</h2>
+        /* ===== MODAL SIMPLES ===== */
 
-    <div class="contador">
-        📸 Fotos utilizadas: {total_fotos} / 4
-    </div>
+        .modal {{
+            position:fixed;
+            top:0;
+            left:0;
+            width:100%;
+            height:100%;
+            background:rgba(0,0,0,0.65);
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            z-index:1000;
+        }}
 
-    <div class="card">
-        <strong>{pane.description}</strong><br>
-        <small>Status: {pane.status}</small>
-    </div>
+        .modal-box {{
+            background:#1e293b;
+            width:420px;
+            max-height:85vh;
+            overflow:auto;
+            padding:25px;
+            border-radius:10px;
+        }}
+    </style>
+</head>
+<body>
 
-    <div class="top-actions">
-        <button class="btn" onclick="toggle('formStep')">➕ Adicionar Etapa</button>
-        <button class="btn" onclick="toggle('formPend')">➕ Registrar Pendência</button>
-        <button class="btn btn-green" onclick="confirmarFinalizacao()">✅ Finalizar Pane</button>
-    </div>
+<a href="/aircraft/{pane.aircraft_id}">← Voltar</a>
+<h2>Pane #{pane.id} - ATA {pane.ata}</h2>
 
-    <div id="formStep" class="card hidden">
-        <h3>Nova Etapa</h3>
-        <form method="POST">
-            <textarea name="step_desc" placeholder="Descreva a etapa" required></textarea>
-            <input name="responsavel_info" placeholder="Responsável pela informação" required>
+<div class="contador">
+    📸 Fotos utilizadas: {total_fotos} / 4
+</div>
 
-            <div style="margin-top:15px;">
-                <button type="submit" name="action" value="add_step" class="btn">
-                    Salvar
-                </button>
-                <button type="button" class="btn btn-red" onclick="toggle('formStep')">
-                    Cancelar
-                </button>
-            </div>
-        </form>
-    </div>
+<div class="card">
+    <strong>{pane.description}</strong><br>
+    <small>Status: {pane.status}</small>
+</div>
 
-    <div id="formPend" class="card hidden">
-    <h3 style="margin-bottom:20px;">Nova Pendência</h3>
+<div class="top-actions">
+    <button class="btn" onclick="toggle('formStep')">➕ Adicionar Etapa</button>
+    <button class="btn" onclick="toggle('formPend')">➕ Registrar Pendência</button>
+    <button class="btn btn-green" onclick="confirmarFinalizacao()">✅ Finalizar Pane</button>
+</div>
 
+<!-- ================= FORM ETAPA ================= -->
+
+<div id="formStep" class="card hidden">
+    <h3>Nova Etapa</h3>
     <form method="POST">
+        <textarea name="step_desc" placeholder="Descreva a etapa" required></textarea>
+        <input name="responsavel_info" placeholder="Responsável pela informação" required>
 
-        <!-- TIPO DE ITEM -->
-        <label style="font-weight:600;">Tipo de Item *</label>
-        <div class="radio-group">
-            <label>
-                <input type="radio" name="tipo_item" value="Ferramenta" required>
-                🔧 Ferramenta
-            </label>
-            <label>
-                <input type="radio" name="tipo_item" value="Material" required>
-                📋 Material
-            </label>
-        </div>
-
-        <!-- TIPO DE AQUISIÇÃO -->
-        <label style="font-weight:600;">Tipo de Aquisição *</label>
-        <div class="radio-group">
-            <label>
-                <input type="radio" name="tipo_aquisicao" value="Transferência" required>
-                🔄 Transferência
-            </label>
-            <label>
-                <input type="radio" name="tipo_aquisicao" value="Compra" required>
-                🛒 Compra
-            </label>
-        </div>
-
-        <!-- DESCRIÇÃO -->
-        <label style="font-weight:600;">DESCRIÇÃO *</label>
-        <textarea name="descricao" required></textarea>
-
-        <!-- P/N -->
-        <label style="font-weight:600;">P/N *</label>
-        <input name="pn" required>
-
-        <!-- SMS -->
-        <label style="font-weight:600;">SMS/Part Request *</label>
-        <input name="sms_part_request" required>
-        <small style="color:#94a3b8;">Somente números e ponto (.)</small>
-
-        <!-- TASK CARD -->
-        <label style="font-weight:600;">Task Card *</label>
-        <input name="task_card" required>
-        <small style="color:#94a3b8;">Somente números e hífen (-)</small>
-
-        <!-- RESPONSÁVEL -->
-        <label style="font-weight:600;">Responsável *</label>
-        <input name="responsavel" required>
-
-        <div style="margin-top:20px; display:flex; gap:15px;">
-            <button type="submit" name="action" value="add_pendencia" class="btn">
+        <div style="margin-top:15px;">
+            <button type="submit" name="action" value="add_step" class="btn">
                 Salvar
             </button>
-
-            <button type="button" class="btn btn-red" onclick="toggle('formPend')">
+            <button type="button" class="btn btn-red" onclick="toggle('formStep')">
                 Cancelar
             </button>
         </div>
-
     </form>
 </div>
-    <div class="card">
-        <h3>Etapas</h3>
-    """
 
-    for step in steps:
-        html += f"""
-        <div style="background:#334155;padding:12px;border-radius:8px;margin-bottom:12px;">
-            🛠 {step.description}<br>
-            <small>
-                Info: {step.responsavel_info}<br>
-                {hora_br(step.created_at)} - {step.created_by}
-            </small>
-        </div>
-        """
+<!-- ================= MODAL PENDÊNCIA ================= -->
 
-    html += "</div><div class='card'><h3>Pendências</h3>"
+<div id="formPend" class="modal hidden">
+    <div class="modal-box">
 
-    for p in pendencias:
-        html += f"""
-        <div style="background:#334155;padding:12px;border-radius:8px;margin-bottom:12px;">
-            <strong>{p.tipo_item}</strong> - {p.descricao}<br>
-            <small>
-                Aquisição: {p.tipo_aquisicao}<br>
-                P/N: {p.pn or '-'}<br>
-                SMS/Part: {p.sms_part_request or '-'}<br>
-                Task Card: {p.task_card or '-'}<br>
-                Responsável: {p.responsavel}<br>
-                {hora_br(p.created_at)} - {p.created_by}
-            </small>
-        </div>
-        """
+        <h3>Nova Pendência</h3>
 
-    html += f"""
-        </div>
+        <form method="POST">
 
-        <form method="POST" id="formFinalize" class="hidden">
-            <input type="hidden" name="action" value="finalize">
+            <label>Tipo de Item *</label>
+            <div class="radio-group">
+                <label><input type="radio" name="tipo_item" value="Ferramenta" required> 🔧 Ferramenta</label>
+                <label><input type="radio" name="tipo_item" value="Material" required> 📋 Material</label>
+            </div>
+
+            <label>Tipo de Aquisição *</label>
+            <div class="radio-group">
+                <label><input type="radio" name="tipo_aquisicao" value="Transferência" required> 🔄 Transferência</label>
+                <label><input type="radio" name="tipo_aquisicao" value="Compra" required> 🛒 Compra</label>
+            </div>
+
+            <label>Descrição *</label>
+            <textarea name="descricao" required></textarea>
+
+            <label>P/N *</label>
+            <input name="pn" required>
+
+            <label>SMS/Part Request *</label>
+            <input name="sms_part_request" required>
+            <small>Somente números e ponto (.)</small>
+
+            <label>Task Card *</label>
+            <input name="task_card" required>
+            <small>Somente números e hífen (-)</small>
+
+            <label>Responsável *</label>
+            <input name="responsavel" required>
+
+            <div style="margin-top:20px; display:flex; gap:10px;">
+                <button type="submit" name="action" value="add_pendencia" class="btn">
+                    Salvar
+                </button>
+
+                <button type="button" class="btn btn-red" onclick="toggle('formPend')">
+                    Cancelar
+                </button>
+            </div>
+
         </form>
 
-        <script>
-            function toggle(id) {{
-                const el = document.getElementById(id);
-                el.classList.toggle("hidden");
-            }}
+    </div>
+</div>
 
-            function confirmarFinalizacao() {{
-                if (confirm("Tem certeza que deseja finalizar esta pane?")) {{
-                    document.getElementById("formFinalize").submit();
-                }}
-            }}
-        </script>
+<div class="card">
+    <h3>Etapas</h3>
+"""
 
-    </body>
-    </html>
+for step in steps:
+    html += f"""
+    <div style="background:#334155;padding:12px;border-radius:8px;margin-bottom:12px;">
+        🛠 {step.description}<br>
+        <small>
+            Info: {step.responsavel_info}<br>
+            {hora_br(step.created_at)} - {step.created_by}
+        </small>
+    </div>
     """
 
-    return html
+html += "</div><div class='card'><h3>Pendências</h3>"
+
+for p in pendencias:
+    html += f"""
+    <div style="background:#334155;padding:12px;border-radius:8px;margin-bottom:12px;">
+        <strong>{p.tipo_item}</strong> - {p.descricao}<br>
+        <small>
+            Aquisição: {p.tipo_aquisicao}<br>
+            P/N: {p.pn or '-'}<br>
+            SMS/Part: {p.sms_part_request or '-'}<br>
+            Task Card: {p.task_card or '-'}<br>
+            Responsável: {p.responsavel}<br>
+            {hora_br(p.created_at)} - {p.created_by}
+        </small>
+    </div>
+    """
+
+html += f"""
+    </div>
+
+    <form method="POST" id="formFinalize" class="hidden">
+        <input type="hidden" name="action" value="finalize">
+    </form>
+
+    <script>
+        function toggle(id) {{
+            const el = document.getElementById(id);
+            el.classList.toggle("hidden");
+        }}
+
+        function confirmarFinalizacao() {{
+            if (confirm("Tem certeza que deseja finalizar esta pane?")) {{
+                document.getElementById("formFinalize").submit();
+            }}
+        }}
+    </script>
+
+</body>
+</html>
+"""
+   
 
 # ======================
 # LOGIN
@@ -1075,6 +1088,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
