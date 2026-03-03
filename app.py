@@ -798,6 +798,24 @@ def pane_detail(id):
                 display:inline-block;
                 margin-bottom:20px;
             }}
+            label {{
+                display:block;
+                margin-top:18px;
+                margin-bottom:6px;
+            }}
+
+            .radio-group label {{
+                display:flex;
+                align-items:center;
+                gap:6px;
+                font-weight:500;
+            }}
+
+            small {{
+                display:block;
+                margin-top:4px;
+                font-size:12px;
+            }}
         </style>
     </head>
     <body>
@@ -838,35 +856,70 @@ def pane_detail(id):
     </div>
 
     <div id="formPend" class="card hidden">
-        <h3>Nova Pendência</h3>
-        <form method="POST">
-            <div class="radio-group">
-                <label><input type="radio" name="tipo_item" value="Ferramenta" required> Ferramenta</label>
-                <label><input type="radio" name="tipo_item" value="Material" required> Material</label>
-            </div>
+    <h3 style="margin-bottom:20px;">Nova Pendência</h3>
 
-            <div class="radio-group">
-                <label><input type="radio" name="tipo_aquisicao" value="Transferência" required> Transferência</label>
-                <label><input type="radio" name="tipo_aquisicao" value="Compra" required> Compra</label>
-            </div>
+    <form method="POST">
 
-            <input name="descricao" placeholder="Descrição" required>
-            <input name="pn" placeholder="P/N">
-            <input name="sms_part_request" placeholder="SMS/Part Request">
-            <input name="task_card" placeholder="Task Card">
-            <input name="responsavel" placeholder="Responsável" required>
+        <!-- TIPO DE ITEM -->
+        <label style="font-weight:600;">Tipo de Item *</label>
+        <div class="radio-group">
+            <label>
+                <input type="radio" name="tipo_item" value="Ferramenta" required>
+                🔧 Ferramenta
+            </label>
+            <label>
+                <input type="radio" name="tipo_item" value="Material" required>
+                📋 Material
+            </label>
+        </div>
 
-            <div style="margin-top:15px;">
-                <button type="submit" name="action" value="add_pendencia" class="btn">
-                    Salvar
-                </button>
-                <button type="button" class="btn btn-red" onclick="toggle('formPend')">
-                    Cancelar
-                </button>
-            </div>
-        </form>
-    </div>
+        <!-- TIPO DE AQUISIÇÃO -->
+        <label style="font-weight:600;">Tipo de Aquisição *</label>
+        <div class="radio-group">
+            <label>
+                <input type="radio" name="tipo_aquisicao" value="Transferência" required>
+                🔄 Transferência
+            </label>
+            <label>
+                <input type="radio" name="tipo_aquisicao" value="Compra" required>
+                🛒 Compra
+            </label>
+        </div>
 
+        <!-- DESCRIÇÃO -->
+        <label style="font-weight:600;">DESCRIÇÃO *</label>
+        <textarea name="descricao" required></textarea>
+
+        <!-- P/N -->
+        <label style="font-weight:600;">P/N *</label>
+        <input name="pn" required>
+
+        <!-- SMS -->
+        <label style="font-weight:600;">SMS/Part Request *</label>
+        <input name="sms_part_request" required>
+        <small style="color:#94a3b8;">Somente números e ponto (.)</small>
+
+        <!-- TASK CARD -->
+        <label style="font-weight:600;">Task Card *</label>
+        <input name="task_card" required>
+        <small style="color:#94a3b8;">Somente números e hífen (-)</small>
+
+        <!-- RESPONSÁVEL -->
+        <label style="font-weight:600;">Responsável *</label>
+        <input name="responsavel" required>
+
+        <div style="margin-top:20px; display:flex; gap:15px;">
+            <button type="submit" name="action" value="add_pendencia" class="btn">
+                Salvar
+            </button>
+
+            <button type="button" class="btn btn-red" onclick="toggle('formPend')">
+                Cancelar
+            </button>
+        </div>
+
+    </form>
+</div>
     <div class="card">
         <h3>Etapas</h3>
     """
@@ -1022,6 +1075,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
