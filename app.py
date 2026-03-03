@@ -721,6 +721,40 @@ def pane_detail(id):
         from {{ transform:scale(0.9); opacity:0; }}
         to {{ transform:scale(1); opacity:1; }}
     }}
+    /* ===== FORM PENDENCIA MELHORADO ===== */
+
+    .radio-group {
+        margin-bottom:15px;
+    }
+
+    .radio-title {
+        font-weight:600;
+        margin-bottom:6px;
+        display:block;
+    }
+
+    .radio-row {
+        display:flex;
+        gap:25px;
+    }
+
+    .radio-row label {
+        display:flex;
+        align-items:center;
+        gap:6px;
+        cursor:pointer;
+    }
+
+    .form-grid {
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:12px;
+        margin-top:10px;
+    }
+
+    .form-grid input {
+        margin-top:6px;
+    }
     </style>
     </head>
     <body>
@@ -761,24 +795,65 @@ def pane_detail(id):
         <div class="modal-content">
             <h3>Nova Pendência</h3>
             <form method="POST">
-                <div class="radio-group">
-                    <label><input type="radio" name="tipo_item" value="Ferramenta" required> Ferramenta</label>
-                    <label><input type="radio" name="tipo_item" value="Material" required> Material</label>
-                </div>
-                <div class="radio-group">
-                    <label><input type="radio" name="tipo_aquisicao" value="Transferência" required> Transferência</label>
-                    <label><input type="radio" name="tipo_aquisicao" value="Compra" required> Compra</label>
-                </div>
-                <input name="descricao" placeholder="Descrição" required>
-                <input name="pn" placeholder="P/N">
-                <input name="sms_part_request" placeholder="SMS/Part Request">
-                <input name="task_card" placeholder="Task Card">
-                <input name="responsavel" placeholder="Responsável" required>
-                <div style="margin-top:15px;">
-                    <button type="submit" name="action" value="add_pendencia" class="btn">Salvar</button>
-                    <button type="button" class="btn btn-red" onclick="closeModal('modalPend')">Cancelar</button>
-                </div>
-            </form>
+
+    <input type="hidden" name="action" value="add_pendencia">
+
+    <!-- Tipo de Item -->
+    <div class="radio-group">
+        <span class="radio-title">Tipo de Item *</span>
+        <div class="radio-row">
+            <label>
+                <input type="radio" name="tipo_item" value="Ferramenta" required>
+                🔧 Ferramenta
+            </label>
+            <label>
+                <input type="radio" name="tipo_item" value="Material" required>
+                📋 Material
+            </label>
+        </div>
+    </div>
+
+    <!-- Tipo de Aquisição -->
+    <div class="radio-group">
+        <span class="radio-title">Tipo de Aquisição *</span>
+        <div class="radio-row">
+            <label>
+                <input type="radio" name="tipo_aquisicao" value="Transferência" required>
+                🔄 Transferência
+            </label>
+            <label>
+                <input type="radio" name="tipo_aquisicao" value="Compra" required>
+                🛒 Compra
+            </label>
+        </div>
+    </div>
+
+    <input name="descricao" placeholder="Descrição" required>
+
+    <div class="form-grid">
+        <div>
+            <input name="pn" placeholder="P/N">
+        </div>
+
+        <div>
+            <input name="sms_part_request" placeholder="SMS/Part Request">
+        </div>
+
+        <div>
+            <input name="task_card" placeholder="Task Card">
+        </div>
+
+        <div>
+            <input name="responsavel" placeholder="Responsável" required>
+        </div>
+    </div>
+
+    <div style="margin-top:15px; display:flex; gap:12px;">
+        <button type="submit" class="btn">Salvar</button>
+        <button type="button" class="btn btn-red" onclick="closeModal('modalPend')">Cancelar</button>
+    </div>
+
+</form>
         </div>
     </div>
 
@@ -945,5 +1020,6 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
