@@ -741,6 +741,64 @@ def pane_detail(id):
         background:#1e293b; padding:25px; border-radius:10px; width:90%; max-width:500px;
         box-shadow:0 0 20px rgba(0,0,0,0.4);
     }}
+    .modal-large {{
+        max-width: 700px;
+    }}
+
+    .form-group {{
+        margin-bottom: 15px;
+    }}
+
+    .form-grid {{
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin-top: 15px;
+    }}
+
+    .form-grid label {{
+        font-size: 13px;
+        color: #94a3b8;
+        display: block;
+        margin-bottom: 4px;
+    }}
+
+    .radio-group {{
+        margin-bottom: 18px;
+    }}
+
+    .radio-title {{
+        font-weight: 600;
+        display: block;
+        margin-bottom: 8px;
+    }}
+
+    .radio-row {{
+        display: flex;
+        gap: 15px;
+    }}
+
+    .radio-card {{
+        background: #1e293b;
+        padding: 10px 14px;
+        border-radius: 8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid #334155;
+    }}
+
+    .radio-card input {{
+        margin-right: 6px;
+    }}
+
+    .modal-actions {{
+        margin-top: 25px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+    }}
     </style>
     </head>
     <body>
@@ -1029,5 +1087,6 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
