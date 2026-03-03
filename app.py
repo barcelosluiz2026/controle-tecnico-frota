@@ -637,7 +637,6 @@ def pane_detail(id):
 
     steps_all = Step.query.filter_by(pane_id=pane.id).all()
 
-    # Todas as fotos da pane
     todas_fotos = []
 
     if pane.photo_url:
@@ -655,14 +654,12 @@ def pane_detail(id):
         action = request.form.get("action")
 
         if action == "add_step":
-
             descricao = request.form.get("step_desc", "").strip()
             responsavel_info = request.form.get("responsavel_info", "").strip()
 
             if not descricao or not responsavel_info:
                 return redirect(url_for("pane_detail", id=pane.id))
 
-            # Contar novas fotos enviadas
             novas_fotos = [
                 request.form.get("photo1"),
                 request.form.get("photo2"),
@@ -687,7 +684,6 @@ def pane_detail(id):
             pane.status = "In Progress Avi" if pane.tipo and pane.tipo.strip().lower() == "aviônico" else "In Progress Mec"
 
         elif action == "add_pendencia":
-
             pend = Pendencia(
                 pane_id=pane.id,
                 tipo_item=request.form.get("tipo_item"),
@@ -710,7 +706,6 @@ def pane_detail(id):
                     pane.status = "Wait Transfer"
 
         elif action == "delete_photo":
-
             photo = request.form.get("photo")
 
             if pane.photo_url == photo:
@@ -783,7 +778,6 @@ def pane_detail(id):
                 <img src="{foto}"
                      style="width:110px;height:110px;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid #475569;"
                      onclick="openImage('{foto}')">
-
                 <form method="POST" style="position:absolute;top:-6px;right:-6px;">
                     <input type="hidden" name="action" value="delete_photo">
                     <input type="hidden" name="photo" value="{foto}">
@@ -803,17 +797,104 @@ def pane_detail(id):
 
     html += "</div>"
 
-    # 🔹 RESTANTE DO HTML PERMANECE EXATAMENTE IGUAL AO SEU ORIGINAL
-    # (Etapas, Pendências, Modais, Zoom, Scripts...)
-
     html += """
-    <!-- RESTANTE DO SEU CÓDIGO HTML ORIGINAL AQUI -->
+    <div class="top-actions">
+        <button class="btn" onclick="openModal('modalStep')">➕ Adicionar Etapa</button>
+        <button class="btn" onclick="openModal('modalPend')">➕ Registrar Pendência</button>
+        <button class="btn btn-green" onclick="confirmarFinalizacao()">✅ Finalizar Pane</button>
+    </div>
     """
 
-    html += "</body></html>"
+    html += "<div class='card'><h3>Etapas</h3>"
+
+    for step in steps:
+        html += f"""
+        <div style="background:#334155;padding:12px;border-radius:8px;margin-bottom:12px;">
+        🛠 {step.description}<br>
+        <small>{step.responsavel_info}<br>{hora_br(step.created_at)} - {step.created_by}</small>
+        </div>
+        """
+
+    html += "</div>"
+
+    html += "<div class='card'><h3>Pendências</h3>"
+
+    for p in pendencias:
+        html += f"""
+        <div style="background:#334155;padding:12px;border-radius:8px;margin-bottom:12px;">
+        <strong>{p.tipo_item}</strong> - {p.descricao}<br>
+        <small>
+        Aquisição: {p.tipo_aquisicao}<br>
+        P/N: {p.pn or '-'}<br>
+        SMS/Part: {p.sms_part_request or '-'}<br>
+        Task Card: {p.task_card or '-'}<br>
+        Responsável: {p.responsavel}<br>
+        {hora_br(p.created_at)} - {p.created_by}
+        </small>
+        </div>
+        """
+
+    html += """
+    </div>
+
+<form method="POST" id="formFinalize">
+    <input type="hidden" name="action" value="finalize">
+</form>
+
+<div id="imageModal" style="
+    display:none;
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background:rgba(0,0,0,0.85);
+    justify-content:center;
+    align-items:center;
+    z-index:2000;">
+    <img id="zoomedImage" style="
+        max-width:90%;
+        max-height:90%;
+        border-radius:10px;
+        box-shadow:0 0 40px rgba(0,0,0,0.7);">
+</div>
+
+<script>
+function openModal(id) {{
+    document.getElementById(id).style.display = "flex";
+}}
+
+function closeModal(id) {{
+    document.getElementById(id).style.display = "none";
+}}
+
+function confirmarFinalizacao() {{
+    if (confirm("Tem certeza que deseja finalizar esta pane?")) {{
+        document.getElementById("formFinalize").submit();
+    }}
+}}
+
+function openImage(src) {{
+    document.getElementById("zoomedImage").src = src;
+    document.getElementById("imageModal").style.display = "flex";
+}}
+
+document.getElementById("imageModal").addEventListener("click", function() {{
+    this.style.display = "none";
+}});
+
+document.addEventListener("keydown", function(e) {{
+    if (e.key === "Escape") {{
+        document.getElementById("imageModal").style.display = "none";
+    }}
+}});
+</script>
+
+</body>
+</html>
+"""
 
     return html
-
 # ======================
 # LOGIN
 # ======================
@@ -911,6 +992,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
