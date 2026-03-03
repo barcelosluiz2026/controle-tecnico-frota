@@ -831,7 +831,7 @@ def pane_detail(id):
                 z-index:1000;
             }}
 
-            .modal.show {
+            .modal.show {{
                 display:flex;
             }}
 
@@ -1078,6 +1078,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
