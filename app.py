@@ -1024,7 +1024,6 @@ def register():
     </form>
     """
 
-
 @app.route("/login", methods=["GET", "POST"])
 def login():
 
@@ -1052,12 +1051,10 @@ def login():
     </form>
     """
 
-
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect(url_for("login"))
-
 
 # ======================
 # CRIAR TABELAS
@@ -1078,6 +1075,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
