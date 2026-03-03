@@ -281,7 +281,7 @@ def add_aircraft():
 
         model = request.form["model"]
         prefix = request.form["prefix"].upper()
-        photo_url = request.form["photo_url"]
+        photo_url = request.form.get("photo_url", "").strip() or None
 
         if not re.match(r"^[A-Z]{2}-[A-Z]{3}$", prefix):
             return "Prefixo inválido. Use formato PR-ABC"
@@ -388,7 +388,7 @@ def aircraft_page(id):
         ata = request.form["ata"]
         tipo = request.form["tipo"]
         responsavel = request.form["responsavel"]
-        photo_url = request.form.get("photo_url")
+        photo_url = request.form.get("photo_url", "").strip() or None
 
         new_pane = Pane(
             aircraft_id=aircraft.id,
@@ -1022,6 +1022,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
