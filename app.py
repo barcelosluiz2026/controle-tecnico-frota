@@ -791,6 +791,78 @@ def pane_detail(id):
 
     html += """
     </div>
+    <!-- MODAL ETAPA -->
+<div id="modalStep" class="modal">
+    <div class="modal-content">
+        <h3>Nova Etapa</h3>
+        <form method="POST" class="step-form">
+            <input type="hidden" name="action" value="add_step">
+
+            <label>Descrição *</label>
+            <textarea name="step_desc" required></textarea>
+
+            <label style="margin-top:12px; display:block;">Responsável *</label>
+            <input name="responsavel_info" required>
+
+            <div class="photo-group">
+                <label>📷 Fotos (até 3)</label>
+                <input name="photo1" placeholder="https://exemplo.com/foto1.jpg">
+                <input name="photo2" placeholder="https://exemplo.com/foto2.jpg">
+                <input name="photo3" placeholder="https://exemplo.com/foto3.jpg">
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn">Salvar</button>
+                <button type="button" class="btn btn-red" onclick="closeModal('modalStep')">Cancelar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL PENDÊNCIA -->
+<div id="modalPend" class="modal">
+    <div class="modal-content">
+        <h3>Nova Pendência</h3>
+        <form method="POST">
+            <input type="hidden" name="action" value="add_pendencia">
+
+            <div class="radio-group">
+                <span class="radio-title">Tipo de Item *</span>
+                <div class="radio-row">
+                    <label><input type="radio" name="tipo_item" value="Ferramenta" required> 🔧 Ferramenta</label>
+                    <label><input type="radio" name="tipo_item" value="Material" required> 📋 Material</label>
+                </div>
+            </div>
+
+            <div class="radio-group">
+                <span class="radio-title">Tipo de Aquisição *</span>
+                <div class="radio-row">
+                    <label><input type="radio" name="tipo_aquisicao" value="Transferência" required> 🔄 Transferência</label>
+                    <label><input type="radio" name="tipo_aquisicao" value="Compra" required> 🛒 Compra</label>
+                </div>
+            </div>
+
+            <input name="descricao" placeholder="Descrição" required>
+
+            <div class="form-grid">
+                <input name="pn" placeholder="P/N">
+                <input name="sms_part_request" placeholder="SMS/Part Request">
+                <input name="task_card" placeholder="Task Card">
+                <input name="responsavel" placeholder="Responsável" required>
+            </div>
+
+            <div style="margin-top:15px; display:flex; gap:12px;">
+                <button type="submit" class="btn">Salvar</button>
+                <button type="button" class="btn btn-red" onclick="closeModal('modalPend')">Cancelar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- FORM FINALIZAR -->
+<form method="POST" id="formFinalize">
+    <input type="hidden" name="action" value="finalize">
+</form>
 
     <!-- MODAL ZOOM IMAGEM -->
     <div id="imageModal" style="
@@ -814,21 +886,38 @@ def pane_detail(id):
     </div>
 
     <script>
-    function openImage(src) {{
-        document.getElementById("zoomedImage").src = src;
-        document.getElementById("imageModal").style.display = "flex";
-    }}
+function openModal(id) {
+    document.getElementById(id).style.display = "flex";
+}
 
-    document.getElementById("imageModal").addEventListener("click", function() {{
-        this.style.display = "none";
-    }});
+function closeModal(id) {
+    document.getElementById(id).style.display = "none";
+}
 
-    document.addEventListener("keydown", function(e) {{
-        if (e.key === "Escape") {{
-            document.getElementById("imageModal").style.display = "none";
-        }}
-    }});
-    </script>
+function confirmarFinalizacao() {
+    if (confirm("Tem certeza que deseja finalizar esta pane?")) {
+        document.getElementById("formFinalize").submit();
+    }
+}
+
+/* ===== ZOOM IMAGEM ===== */
+function openImage(src) {
+    document.getElementById("zoomedImage").src = src;
+    document.getElementById("imageModal").style.display = "flex";
+}
+
+document.getElementById("imageModal").addEventListener("click", function() {
+    this.style.display = "none";
+});
+
+document.addEventListener("keydown", function(e) {
+    if (e.key === "Escape") {
+        closeModal("modalStep");
+        closeModal("modalPend");
+        document.getElementById("imageModal").style.display = "none";
+    }
+});
+</script>
 
     </body>
     </html>
@@ -933,6 +1022,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
