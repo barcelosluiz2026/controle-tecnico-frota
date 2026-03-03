@@ -637,14 +637,10 @@ def pane_detail(id):
 
     steps_all = Step.query.filter_by(pane_id=pane.id).all()
 
-    # Todas as fotos da pane (de todas as etapas)
+    # Todas as fotos da pane (principal + etapas)
     todas_fotos = []
-
-# Foto principal da pane
     if pane.photo_url:
         todas_fotos.append(pane.photo_url)
-
-# Fotos das etapas
     for s in steps_all:
         for f in [s.photo1, s.photo2, s.photo3]:
             if f:
@@ -652,13 +648,24 @@ def pane_detail(id):
 
     total_fotos = len(todas_fotos)
 
+    # ======================
+    # PROCESSAMENTO DE FORMULÁRIOS
+    # ======================
     if request.method == "POST":
         action = request.form.get("action")
+
+        # Bloqueia novas fotos se já houver 4
+        if action == "add_step" and total_fotos >= 4:
+            return f"""
+            <html><body style='background:#0f172a;color:white;text-align:center;padding:40px;'>
+            <h2>⚠ Limite de 4 fotos atingido para esta pane.</h2>
+            <a href='{url_for('pane_detail', id=pane.id)}' style='color:#38bdf8;'>Voltar</a>
+            </body></html>
+            """
 
         if action == "add_step":
             descricao = request.form.get("step_desc", "").strip()
             responsavel_info = request.form.get("responsavel_info", "").strip()
-
             if not descricao or not responsavel_info:
                 return redirect(url_for("pane_detail", id=pane.id))
 
@@ -672,7 +679,6 @@ def pane_detail(id):
                 photo3=request.form.get("photo3")
             )
             db.session.add(step)
-
             pane.status = "In Progress Avi" if pane.tipo and pane.tipo.strip().lower() == "aviônico" else "In Progress Mec"
 
         elif action == "add_pendencia":
@@ -688,7 +694,6 @@ def pane_detail(id):
                 created_by=session.get("username")
             )
             db.session.add(pend)
-
             if pend.tipo_item == "Ferramenta":
                 pane.status = "Wait Tools"
             elif pend.tipo_item == "Material":
@@ -703,9 +708,15 @@ def pane_detail(id):
         db.session.commit()
         return redirect(url_for("pane_detail", id=pane.id))
 
+    # ======================
+    # CONSULTAS
+    # ======================
     steps = Step.query.filter_by(pane_id=pane.id).order_by(Step.created_at.desc()).all()
     pendencias = Pendencia.query.filter_by(pane_id=pane.id).order_by(Pendencia.created_at.desc()).all()
 
+    # ======================
+    # HTML
+    # ======================
     html = f"""
     <html>
     <head>
@@ -721,7 +732,6 @@ def pane_detail(id):
     .btn-red {{ background:#ef4444; }}
     .top-actions {{ display:flex; gap:15px; margin-bottom:25px; flex-wrap:wrap; }}
     .contador {{ background:#334155; padding:8px 12px; border-radius:6px; display:inline-block; margin-bottom:20px; }}
-
     .modal {{
         display:none; position:fixed; top:0; left:0; width:100%; height:100%;
         background:rgba(0,0,0,0.6); justify-content:center; align-items:center;
@@ -738,21 +748,28 @@ def pane_detail(id):
     <a href="/aircraft/{pane.aircraft_id}">← Voltar</a>
     <h2>Pane #{pane.id} - ATA {pane.ata}</h2>
 
-    <div class="contador">📸 Fotos utilizadas: {total_fotos}</div>
+    <div class="contador">📸 Fotos utilizadas: {total_fotos} / 4</div>
 
     <div class="card">
         <strong>{pane.description}</strong><br>
         <small>Status: {pane.status}</small>
     """
 
-    # Fotos no topo
+    # Exibe fotos com botão de exclusão
     if todas_fotos:
         html += "<div style='margin-top:15px; display:flex; gap:12px; flex-wrap:wrap;'>"
         for foto in todas_fotos:
             html += f"""
-            <img src="{foto}"
-                 style="width:110px;height:110px;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid #475569;"
-                 onclick="openImage('{foto}')">
+            <div style="position:relative;display:inline-block;">
+                <img src="{foto}"
+                     style="width:110px;height:110px;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid #475569;"
+                     onclick="openImage('{foto}')">
+                <form method="POST" action="/delete_photo/{pane.id}" style="position:absolute;top:4px;right:4px;">
+                    <input type="hidden" name="foto_url" value="{foto}">
+                    <button type="submit" onclick="return confirm('Excluir esta foto?')" 
+                            style="background:#ef4444;border:none;color:white;border-radius:50%;width:22px;height:22px;cursor:pointer;">×</button>
+                </form>
+            </div>
             """
         html += "</div>"
 
@@ -767,7 +784,6 @@ def pane_detail(id):
     """
 
     html += "<div class='card'><h3>Etapas</h3>"
-
     for step in steps:
         html += f"""
         <div style="background:#334155;padding:12px;border-radius:8px;margin-bottom:12px;">
@@ -775,11 +791,9 @@ def pane_detail(id):
         <small>{step.responsavel_info}<br>{hora_br(step.created_at)} - {step.created_by}</small>
         </div>
         """
-
     html += "</div>"
 
     html += "<div class='card'><h3>Pendências</h3>"
-
     for p in pendencias:
         html += f"""
         <div style="background:#334155;padding:12px;border-radius:8px;margin-bottom:12px;">
@@ -794,142 +808,105 @@ def pane_detail(id):
         </small>
         </div>
         """
+    html += "</div>"
 
     html += """
-    </div>
     <!-- MODAL ETAPA -->
-<div id="modalStep" class="modal">
-    <div class="modal-content">
-        <h3>Nova Etapa</h3>
-        <form method="POST" class="step-form">
-            <input type="hidden" name="action" value="add_step">
-
-            <label>Descrição *</label>
-            <textarea name="step_desc" required></textarea>
-
-            <label style="margin-top:12px; display:block;">Responsável *</label>
-            <input name="responsavel_info" required>
-
-            <div class="photo-group">
+    <div id="modalStep" class="modal">
+        <div class="modal-content">
+            <h3>Nova Etapa</h3>
+            <form method="POST">
+                <input type="hidden" name="action" value="add_step">
+                <textarea name="step_desc" placeholder="Descreva a etapa" required></textarea>
+                <input name="responsavel_info" placeholder="Responsável pela informação" required>
                 <label>📷 Fotos (até 3)</label>
                 <input name="photo1" placeholder="https://exemplo.com/foto1.jpg">
                 <input name="photo2" placeholder="https://exemplo.com/foto2.jpg">
                 <input name="photo3" placeholder="https://exemplo.com/foto3.jpg">
-            </div>
-
-            <div class="form-actions">
-                <button type="submit" class="btn">Salvar</button>
-                <button type="button" class="btn btn-red" onclick="closeModal('modalStep')">Cancelar</button>
-            </div>
-        </form>
+                <div style="margin-top:15px;">
+                    <button type="submit" class="btn">Salvar</button>
+                    <button type="button" class="btn btn-red" onclick="closeModal('modalStep')">Cancelar</button>
+                </div>
+            </form>
+        </div>
     </div>
-</div>
 
-<!-- MODAL PENDÊNCIA -->
-<div id="modalPend" class="modal">
-    <div class="modal-content">
-        <h3>Nova Pendência</h3>
-        <form method="POST">
-            <input type="hidden" name="action" value="add_pendencia">
-
-            <div class="radio-group">
-                <span class="radio-title">Tipo de Item *</span>
-                <div class="radio-row">
-                    <label><input type="radio" name="tipo_item" value="Ferramenta" required> 🔧 Ferramenta</label>
-                    <label><input type="radio" name="tipo_item" value="Material" required> 📋 Material</label>
-                </div>
-            </div>
-
-            <div class="radio-group">
-                <span class="radio-title">Tipo de Aquisição *</span>
-                <div class="radio-row">
-                    <label><input type="radio" name="tipo_aquisicao" value="Transferência" required> 🔄 Transferência</label>
-                    <label><input type="radio" name="tipo_aquisicao" value="Compra" required> 🛒 Compra</label>
-                </div>
-            </div>
-
-            <input name="descricao" placeholder="Descrição" required>
-
-            <div class="form-grid">
-                <input name="pn" placeholder="P/N">
-                <input name="sms_part_request" placeholder="SMS/Part Request">
-                <input name="task_card" placeholder="Task Card">
+    <!-- MODAL PENDÊNCIA -->
+    <div id="modalPend" class="modal">
+        <div class="modal-content">
+            <h3>Nova Pendência</h3>
+            <form method="POST">
+                <input type="hidden" name="action" value="add_pendencia">
+                <input name="descricao" placeholder="Descrição" required>
                 <input name="responsavel" placeholder="Responsável" required>
-            </div>
-
-            <div style="margin-top:15px; display:flex; gap:12px;">
-                <button type="submit" class="btn">Salvar</button>
-                <button type="button" class="btn btn-red" onclick="closeModal('modalPend')">Cancelar</button>
-            </div>
-        </form>
+                <div style="margin-top:15px;">
+                    <button type="submit" class="btn">Salvar</button>
+                    <button type="button" class="btn btn-red" onclick="closeModal('modalPend')">Cancelar</button>
+                </div>
+            </form>
+        </div>
     </div>
-</div>
 
-<!-- FORM FINALIZAR -->
-<form method="POST" id="formFinalize">
-    <input type="hidden" name="action" value="finalize">
-</form>
+    <form method="POST" id="formFinalize">
+        <input type="hidden" name="action" value="finalize">
+    </form>
 
-    <!-- MODAL ZOOM IMAGEM -->
-    <div id="imageModal" style="
-        display:none;
-        position:fixed;
-        top:0;
-        left:0;
-        width:100%;
-        height:100%;
-        background:rgba(0,0,0,0.85);
-        justify-content:center;
-        align-items:center;
-        z-index:2000;
-    ">
-        <img id="zoomedImage" style="
-            max-width:90%;
-            max-height:90%;
-            border-radius:10px;
-            box-shadow:0 0 40px rgba(0,0,0,0.7);
-        ">
+    <div id="imageModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);justify-content:center;align-items:center;z-index:2000;">
+        <img id="zoomedImage" style="max-width:90%;max-height:90%;border-radius:10px;box-shadow:0 0 40px rgba(0,0,0,0.7);">
     </div>
 
     <script>
-function openModal(id) {
-    document.getElementById(id).style.display = "flex";
-}
-
-function closeModal(id) {
-    document.getElementById(id).style.display = "none";
-}
-
-function confirmarFinalizacao() {
-    if (confirm("Tem certeza que deseja finalizar esta pane?")) {
-        document.getElementById("formFinalize").submit();
-    }
-}
-
-/* ===== ZOOM IMAGEM ===== */
-function openImage(src) {
-    document.getElementById("zoomedImage").src = src;
-    document.getElementById("imageModal").style.display = "flex";
-}
-
-document.getElementById("imageModal").addEventListener("click", function() {
-    this.style.display = "none";
-});
-
-document.addEventListener("keydown", function(e) {
-    if (e.key === "Escape") {
-        closeModal("modalStep");
-        closeModal("modalPend");
-        document.getElementById("imageModal").style.display = "none";
-    }
-});
-</script>
+    function openModal(id) {{ document.getElementById(id).style.display = "flex"; }}
+    function closeModal(id) {{ document.getElementById(id).style.display = "none"; }}
+    function confirmarFinalizacao() {{
+        if (confirm("Tem certeza que deseja finalizar esta pane?")) {{
+            document.getElementById("formFinalize").submit();
+        }}
+    }}
+    function openImage(src) {{
+        document.getElementById("zoomedImage").src = src;
+        document.getElementById("imageModal").style.display = "flex";
+    }}
+    document.getElementById("imageModal").addEventListener("click", function() {{
+        this.style.display = "none";
+    }});
+    document.addEventListener("keydown", function(e) {{
+        if (e.key === "Escape") {{
+            closeModal("modalStep");
+            closeModal("modalPend");
+            document.getElementById("imageModal").style.display = "none";
+        }}
+    }});
+    </script>
 
     </body>
     </html>
     """
 
     return html
+
+# ======================
+# EXCLUIR FOTOS
+# ======================
+@app.route("/delete_photo/<int:pane_id>", methods=["POST"])
+@login_required()
+def delete_photo(pane_id):
+    pane = Pane.query.get_or_404(pane_id)
+    foto_url = request.form.get("foto_url")
+
+    # Remove se for a foto principal
+    if pane.photo_url == foto_url:
+        pane.photo_url = None
+
+    # Remove se for de alguma etapa
+    steps = Step.query.filter_by(pane_id=pane.id).all()
+    for s in steps:
+        for attr in ["photo1", "photo2", "photo3"]:
+            if getattr(s, attr) == foto_url:
+                setattr(s, attr, None)
+
+    db.session.commit()
+    return redirect(url_for("pane_detail", id=pane.id))
 
 # ======================
 # LOGIN
@@ -1028,3 +1005,4 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
