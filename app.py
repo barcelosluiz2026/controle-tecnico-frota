@@ -745,9 +745,9 @@ def pane_detail(id):
     # HTML
     # =============================
     html = f"""
-   <html>
-   <head>
-       <style>
+<html>
+<head>
+    <style>
         body {{ background:#0f172a; color:#f1f5f9; font-family:Segoe UI; padding:40px; }}
 
         .card {{ background:#1e293b; padding:20px; border-radius:10px; margin-bottom:25px; }}
@@ -1088,6 +1088,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
