@@ -798,51 +798,6 @@ def pane_detail(id):
                 display:inline-block;
                 margin-bottom:20px;
             }}
-
-            label {{
-                display:block;
-                margin-top:18px;
-                margin-bottom:6px;
-            }}
-
-            .radio-group label {{
-                display:flex;
-                align-items:center;
-                gap:6px;
-                font-weight:500;
-            }}
-
-            small {{
-                display:block;
-                margin-top:4px;
-                font-size:12px;
-            }}
-
-            .modal {{
-                position:fixed;
-                top:0;
-                left:0;
-                width:100%;
-                height:100%;
-                background:rgba(0,0,0,0.65);
-                display:none;   /* começa escondido */
-                justify-content:center;
-                align-items:center;
-                z-index:1000;
-            }}
-
-            .modal.show {{
-                display:flex;
-            }}
-
-            .modal-box {{
-                background:#1e293b;
-                width:420px;
-                max-height:85vh;
-                overflow:auto;
-                padding:25px;
-                border-radius:10px;
-            }}
         </style>
     </head>
     <body>
@@ -882,54 +837,38 @@ def pane_detail(id):
         </form>
     </div>
 
-    <div id="formPend" class="modal hidden">
-        <div class="modal-box">
-            <h3>Nova Pendência</h3>
+    <div id="formPend" class="card hidden">
+        <h3>Nova Pendência</h3>
+        <form method="POST">
+            <div class="radio-group">
+                <label><input type="radio" name="tipo_item" value="Ferramenta" required> Ferramenta</label>
+                <label><input type="radio" name="tipo_item" value="Material" required> Material</label>
+            </div>
 
-            <form method="POST">
+            <div class="radio-group">
+                <label><input type="radio" name="tipo_aquisicao" value="Transferência" required> Transferência</label>
+                <label><input type="radio" name="tipo_aquisicao" value="Compra" required> Compra</label>
+            </div>
 
-                <label>Tipo de Item *</label>
-                <div class="radio-group">
-                    <label><input type="radio" name="tipo_item" value="Ferramenta" required> 🔧 Ferramenta</label>
-                    <label><input type="radio" name="tipo_item" value="Material" required> 📋 Material</label>
-                </div>
+            <input name="descricao" placeholder="Descrição" required>
+            <input name="pn" placeholder="P/N">
+            <input name="sms_part_request" placeholder="SMS/Part Request">
+            <input name="task_card" placeholder="Task Card">
+            <input name="responsavel" placeholder="Responsável" required>
 
-                <label>Tipo de Aquisição *</label>
-                <div class="radio-group">
-                    <label><input type="radio" name="tipo_aquisicao" value="Transferência" required> 🔄 Transferência</label>
-                    <label><input type="radio" name="tipo_aquisicao" value="Compra" required> 🛒 Compra</label>
-                </div>
-
-                <label>Descrição *</label>
-                <textarea name="descricao" required></textarea>
-
-                <label>P/N *</label>
-                <input name="pn" required>
-
-                <label>SMS/Part Request *</label>
-                <input name="sms_part_request" required>
-                <small>Somente números e ponto (.)</small>
-
-                <label>Task Card *</label>
-                <input name="task_card" required>
-                <small>Somente números e hífen (-)</small>
-
-                <label>Responsável *</label>
-                <input name="responsavel" required>
-
-                <div style="margin-top:20px; display:flex; gap:10px;">
-                    <button type="submit" name="action" value="add_pendencia" class="btn">
-                        Salvar
-                    </button>
-
-                    <button type="button" class="btn btn-red" onclick="toggle('formPend')">
-                        Cancelar
-                    </button>
-                </div>
-
-            </form>
-        </div>
+            <div style="margin-top:15px;">
+                <button type="submit" name="action" value="add_pendencia" class="btn">
+                    Salvar
+                </button>
+                <button type="button" class="btn btn-red" onclick="toggle('formPend')">
+                    Cancelar
+                </button>
+            </div>
+        </form>
     </div>
+
+    <div class="card">
+        <h3>Etapas</h3>
     """
 
     for step in steps:
@@ -943,7 +882,7 @@ def pane_detail(id):
         </div>
         """
 
-    html += "<div class='card'><h3>Pendências</h3>"
+    html += "</div><div class='card'><h3>Pendências</h3>"
 
     for p in pendencias:
         html += f"""
@@ -960,7 +899,7 @@ def pane_detail(id):
         </div>
         """
 
-    html += """
+    html += f"""
         </div>
 
         <form method="POST" id="formFinalize" class="hidden">
@@ -968,15 +907,16 @@ def pane_detail(id):
         </form>
 
         <script>
-            function toggle(id) {
+            function toggle(id) {{
                 const el = document.getElementById(id);
+                el.classList.toggle("hidden");
+            }}
 
-                if (el.classList.contains("show")) {
-                    el.classList.remove("show");
-                } else {
-                    el.classList.add("show");
-                }
-            }
+            function confirmarFinalizacao() {{
+                if (confirm("Tem certeza que deseja finalizar esta pane?")) {{
+                    document.getElementById("formFinalize").submit();
+                }}
+            }}
         </script>
 
     </body>
@@ -984,6 +924,7 @@ def pane_detail(id):
     """
 
     return html
+
 # ======================
 # LOGIN
 # ======================
@@ -1027,6 +968,7 @@ def register():
     </form>
     """
 
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
 
@@ -1054,10 +996,12 @@ def login():
     </form>
     """
 
+
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect(url_for("login"))
+
 
 # ======================
 # CRIAR TABELAS
@@ -1078,20 +1022,4 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
