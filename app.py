@@ -86,7 +86,7 @@ class Pendencia(db.Model):
     pane_id = db.Column(db.Integer, db.ForeignKey("pane.id"), nullable=False)
     tipo_item = db.Column(db.String(20), nullable=False)
     tipo_aquisicao = db.Column(db.String(20), nullable=False)
-    descricao = db.Column(db.Text, nullable=False)
+     = db.Column(db.Text, nullable=False)
     pn = db.Column(db.String(50))
     sms_part_request = db.Column(db.String(20))
     task_card = db.Column(db.String(20))
@@ -664,14 +664,14 @@ def pane_detail(id):
             """
 
         if action == "add_step":
-            descricao = request.form.get("step_desc", "").strip()
+             = request.form.get("step_desc", "").strip()
             responsavel_info = request.form.get("responsavel_info", "").strip()
-            if not descricao or not responsavel_info:
+            if not  or not responsavel_info:
                 return redirect(url_for("pane_detail", id=pane.id))
 
             step = Step(
                 pane_id=pane.id,
-                description=descricao,
+                description=,
                 responsavel_info=responsavel_info,
                 created_by=session.get("username"),
                 photo1=request.form.get("photo1"),
@@ -686,7 +686,7 @@ def pane_detail(id):
                 pane_id=pane.id,
                 tipo_item=request.form.get("tipo_item"),
                 tipo_aquisicao=request.form.get("tipo_aquisicao"),
-                descricao=request.form.get("descricao"),
+                =request.form.get(""),
                 pn=request.form.get("pn"),
                 sms_part_request=request.form.get("sms_part_request"),
                 task_card=request.form.get("task_card"),
@@ -804,7 +804,7 @@ def pane_detail(id):
     <body>
 
     <a href="/aircraft/{pane.aircraft_id}">← Voltar</a>
-    <h2>Pane #{pane.descricao} - ATA {pane.ata}</h2>
+    <h2>Pane #{pane.description} - ATA {pane.ata}</h2>
 
     <div class="contador">📸 Fotos utilizadas: {total_fotos} / 4</div>
 
@@ -1087,6 +1087,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
