@@ -804,7 +804,7 @@ def pane_detail(id):
     <body>
 
     <a href="/aircraft/{pane.aircraft_id}">← Voltar</a>
-    <h2>Pane #{pane.id} - ATA {pane.ata}</h2>
+    <h2>Pane #{pane.descricao} - ATA {pane.ata}</h2>
 
     <div class="contador">📸 Fotos utilizadas: {total_fotos} / 4</div>
 
@@ -1087,6 +1087,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
