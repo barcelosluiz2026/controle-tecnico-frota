@@ -1018,23 +1018,35 @@ def delete_photo(pane_id):
 # RELATÓRIO PENDENCIAS
 # ======================
 
-@app.route("/relatorio/pendencias/pdf")
+@app.route("/relatorio/pendencias/modelo/pdf")
 @login_required()
-def relatorio_pendencias_pdf():
+def relatorio_pendencias_modelo_pdf():
 
-    aeronave_id = request.args.get("aeronave")
+    modelo = request.args.get("modelo")
+    prefixo = request.args.get("prefixo")
 
-    if aeronave_id and aeronave_id != "todas":
-        pendencias = (
-            Pendencia.query
-            .join(Pane)
-            .filter(Pane.aircraft_id == aeronave_id)
-            .all()
-        )
-        nome_frota = Aircraft.query.get(aeronave_id).prefix
-    else:
-        pendencias = Pendencia.query.all()
-        nome_frota = "Toda a Frota"
+    query = (
+        Pendencia.query
+        .join(Pane)
+        .join(Aircraft)
+    )
+
+    if modelo and modelo != "todos":
+        query = query.filter(Aircraft.model == modelo)
+
+    if prefixo and prefixo != "todos":
+        query = query.filter(Aircraft.prefix == prefixo)
+
+    pendencias = query.order_by(Aircraft.model, Aircraft.prefix).all()
+
+    # Agrupar por modelo
+    agrupado = {}
+
+    for pend in pendencias:
+        model_name = pend.pane.aircraft.model
+        if model_name not in agrupado:
+            agrupado[model_name] = []
+        agrupado[model_name].append(pend)
 
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4)
@@ -1042,75 +1054,80 @@ def relatorio_pendencias_pdf():
 
     styles_default = styles.getSampleStyleSheet()
 
-    titulo = Paragraph(
-        "<b>RELATÓRIO DE PENDÊNCIAS ABERTAS</b>",
-        styles_default["Title"]
+    # Título
+    elements.append(
+        Paragraph("<b>RELATÓRIO DE PENDÊNCIAS POR MODELO</b>",
+                  styles_default["Title"])
     )
+    elements.append(Spacer(1, 20))
 
-    elements.append(titulo)
-    elements.append(Spacer(1, 0.3 * inch))
-
-    info = Paragraph(
-        f"Frota: {nome_frota}<br/>"
-        f"Data de emissão: {datetime.now().strftime('%d/%m/%Y %H:%M')}",
-        styles_default["Normal"]
-    )
-
-    elements.append(info)
-    elements.append(Spacer(1, 0.4 * inch))
-
-    # Cabeçalho da tabela
-    data_table = [[
-        "Aeronave",
-        "Pane",
-        "Descrição",
-        "Tipo",
-        "Aquisição",
-        "Responsável",
-        "PN",
-        "SMS/Part",
-        "Task Card"
-    ]]
-
-    for pend in pendencias:
-
-        mostrar_extra = (
-            pend.tipo_item == "Material"
-            and pend.tipo_aquisicao == "Compra"
+    elements.append(
+        Paragraph(
+            f"Data de emissão: {datetime.now().strftime('%d/%m/%Y %H:%M')}",
+            styles_default["Normal"]
         )
+    )
+    elements.append(Spacer(1, 20))
 
-        data_table.append([
-            pend.pane.aircraft.prefix if pend.pane and pend.pane.aircraft else "",
-            str(pend.pane_id),
-            pend.descricao or "",
-            pend.tipo_item or "",
-            pend.tipo_aquisicao or "",
-            pend.responsavel or "",
-            pend.pn if mostrar_extra else "",
-            pend.sms_part_request if mostrar_extra else "",
-            pend.task_card if mostrar_extra else ""
-        ])
+    # Para cada modelo
+    for model_name, lista in agrupado.items():
 
-    tabela = Table(data_table, repeatRows=1)
+        elements.append(
+            Paragraph(f"<b>Modelo: {model_name}</b>",
+                      styles_default["Heading2"])
+        )
+        elements.append(Spacer(1, 12))
 
-    tabela.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-        ("FONTSIZE", (0, 0), (-1, -1), 8),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-    ]))
+        data_table = [[
+            "Prefixo",
+            "Pane",
+            "Descrição",
+            "Tipo",
+            "Aquisição",
+            "Responsável",
+            "PN",
+            "SMS/Part",
+            "Task Card"
+        ]]
 
-    elements.append(tabela)
+        for pend in lista:
+
+            mostrar_extra = (
+                pend.tipo_item == "Material"
+                and pend.tipo_aquisicao == "Compra"
+            )
+
+            data_table.append([
+                pend.pane.aircraft.prefix,
+                str(pend.pane_id),
+                pend.descricao or "",
+                pend.tipo_item or "",
+                pend.tipo_aquisicao or "",
+                pend.responsavel or "",
+                pend.pn if mostrar_extra else "",
+                pend.sms_part_request if mostrar_extra else "",
+                pend.task_card if mostrar_extra else ""
+            ])
+
+        tabela = Table(data_table, repeatRows=1)
+
+        tabela.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+            ("FONTSIZE", (0, 0), (-1, -1), 8),
+        ]))
+
+        elements.append(tabela)
+        elements.append(Spacer(1, 25))
 
     doc.build(elements)
-
     buffer.seek(0)
 
     return send_file(
         buffer,
         as_attachment=True,
-        download_name="relatorio_pendencias.pdf",
+        download_name="relatorio_pendencias_modelo.pdf",
         mimetype="application/pdf"
     )
 
@@ -1211,6 +1228,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
