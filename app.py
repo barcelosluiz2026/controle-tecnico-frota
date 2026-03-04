@@ -667,90 +667,90 @@ def pane_detail(id):
     # ======================
     # PROCESSAMENTO DE FORMULÁRIOS
     # ======================
-if request.method == "POST":
+    if request.method == "POST":
 
-    action = request.form.get("action")
+        action = request.form.get("action")
 
     # ======================
     # BLOQUEIO DE LIMITE DE FOTOS (4 NO TOTAL)
     # ======================
-    if action == "add_step" and total_fotos >= 4:
-        return f"""
-        <html>
-        <body style='background:#0f172a;color:white;text-align:center;padding:40px;'>
-            <h2>⚠ Limite de 4 fotos atingido para esta pane.</h2>
-            <a href='{url_for("pane_detail", id=pane.id)}' 
-               style='color:#38bdf8;text-decoration:none;'>
-               ← Voltar
-            </a>
-        </body>
-        </html>
-        """
+        if action == "add_step" and total_fotos >= 4:
+            return f"""
+            <html>
+            <body style='background:#0f172a;color:white;text-align:center;padding:40px;'>
+                <h2>⚠ Limite de 4 fotos atingido para esta pane.</h2>
+                <a href='{url_for("pane_detail", id=pane.id)}' 
+                   style='color:#38bdf8;text-decoration:none;'>
+                   ← Voltar
+                </a>
+            </body>
+            </html>
+            """
 
     # ======================
     # ADICIONAR ETAPA
     # ======================
-    if action == "add_step":
+        if action == "add_step":
 
-        descricao = (request.form.get("step_desc") or "").strip()
-        responsavel_info = (request.form.get("responsavel_info") or "").strip()
+            descricao = (request.form.get("step_desc") or "").strip()
+            responsavel_info = (request.form.get("responsavel_info") or "").strip()
 
-        if not descricao or not responsavel_info:
-            return redirect(url_for("pane_detail", id=pane.id))
+            if not descricao or not responsavel_info:
+                return redirect(url_for("pane_detail", id=pane.id))
 
-        step = Step(
-            pane_id=pane.id,
-            description=descricao,
-            responsavel_info=responsavel_info,
-            created_by=session.get("username"),
-            photo1=request.form.get("photo1") or None,
-            photo2=request.form.get("photo2") or None,
-            photo3=request.form.get("photo3") or None
-        )
+            step = Step(
+                pane_id=pane.id,
+                description=descricao,
+                responsavel_info=responsavel_info,
+                created_by=session.get("username"),
+                photo1=request.form.get("photo1") or None,
+                photo2=request.form.get("photo2") or None,
+                photo3=request.form.get("photo3") or None
+            )
 
-        db.session.add(step)
+            db.session.add(step)
 
-        if pane.tipo and pane.tipo.strip().lower() == "aviônico":
-            pane.status = "In Progress Avi"
-        else:
-            pane.status = "In Progress Mec"
+            if pane.tipo and pane.tipo.strip().lower() == "aviônico":
+                pane.status = "In Progress Avi"
+            else:
+                pane.status = "In Progress Mec"
 
     # ======================
     # ADICIONAR PENDÊNCIA
     # ======================
-    elif action == "add_pendencia":
+        elif action == "add_pendencia":
 
-        pend = Pendencia(
-            pane_id=pane.id,
-            tipo_item=request.form.get("tipo_item"),
-            tipo_aquisicao=request.form.get("tipo_aquisicao"),
-            descricao=request.form.get("descricao"),
-            pn=request.form.get("pn"),
-            sms_part_request=request.form.get("sms_part_request"),
-            task_card=request.form.get("task_card"),
-            responsavel=request.form.get("responsavel"),
-            created_by=session.get("username")
-        )
+            pend = Pendencia(
+                pane_id=pane.id,
+                tipo_item=request.form.get("tipo_item"),
+                tipo_aquisicao=request.form.get("tipo_aquisicao"),
+                descricao=request.form.get("descricao"),
+                pn=request.form.get("pn"),
+                sms_part_request=request.form.get("sms_part_request"),
+                task_card=request.form.get("task_card"),
+                responsavel=request.form.get("responsavel"),
+                created_by=session.get("username")
+            )
 
-        db.session.add(pend)
+            db.session.add(pend)
 
-        if pend.tipo_item == "Ferramenta":
-            pane.status = "Wait Tools"
+            if pend.tipo_item == "Ferramenta":
+                pane.status = "Wait Tools"
 
-        elif pend.tipo_item == "Material":
-            if pend.tipo_aquisicao == "Compra":
-                pane.status = "Wait Material"
-            elif pend.tipo_aquisicao == "Transferência":
-                pane.status = "Wait Transfer"
+            elif pend.tipo_item == "Material":
+                if pend.tipo_aquisicao == "Compra":
+                    pane.status = "Wait Material"
+                elif pend.tipo_aquisicao == "Transferência":
+                    pane.status = "Wait Transfer"
 
     # ======================
     # FINALIZAR PANE
     # ======================
-    elif action == "finalize":
-        pane.status = "Finalizadas"
+        elif action == "finalize":
+            pane.status = "Finalizadas"
 
-    db.session.commit()
-    return redirect(url_for("pane_detail", id=pane.id))
+        db.session.commit()
+        return redirect(url_for("pane_detail", id=pane.id))
 
     # ======================
     # CONSULTAS
@@ -1256,6 +1256,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
