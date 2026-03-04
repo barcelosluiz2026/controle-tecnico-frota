@@ -532,7 +532,15 @@ def aircraft_page(id):
     </head>
     <body>
         <div class="container">
-            <a href="/">← Voltar</a>
+            <a href="/" style="
+                background:#334155;
+                color:white;
+                padding:6px 12px;
+                border-radius:6px;
+                text-decoration:none;
+            ">
+                ← Voltar
+            </a>
             <h2>🚁 {aircraft.prefix} - {aircraft.model}</h2>
 
             <button class="btn-add" onclick="toggleForm()">➕ Adicionar Pane</button>
@@ -1087,6 +1095,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
