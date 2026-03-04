@@ -681,28 +681,28 @@ def pane_detail(id):
 
         if action == "add_step":
 
-    descricao = (request.form.get("step_desc") or "").strip()
-    responsavel_info = (request.form.get("responsavel_info") or "").strip()
+            descricao = (request.form.get("step_desc") or "").strip()
+            responsavel_info = (request.form.get("responsavel_info") or "").strip()
 
-    if not descricao or not responsavel_info:
-        return redirect(url_for("pane_detail", id=pane.id))
+            if not descricao or not responsavel_info:
+                return redirect(url_for("pane_detail", id=pane.id))
 
-    step = Step(
-        pane_id=pane.id,
-        description=descricao,
-        responsavel_info=responsavel_info,
-        created_by=session.get("username"),
-        photo1=request.form.get("photo1") or None,
-        photo2=request.form.get("photo2") or None,
-        photo3=request.form.get("photo3") or None
-    )
+        step = Step(
+            pane_id=pane.id,
+            description=descricao,
+            responsavel_info=responsavel_info,
+            created_by=session.get("username"),
+            photo1=request.form.get("photo1") or None,
+            photo2=request.form.get("photo2") or None,
+            photo3=request.form.get("photo3") or None
+        )
 
-    db.session.add(step)
+        db.session.add(step)
 
-    if pane.tipo and pane.tipo.strip().lower() == "aviônico":
-        pane.status = "In Progress Avi"
-    else:
-        pane.status = "In Progress Mec"
+        if pane.tipo and pane.tipo.strip().lower() == "aviônico":
+            pane.status = "In Progress Avi"
+        else:
+            pane.status = "In Progress Mec"
 
         elif action == "add_pendencia":
             pend = Pendencia(
@@ -1235,6 +1235,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
