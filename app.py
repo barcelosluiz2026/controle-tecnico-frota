@@ -687,24 +687,25 @@ def pane_detail(id):
             if not descricao or not responsavel_info:
                 return redirect(url_for("pane_detail", id=pane.id))
 
-        step = Step(
-            pane_id=pane.id,
-            description=descricao,
-            responsavel_info=responsavel_info,
-            created_by=session.get("username"),
-            photo1=request.form.get("photo1") or None,
-            photo2=request.form.get("photo2") or None,
-            photo3=request.form.get("photo3") or None
-        )
+            step = Step(
+                pane_id=pane.id,
+                description=descricao,
+                responsavel_info=responsavel_info,
+                created_by=session.get("username"),
+                photo1=request.form.get("photo1") or None,
+                photo2=request.form.get("photo2") or None,
+                photo3=request.form.get("photo3") or None
+            )
 
-        db.session.add(step)
+            db.session.add(step)
 
-        if pane.tipo and pane.tipo.strip().lower() == "aviônico":
-            pane.status = "In Progress Avi"
-        else:
-            pane.status = "In Progress Mec"
+            if pane.tipo and pane.tipo.strip().lower() == "aviônico":
+                pane.status = "In Progress Avi"
+            else:
+                pane.status = "In Progress Mec"
 
         elif action == "add_pendencia":
+
             pend = Pendencia(
                 pane_id=pane.id,
                 tipo_item=request.form.get("tipo_item"),
@@ -715,21 +716,24 @@ def pane_detail(id):
                 task_card=request.form.get("task_card"),
                 responsavel=request.form.get("responsavel"),
                 created_by=session.get("username")
-            )
-            db.session.add(pend)
-            if pend.tipo_item == "Ferramenta":
-                pane.status = "Wait Tools"
-            elif pend.tipo_item == "Material":
-                if pend.tipo_aquisicao == "Compra":
-                    pane.status = "Wait Material"
-                elif pend.tipo_aquisicao == "Transferência":
-                    pane.status = "Wait Transfer"
+        )
 
-        elif action == "finalize":
-            pane.status = "Finalizadas"
+        db.session.add(pend)
 
-        db.session.commit()
-        return redirect(url_for("pane_detail", id=pane.id))
+        if pend.tipo_item == "Ferramenta":
+            pane.status = "Wait Tools"
+
+        elif pend.tipo_item == "Material":
+            if pend.tipo_aquisicao == "Compra":
+                pane.status = "Wait Material"
+            elif pend.tipo_aquisicao == "Transferência":
+                pane.status = "Wait Transfer"
+
+    elif action == "finalize":
+        pane.status = "Finalizadas"
+
+    db.session.commit()
+    return redirect(url_for("pane_detail", id=pane.id))
 
     # ======================
     # CONSULTAS
@@ -1235,6 +1239,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
