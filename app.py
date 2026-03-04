@@ -667,7 +667,7 @@ def pane_detail(id):
     # ======================
     # PROCESSAMENTO DE FORMULÁRIOS
     # ======================
-    if request.method == "POST":
+if request.method == "POST":
 
     action = request.form.get("action")
 
@@ -1256,6 +1256,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
