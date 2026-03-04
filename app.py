@@ -1108,7 +1108,6 @@ def relatorio_pendencias_modelo_pdf():
 
         data_table = [[
             "Prefixo",
-            "Pane",
             "Descrição",
             "Tipo",
             "Aquisição",
@@ -1127,7 +1126,6 @@ def relatorio_pendencias_modelo_pdf():
 
             data_table.append([
                 pend.pane.aircraft.prefix,
-                str(pend.pane_id),
                 pend.descricao or "",
                 pend.tipo_item or "",
                 pend.tipo_aquisicao or "",
@@ -1256,6 +1254,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
