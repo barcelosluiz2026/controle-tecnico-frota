@@ -86,7 +86,7 @@ class Pendencia(db.Model):
     pane_id = db.Column(db.Integer, db.ForeignKey("pane.id"), nullable=False)
     tipo_item = db.Column(db.String(20), nullable=False)
     tipo_aquisicao = db.Column(db.String(20), nullable=False)
-     = db.Column(db.Text, nullable=False)
+    descricao = db.Column(db.Text, nullable=False)
     pn = db.Column(db.String(50))
     sms_part_request = db.Column(db.String(20))
     task_card = db.Column(db.String(20))
@@ -1087,6 +1087,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
