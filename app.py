@@ -666,7 +666,7 @@ def pane_detail(id):
         if action == "add_step":
             descricao = request.form.get("step_desc", "").strip()
             responsavel_info = request.form.get("responsavel_info", "").strip()
-            if not  or not responsavel_info:
+            if not descricao or not responsavel_info:
                 return redirect(url_for("pane_detail", id=pane.id))
 
             step = Step(
@@ -1087,6 +1087,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
