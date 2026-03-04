@@ -531,7 +531,7 @@ def aircraft_page(id):
         </style>
     </head>
     <body>
-        ##<div class="container">
+        <div class="container">
             <a href="/" style="
                 background:#334155;
                 color:white;
@@ -810,6 +810,7 @@ def pane_detail(id):
     </style>
     </head>
     <body>
+        <div class="container">
         <a href="/aircraft/{pane.aircraft_id}"style="
             background:#334155;
             color:white;
@@ -1102,6 +1103,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
