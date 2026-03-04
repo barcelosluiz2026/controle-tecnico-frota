@@ -664,7 +664,7 @@ def pane_detail(id):
             """
 
         if action == "add_step":
-             = request.form.get("step_desc", "").strip()
+            descricao = request.form.get("step_desc", "").strip()
             responsavel_info = request.form.get("responsavel_info", "").strip()
             if not  or not responsavel_info:
                 return redirect(url_for("pane_detail", id=pane.id))
@@ -686,7 +686,7 @@ def pane_detail(id):
                 pane_id=pane.id,
                 tipo_item=request.form.get("tipo_item"),
                 tipo_aquisicao=request.form.get("tipo_aquisicao"),
-                =request.form.get(""),
+                descricao=request.form.get(""),
                 pn=request.form.get("pn"),
                 sms_part_request=request.form.get("sms_part_request"),
                 task_card=request.form.get("task_card"),
@@ -1087,6 +1087,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
