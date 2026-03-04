@@ -671,7 +671,7 @@ def pane_detail(id):
 
             step = Step(
                 pane_id=pane.id,
-                description=,
+                description=descricao,
                 responsavel_info=responsavel_info,
                 created_by=session.get("username"),
                 photo1=request.form.get("photo1"),
@@ -1087,6 +1087,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
