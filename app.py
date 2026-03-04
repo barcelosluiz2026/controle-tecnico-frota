@@ -531,7 +531,7 @@ def aircraft_page(id):
         </style>
     </head>
     <body>
-        <div class="container">
+        ##<div class="container">
             <a href="/" style="
                 background:#334155;
                 color:white;
@@ -810,16 +810,15 @@ def pane_detail(id):
     </style>
     </head>
     <body>
-
-    <a href="/aircraft/{pane.aircraft_id}"style="
-        background:#334155;
-        color:white;
-        padding:6px 12px;
-        border-radius:6px;
-        text-decoration:none;
-    ">
-        ← Voltar
-    </a>
+        <a href="/aircraft/{pane.aircraft_id}"style="
+            background:#334155;
+            color:white;
+            padding:6px 12px;
+            border-radius:6px;
+            text-decoration:none;
+        ">
+            ← Voltar
+        </a>
     <h2>Pane: {pane.description} - ATA {pane.ata}</h2>
     <small>Criado por: {pane.created_by} - Em: {hora_br(pane.created_at)}</small><br>
     <div class="contador">📸 Fotos utilizadas: {total_fotos} / 4</div>
@@ -1103,6 +1102,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
