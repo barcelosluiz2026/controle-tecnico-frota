@@ -702,7 +702,7 @@ def pane_detail(id):
                 pane_id=pane.id,
                 tipo_item=request.form.get("tipo_item"),
                 tipo_aquisicao=request.form.get("tipo_aquisicao"),
-                descricao=request.form.get(""),
+                descricao=request.form.get("descricao"),
                 pn=request.form.get("pn"),
                 sms_part_request=request.form.get("sms_part_request"),
                 task_card=request.form.get("task_card"),
@@ -1228,6 +1228,7 @@ def reset_db():
     db.drop_all()
     db.create_all()
     return "Banco recriado com sucesso!"
+
 
 
 
