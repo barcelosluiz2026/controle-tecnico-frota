@@ -68,6 +68,111 @@ with app.app_context():
     db.create_all()
 
 
+def parse_iso_datetime(value):
+    if not value:
+        return None
+
+    if isinstance(value, datetime):
+        dt = value
+    else:
+        text = str(value).strip()
+        if not text:
+            return None
+        if text.endswith("Z"):
+            text = text[:-1] + "+00:00"
+        try:
+            dt = datetime.fromisoformat(text)
+        except ValueError:
+            return None
+
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
+def normalize_tipo(value: str) -> str:
+    text = str(value or "").strip().lower()
+    if text in {"avionico", "aviônico"}:
+        return "avionico"
+    if text == "mecânico":
+        return "mecanico"
+    return text
+
+
+def pane_status_aberta(status: str) -> bool:
+    return normalize_tipo(status) != "finalizada" and str(status or "").strip().lower() != "finalizada"
+
+
+def montar_ranking_panes(tipo: str | None = None, limit: int = 10):
+    records = Record.query.order_by(Record.created_at.asc(), Record.id.asc()).all()
+
+    aeronaves = {}
+    panes = []
+
+    for record in records:
+        try:
+            payload = record.to_dict()
+        except Exception:
+            continue
+
+        record_type = str(payload.get("type") or record.record_type or "").strip().lower()
+
+        if record_type == "aeronave":
+            aeronaves[str(payload.get("id", "")).strip()] = payload
+            continue
+
+        if record_type != "pane":
+            continue
+
+        pane_tipo = normalize_tipo(payload.get("paneTipo"))
+        pane_status = str(payload.get("paneStatus", "")).strip()
+
+        if tipo and pane_tipo != normalize_tipo(tipo):
+            continue
+
+        if not pane_status_aberta(pane_status):
+            continue
+
+        criado_em = parse_iso_datetime(payload.get("criadoEm")) or record.created_at
+        if not criado_em:
+            continue
+
+        agora = datetime.now(timezone.utc)
+        delta = agora - criado_em
+        horas = round(delta.total_seconds() / 3600, 1)
+        dias = round(delta.total_seconds() / 86400, 1)
+
+        aeronave_id = str(payload.get("aeronaveId", "")).strip()
+        aeronave = aeronaves.get(aeronave_id, {})
+
+        panes.append(
+            {
+                "id": str(payload.get("id", "")).strip(),
+                "aeronaveId": aeronave_id,
+                "prefixo": aeronave.get("prefixo"),
+                "modelo": aeronave.get("modelo"),
+                "descricao": payload.get("paneDescricao", ""),
+                "ata": payload.get("paneAta"),
+                "tipo": pane_tipo,
+                "status": pane_status,
+                "criadoEm": criado_em.isoformat(),
+                "horasEmAberto": horas,
+                "diasEmAberto": dias,
+                "criadoPor": payload.get("criadoPor"),
+            }
+        )
+
+    panes.sort(
+        key=lambda item: (
+            -item["horasEmAberto"],
+            str(item.get("prefixo") or ""),
+            str(item.get("descricao") or ""),
+        )
+    )
+    return panes[:limit]
+
+
+
 @app.after_request
 def add_cors_headers(response):
     origin = request.headers.get("Origin", "*")
@@ -159,6 +264,21 @@ def delete_record_from_body():
         return jsonify({"error": "Campo 'id' é obrigatório"}), 400
     return delete_record(record_id)
 
+
+
+
+@app.get("/api/ranking-panes")
+def ranking_panes():
+    tipo = request.args.get("tipo")
+    limit = request.args.get("limit", default=10, type=int)
+
+    if limit is None or limit < 1:
+        limit = 10
+    if limit > 50:
+        limit = 50
+
+    ranking = montar_ranking_panes(tipo=tipo, limit=limit)
+    return jsonify(ranking)
 
 @app.get("/")
 def index():
