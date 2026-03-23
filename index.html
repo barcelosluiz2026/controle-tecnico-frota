@@ -134,6 +134,7 @@
     let editingEtapa = null;
     let editingPendencia = null;
     let editingPane = null;
+    let previousView = null;
 
     const MODELOS_HELICOPTERO = ['AW139', 'AW189', 'H175', 'H160', 'EC225', 'S92A', 'Outro'];
 
@@ -2266,6 +2267,8 @@
             const paneId = itemEl.dataset.id;
             selectedPane = currentData.find(d => d.type === 'pane' && d.id === paneId) || null;
             if (selectedPane) {
+              previousView = 'dashboard';
+              selectedAeronave = currentData.find(d => d.type === 'aeronave' && d.id === selectedPane.aeronaveId) || null;
               currentView = 'pane';
               renderCurrentView();
             }
@@ -2773,6 +2776,14 @@
       const backBtn = document.getElementById('backToAeronaveBtn');
       if (backBtn) {
         backBtn.addEventListener('click', () => {
+          if (previousView === 'dashboard') {
+            currentView = 'dashboard';
+            previousView = null;
+            selectedPane = null;
+            renderCurrentView();
+            return;
+          }
+
           currentView = 'aeronave';
           selectedPane = null;
           renderCurrentView();
