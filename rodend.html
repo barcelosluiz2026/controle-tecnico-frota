@@ -270,7 +270,7 @@
      <div><label for="password" class="block text-sm font-medium text-slate-300 mb-2">Senha</label> <input type="password" id="password" required class="input-field w-full px-4 py-3 rounded-lg text-white" placeholder="Digite sua senha">
      </div>
      <div id="error-message" class="hidden bg-red-500/20 border border-red-500 text-red-300 px-4 py-3 rounded-lg text-sm">
-      Usuário ou senha incorretos
+      Usu  rio ou senha incorretos
      </div><button type="submit" class="btn-primary w-full py-3 rounded-lg font-semibold text-white"> ENTRAR </button>
     </form>
    </div>
@@ -308,7 +308,9 @@
        <div class="glass-card px-4 py-2 rounded-lg">
         <svg class="w-4 h-4 inline text-slate-400 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
         </svg><span id="user-display" class="text-white font-medium"></span>
-       </div><button id="print-report-btn" class="glass-card px-4 py-2 rounded-lg text-white hover:bg-white/10 transition-colors">
+       </div><button id="back-to-monitoring-btn" class="glass-card px-4 py-2 rounded-lg text-white hover:bg-white/10 transition-colors">
+        <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg> Voltar </button><button id="print-report-btn" class="glass-card px-4 py-2 rounded-lg text-white hover:bg-white/10 transition-colors">
         <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
         </svg> Relatório </button> <button id="manage-users-btn" class="hidden glass-card px-4 py-2 rounded-lg text-white hover:bg-white/10 transition-colors">
         <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -605,7 +607,7 @@
 
     // ========== CONSTANTS ==========
     const ADMIN_USER = 'admin';
-    const ADMIN_PASSWORD = 'Omni0320!';
+    const ADMIN_PASSWORD = 'admin123';
     const DEFAULT_PASSWORD = '123456';
     
     const MAX_CLEARANCE = {
@@ -1994,6 +1996,11 @@
           errorDiv.classList.remove('hidden');
         }
       }
+    });
+
+    // Back to Monitoring
+    document.getElementById('back-to-monitoring-btn').addEventListener('click', function() {
+      window.location.href = '/';
     });
 
     // Print Report
