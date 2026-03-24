@@ -402,7 +402,7 @@ def rodend_login():
         return jsonify({"ok": False, "error": "Usuário e senha são obrigatórios"}), 400
 
     # admin fixo do módulo ROD END
-    if username == "admin" and password == "admin123":
+    if username == "admin" and password == "Omni0320!":
         return jsonify(
             {
                 "ok": True,
