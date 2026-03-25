@@ -410,6 +410,64 @@
         <h1 id="aircraft-title" class="text-3xl md:text-4xl font-bold text-white"></h1><span id="aircraft-model-badge" class="px-4 py-2 bg-blue-500/20 text-blue-300 rounded-lg font-medium text-sm"></span>
        </div>
       </div><button id="delete-aircraft-btn" class="glass-card px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors"> 🗑️ Excluir Aeronave </button>
+     </div><!-- Aircraft Health Dashboard -->
+     <div id="aircraft-health-dashboard" class="space-y-6 mb-8">
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+       <div class="stat-card rounded-2xl p-5">
+        <p class="text-slate-400 text-sm mb-1">Componentes Monitorados</p>
+        <p id="aircraft-stat-total" class="text-3xl font-bold text-white">0</p>
+       </div>
+       <div class="glass-card rounded-2xl p-5 border border-emerald-500/20">
+        <p class="text-slate-400 text-sm mb-1">Normais</p>
+        <p id="aircraft-stat-normal" class="text-3xl font-bold text-emerald-400">0</p>
+       </div>
+       <div class="glass-card rounded-2xl p-5 border border-amber-500/20">
+        <p class="text-slate-400 text-sm mb-1">Em Atenção</p>
+        <p id="aircraft-stat-attention" class="text-3xl font-bold text-amber-400">0</p>
+       </div>
+       <div class="glass-card rounded-2xl p-5 border border-red-500/20">
+        <p class="text-slate-400 text-sm mb-1">Críticos</p>
+        <p id="aircraft-stat-critical" class="text-3xl font-bold text-red-400">0</p>
+       </div>
+       <div class="glass-card rounded-2xl p-5 border border-cyan-500/20">
+        <p class="text-slate-400 text-sm mb-1">Próxima Inspeção Estimada</p>
+        <p id="aircraft-next-inspection" class="text-xl font-bold text-cyan-300">—</p>
+        <p id="aircraft-next-inspection-detail" class="text-slate-400 text-xs mt-1">Baseado na medição mais antiga registrada</p>
+       </div>
+      </div>
+      <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+       <div class="glass-card rounded-2xl p-6">
+        <div class="flex items-center justify-between mb-3">
+         <h2 class="text-2xl font-bold text-white">Saúde Geral da Aeronave</h2>
+         <span id="aircraft-health-score" class="text-3xl font-bold text-cyan-300">0%</span>
+        </div>
+        <p id="aircraft-health-summary" class="text-slate-300 mb-4">Sem componentes cadastrados.</p>
+        <div class="progress-bar h-4 mb-3">
+         <div id="aircraft-health-bar" class="progress-fill" style="width: 0%;"></div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+         <div class="glass-card rounded-xl p-3">
+          <p class="text-slate-400 mb-1">Modelo</p>
+          <p id="aircraft-inspection-cycle" class="text-white font-semibold">—</p>
+         </div>
+         <div class="glass-card rounded-xl p-3">
+          <p class="text-slate-400 mb-1">Média de voo</p>
+          <p id="aircraft-flight-rate" class="text-white font-semibold">5 h/dia</p>
+         </div>
+         <div class="glass-card rounded-xl p-3">
+          <p class="text-slate-400 mb-1">Mais próximo do limite</p>
+          <p id="aircraft-most-critical" class="text-white font-semibold">—</p>
+         </div>
+        </div>
+       </div>
+       <div class="glass-card rounded-2xl p-6">
+        <div class="flex items-center justify-between mb-4">
+         <h2 class="text-2xl font-bold text-white">Prioridade de Ação</h2>
+         <span class="text-slate-400 text-sm">Maior desgaste primeiro</span>
+        </div>
+        <div id="aircraft-priority-list" class="space-y-3"></div>
+       </div>
+      </div>
      </div><!-- Component Options -->
      <div id="component-options" class="space-y-6">
       <div>
@@ -609,6 +667,11 @@
     const ADMIN_USER = 'admin';
     const ADMIN_PASSWORD = 'admin123';
     const DEFAULT_PASSWORD = '123456';
+
+    const INSPECTION_RULES = {
+      'AW139': { hours: 100, avgHoursPerDay: 5 },
+      'EC175': { hours: 50, avgHoursPerDay: 5 }
+    };
 
     const SHARED_AUTH_STORAGE_KEY = 'omni_shared_auth_v1';
     const PANES_SESSION_STORAGE_KEY = 'omni_panes_session_v1';
@@ -1119,6 +1182,238 @@
       return { status: 'normal', color: 'Green', label: 'Normal' };
     }
 
+    function clampPercentage(value) {
+      return Math.max(0, Math.min(100, Number(value) || 0));
+    }
+
+    function getComponentUsagePercent(component) {
+      const m1Percent = component.measure1_max ? (Number(component.measure1_current || 0) / Number(component.measure1_max || 0)) * 100 : 0;
+      const m2Percent = component.measure2_max ? (Number(component.measure2_current || 0) / Number(component.measure2_max || 0)) * 100 : 0;
+      return clampPercentage(Math.max(m1Percent, m2Percent));
+    }
+
+    function getComponentHealthPercent(component) {
+      return clampPercentage(100 - getComponentUsagePercent(component));
+    }
+
+    function getComponentLatestInspectionDate(component) {
+      const dates = [];
+      if (component.last_inspection_date) dates.push(component.last_inspection_date);
+      if (component.inspection_date) dates.push(component.inspection_date);
+      if (component.inspection_history) {
+        try {
+          const history = JSON.parse(component.inspection_history);
+          (history || []).forEach((item) => item?.date && dates.push(item.date));
+        } catch (error) {
+          console.warn('Histórico de inspeção inválido:', error);
+        }
+      }
+
+      let latest = null;
+      dates.forEach((value) => {
+        const date = new Date(value);
+        if (!Number.isNaN(date.getTime()) && (!latest || date > latest)) {
+          latest = date;
+        }
+      });
+      return latest;
+    }
+
+    function formatDaysLabel(days) {
+      if (days === 0) return 'hoje';
+      if (days === 1) return '1 dia';
+      return `${days} dias`;
+    }
+
+    function getAircraftInspectionProjection(model, components) {
+      const rule = INSPECTION_RULES[model];
+      if (!rule) {
+        return {
+          cycleLabel: 'Sem regra cadastrada',
+          dueLabel: 'Regra não definida',
+          detailLabel: 'Cadastre a regra de inspeção para este modelo.'
+        };
+      }
+
+      const intervalDays = Math.round(rule.hours / rule.avgHoursPerDay);
+      const latestInspectionDates = (components || [])
+        .map(getComponentLatestInspectionDate)
+        .filter(Boolean)
+        .sort((a, b) => a - b);
+
+      if (!latestInspectionDates.length) {
+        return {
+          cycleLabel: `A cada ${rule.hours}h (~${intervalDays} dias)`,
+          dueLabel: 'Sem medição registrada',
+          detailLabel: `Estimativa baseada em ${rule.avgHoursPerDay} h/dia.`
+        };
+      }
+
+      const oldestInspection = latestInspectionDates[0];
+      const now = new Date();
+      const elapsedDays = Math.max(0, Math.floor((now - oldestInspection) / 86400000));
+      const remainingDays = intervalDays - elapsedDays;
+      const dueDate = new Date(oldestInspection.getTime() + intervalDays * 86400000);
+      const dueDateLabel = dueDate.toLocaleDateString('pt-BR');
+
+      let dueLabel = `Em ${formatDaysLabel(Math.max(0, remainingDays))}`;
+      if (remainingDays < 0) {
+        dueLabel = `Atrasada em ${formatDaysLabel(Math.abs(remainingDays))}`;
+      } else if (remainingDays === 0) {
+        dueLabel = 'Vence hoje';
+      }
+
+      return {
+        cycleLabel: `A cada ${rule.hours}h (~${intervalDays} dias)`,
+        dueLabel,
+        detailLabel: `Base mais antiga: ${oldestInspection.toLocaleDateString('pt-BR')} · previsão ${dueDateLabel} · média ${rule.avgHoursPerDay} h/dia.`
+      };
+    }
+
+    function getAircraftDashboardMetrics(prefix, model) {
+      const components = getComponentsForAircraft(prefix, model);
+      const totals = {
+        total: components.length,
+        normal: 0,
+        attention: 0,
+        critical: 0,
+        healthScore: 0,
+        priority: [],
+        topCriticalLabel: '—'
+      };
+
+      if (!components.length) {
+        return {
+          ...totals,
+          inspection: getAircraftInspectionProjection(model, components)
+        };
+      }
+
+      let healthSum = 0;
+      const priority = components.map((component) => {
+        const status = getComponentStatus(component);
+        const usage = getComponentUsagePercent(component);
+        const health = getComponentHealthPercent(component);
+        const latestInspection = getComponentLatestInspectionDate(component);
+
+        if (status.status === 'normal') totals.normal += 1;
+        if (status.status === 'attention') totals.attention += 1;
+        if (status.status === 'critical') totals.critical += 1;
+
+        healthSum += health;
+
+        return {
+          component,
+          status,
+          usage,
+          health,
+          latestInspection,
+          label: `${component.component_type} · ${component.component_color || 'Sem cor'}`
+        };
+      }).sort((a, b) => b.usage - a.usage);
+
+      totals.healthScore = Math.round(healthSum / components.length);
+      totals.priority = priority;
+      totals.topCriticalLabel = priority[0] ? `${priority[0].label} (${Math.round(priority[0].usage)}%)` : '—';
+      totals.inspection = getAircraftInspectionProjection(model, components);
+
+      return totals;
+    }
+
+    function renderAircraftHealthDashboard() {
+      const metrics = getAircraftDashboardMetrics(currentAircraft.prefix, currentAircraft.model);
+      const setText = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+      };
+
+      setText('aircraft-stat-total', metrics.total);
+      setText('aircraft-stat-normal', metrics.normal);
+      setText('aircraft-stat-attention', metrics.attention);
+      setText('aircraft-stat-critical', metrics.critical);
+      setText('aircraft-health-score', `${metrics.healthScore}%`);
+      setText('aircraft-inspection-cycle', metrics.inspection.cycleLabel);
+      setText('aircraft-flight-rate', `${INSPECTION_RULES[currentAircraft.model]?.avgHoursPerDay || 5} h/dia`);
+      setText('aircraft-most-critical', metrics.topCriticalLabel);
+      setText('aircraft-next-inspection', metrics.inspection.dueLabel);
+      setText('aircraft-next-inspection-detail', metrics.inspection.detailLabel);
+
+      const summaryEl = document.getElementById('aircraft-health-summary');
+      if (summaryEl) {
+        if (!metrics.total) {
+          summaryEl.textContent = 'Cadastre componentes para visualizar a saúde geral e a proximidade da próxima inspeção.';
+        } else if (metrics.critical > 0) {
+          summaryEl.textContent = `Existe ${metrics.critical} componente crítico exigindo prioridade imediata nesta aeronave.`;
+        } else if (metrics.attention > 0) {
+          summaryEl.textContent = `A aeronave possui ${metrics.attention} componente(s) em atenção, acompanhando tendência de desgaste.`;
+        } else {
+          summaryEl.textContent = 'Todos os componentes cadastrados estão dentro da faixa normal de monitoramento.';
+        }
+      }
+
+      const healthBar = document.getElementById('aircraft-health-bar');
+      if (healthBar) {
+        healthBar.style.width = `${metrics.healthScore}%`;
+        if (metrics.healthScore >= 90) {
+          healthBar.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+        } else if (metrics.healthScore >= 75) {
+          healthBar.style.background = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
+        } else {
+          healthBar.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+        }
+      }
+
+      const priorityList = document.getElementById('aircraft-priority-list');
+      if (!priorityList) return;
+
+      if (!metrics.priority.length) {
+        priorityList.innerHTML = `
+          <div class="text-center py-8 text-slate-400">
+            Nenhum componente cadastrado para gerar ranking de prioridade.
+          </div>
+        `;
+        return;
+      }
+
+      priorityList.innerHTML = metrics.priority.slice(0, 6).map((item, index) => {
+        let latestInspectionText = 'Sem data de inspeção';
+        if (item.latestInspection) {
+          const daysAgo = Math.max(0, Math.floor((Date.now() - item.latestInspection.getTime()) / 86400000));
+          latestInspectionText = `Última medição: ${item.latestInspection.toLocaleDateString('pt-BR')} · há ${formatDaysLabel(daysAgo)}`;
+        }
+
+        let barBackground = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+        if (item.usage >= 100) {
+          barBackground = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+        } else if (item.usage >= 80) {
+          barBackground = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
+        }
+
+        return `
+          <div class="glass-card rounded-xl p-4">
+            <div class="flex items-start justify-between gap-3 mb-2">
+              <div>
+                <p class="text-slate-400 text-xs">#${index + 1} prioridade</p>
+                <h3 class="text-white font-semibold">${item.label}</h3>
+                <p class="text-slate-400 text-sm">${latestInspectionText}</p>
+              </div>
+              <div class="text-right">
+                <p class="text-white font-bold text-lg">${Math.round(item.usage)}%</p>
+                <p class="text-slate-400 text-xs">uso do limite</p>
+              </div>
+            </div>
+            <div class="progress-bar mb-2">
+              <div class="progress-fill" style="width: ${Math.min(item.usage, 100)}%; background: ${barBackground};"></div>
+            </div>
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-slate-300">Status: ${item.status.label}</span>
+              <span class="text-slate-400">Saúde ${Math.round(item.health)}%</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
     // ========== UI HELPERS ==========
     function showToast(message, type = 'success') {
       const toast = document.createElement('div');
@@ -1308,10 +1603,12 @@
       dashboardView.classList.add('hidden');
       aircraftDetailsView.classList.remove('hidden');
       
+      renderAircraftHealthDashboard();
       renderComponentOptions();
     }
 
     function renderComponentOptions() {
+      renderAircraftHealthDashboard();
       const buttonsContainer = document.getElementById('component-buttons');
       const config = COMPONENT_CONFIG[currentAircraft.model];
       
