@@ -402,14 +402,17 @@
    </div><!-- ========== AIRCRAFT DETAILS VIEW ========== -->
    <div id="aircraft-details-view" class="hidden w-full p-4 md:p-6 lg:p-8">
     <div class="max-w-7xl mx-auto">
-     <div class="flex items-center justify-between mb-8 gap-3 flex-wrap">
+     <div class="flex items-center justify-between mb-8">
       <div class="flex-1"><button id="back-to-dashboard" class="text-slate-400 hover:text-white mb-4 flex items-center gap-2 transition-colors">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
         </svg> Voltar ao Dashboard </button>
-       <div class="flex items-center gap-4">
+       <div class="flex items-center gap-4 flex-wrap">
         <h1 id="aircraft-title" class="text-3xl md:text-4xl font-bold text-white"></h1><span id="aircraft-model-badge" class="px-4 py-2 bg-blue-500/20 text-blue-300 rounded-lg font-medium text-sm"></span>
+        <button id="view-aw139-schematic-btn" class="hidden glass-card px-4 py-2 rounded-lg text-white hover:bg-white/10 transition-colors">
+         📐 Ver esquema AW139
+        </button>
        </div>
-      </div><div class="flex items-center gap-3 flex-wrap"><button id="view-diagram-btn" class="hidden glass-card px-4 py-2 rounded-lg text-white hover:bg-white/10 transition-colors">📐 Ver esquema AW139</button><button id="delete-aircraft-btn" class="glass-card px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors"> 🗑️ Excluir Aeronave </button></div>
+      </div><button id="delete-aircraft-btn" class="glass-card px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors"> 🗑️ Excluir Aeronave </button>
      </div><!-- Component Options -->
      <div id="component-options" class="space-y-6">
       <div>
@@ -585,42 +588,35 @@
      </div>
     </form>
    </div>
-  </div><!-- ========== DIAGRAM MODAL ========== -->
-  <div id="diagram-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
-   <div id="diagram-modal-backdrop" class="modal-backdrop absolute inset-0"></div>
-   <div class="relative glass-card rounded-2xl p-6 max-w-4xl w-full animate-slide-in">
-    <div class="flex items-center justify-between mb-6">
+  </div><!-- ========== AW139 SCHEMATIC MODAL ========== -->
+  <div id="aw139-schematic-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+   <div id="aw139-schematic-backdrop" class="modal-backdrop absolute inset-0"></div>
+   <div class="relative glass-card rounded-2xl p-6 max-w-3xl w-full animate-slide-in">
+    <div class="flex items-center justify-between mb-4 gap-4">
      <div>
-      <h3 id="diagram-modal-title" class="text-2xl font-bold text-white">Esquema técnico AW139</h3>
-      <p class="text-slate-400 text-sm mt-1">Referência visual para Upper Rod End e Lower Rod End.</p>
+      <h3 class="text-2xl font-bold text-white">Esquema AW139</h3>
+      <p class="text-slate-300 text-sm">Referência visual para Upper Rod End e Lower Rod End</p>
      </div>
-     <button id="diagram-modal-close" class="text-slate-400 hover:text-white transition-colors">
-      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+     <button id="aw139-schematic-close" class="text-slate-400 hover:text-white transition-colors">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      </svg>
      </button>
     </div>
-    <div class="space-y-4">
-     <div class="rounded-2xl bg-slate-900/60 border border-slate-700 p-4 flex items-center justify-center">
-      <img id="diagram-image" src="/aw139_pitch_link.png" alt="Esquema técnico do AW139 Pitch Link" class="max-w-full max-h-[65vh] object-contain rounded-xl" onerror="this.style.display='none'; document.getElementById('diagram-image-fallback').classList.remove('hidden');">
-      <div id="diagram-image-fallback" class="hidden text-center text-slate-300">
-       <p class="font-semibold mb-2">Imagem não encontrada.</p>
-       <p class="text-sm">Salve o arquivo como <strong>aw139_pitch_link.png</strong> na mesma pasta do <strong>app.py</strong>.</p>
-      </div>
+    <div class="rounded-xl overflow-hidden bg-slate-100 p-4">
+     <img src="/aw139_pitch_link.png" alt="Esquema técnico AW139 Pitch Link com Upper Rod End e Lower Rod End" class="w-full h-auto max-h-[70vh] object-contain mx-auto">
+    </div>
+    <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+     <div class="bg-slate-800/60 rounded-lg p-3">
+      <p class="text-white font-semibold">Upper Rod End</p>
+      <p class="text-slate-300 text-sm">Referência para a medição superior do Pitch Link.</p>
      </div>
-     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div class="glass-card rounded-xl p-4">
-       <p class="text-white font-bold mb-1">Upper Rod End</p>
-       <p class="text-slate-300 text-sm">Corresponde à medição superior do conjunto.</p>
-      </div>
-      <div class="glass-card rounded-xl p-4">
-       <p class="text-white font-bold mb-1">Lower Rod End</p>
-       <p class="text-slate-300 text-sm">Corresponde à medição inferior do conjunto.</p>
-      </div>
+     <div class="bg-slate-800/60 rounded-lg p-3">
+      <p class="text-white font-semibold">Lower Rod End</p>
+      <p class="text-slate-300 text-sm">Referência para a medição inferior do Pitch Link.</p>
      </div>
     </div>
    </div>
-  </div>
-
-  <!-- ========== PRINT CONTAINER ========== -->
+  </div><!-- ========== PRINT CONTAINER ========== -->
   <div id="print-container" class="hidden"></div>
   <script>
     // ========== GLOBAL STATE ==========
@@ -639,22 +635,6 @@
     const aircraftDetailsView = document.getElementById('aircraft-details-view');
     const componentOptions = document.getElementById('component-options');
     const colorSelectionView = document.getElementById('color-selection-view');
-    const viewDiagramBtn = document.getElementById('view-diagram-btn');
-
-    function updateDiagramButtonVisibility() {
-      if (!viewDiagramBtn) return;
-      const shouldShow = currentAircraft && currentAircraft.model === 'AW139';
-      viewDiagramBtn.classList.toggle('hidden', !shouldShow);
-    }
-
-    function openTechnicalDiagram() {
-      document.getElementById('diagram-modal-title').textContent = currentAircraft && currentAircraft.model ? `${currentAircraft.model} - Pitch Link` : 'Esquema técnico AW139';
-      document.getElementById('diagram-modal').classList.remove('hidden');
-    }
-
-    function closeTechnicalDiagram() {
-      document.getElementById('diagram-modal').classList.add('hidden');
-    }
 
     // ========== CONSTANTS ==========
     const ADMIN_USER = 'admin';
@@ -726,6 +706,22 @@
       colorSelectionView.classList.add('hidden');
 
       saveRodEndSessionState();
+    }
+
+    function updateAw139SchematicButton() {
+      const btn = document.getElementById('view-aw139-schematic-btn');
+      if (!btn) return;
+      const shouldShow = currentAircraft && currentAircraft.model === 'AW139';
+      btn.classList.toggle('hidden', !shouldShow);
+    }
+
+    function openAw139SchematicModal() {
+      if (!currentAircraft || currentAircraft.model !== 'AW139') return;
+      document.getElementById('aw139-schematic-modal').classList.remove('hidden');
+    }
+
+    function closeAw139SchematicModal() {
+      document.getElementById('aw139-schematic-modal').classList.add('hidden');
     }
 
     function restoreRodEndSessionState() {
@@ -1355,6 +1351,7 @@
       
       document.getElementById('aircraft-title').textContent = aircraft.prefix;
       document.getElementById('aircraft-model-badge').textContent = aircraft.model;
+      updateAw139SchematicButton();
       
       dashboardView.classList.add('hidden');
       aircraftDetailsView.classList.remove('hidden');
@@ -2225,13 +2222,20 @@
       window.location.href = '/';
     });
 
+    document.getElementById('view-aw139-schematic-btn').addEventListener('click', openAw139SchematicModal);
+    document.getElementById('aw139-schematic-close').addEventListener('click', closeAw139SchematicModal);
+    document.getElementById('aw139-schematic-backdrop').addEventListener('click', closeAw139SchematicModal);
+
     // Print Report
     document.getElementById('print-report-btn').addEventListener('click', generateReport);
 
     // Logout
     document.getElementById('logout-btn').addEventListener('click', function() {
       currentUser = { username: '', isAdmin: false };
+      currentAircraft = { prefix: '', model: '' };
       clearUnifiedSessionState();
+      closeAw139SchematicModal();
+      updateAw139SchematicButton();
       mainApp.classList.add('hidden');
       changePasswordScreen.classList.add('hidden');
       loginScreen.classList.remove('hidden');
@@ -2342,6 +2346,9 @@
     document.getElementById('back-to-dashboard').addEventListener('click', () => {
       aircraftDetailsView.classList.add('hidden');
       dashboardView.classList.remove('hidden');
+      currentAircraft = { prefix: '', model: '' };
+      closeAw139SchematicModal();
+      updateAw139SchematicButton();
     });
 
     // Delete Aircraft
@@ -2822,6 +2829,7 @@
       try {
         await loadRecords();
         restoreRodEndSessionState();
+        updateAw139SchematicButton();
       } catch (error) {
         console.error(error);
         showToast('Erro ao carregar dados do ROD END', 'error');
