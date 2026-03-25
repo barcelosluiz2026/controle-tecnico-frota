@@ -385,6 +385,9 @@
                 <button id="inspecaoProgramadaBtn" class="px-4 py-2 rounded font-semibold" style="background-color: ${primaryColor}; color: white; font-size: ${fontSize * 0.9}px;">
                   ✅ Inspeção Programada
                 </button>
+                <button id="controleRodEndBtn" class="px-4 py-2 rounded font-semibold" style="background-color: ${primaryColor}; color: white; font-size: ${fontSize * 0.9}px;">
+                  🔧 Controle Rod End
+                </button>
                 ${currentUser && currentUser.role !== 'mecanico' ? `
                   <button id="relatorioPendenciasBtn" class="px-4 py-2 rounded font-semibold" style="background-color: ${primaryColor}; color: white; font-size: ${fontSize * 0.9}px;">
                     📄 Relatório de Pendências
@@ -1642,6 +1645,13 @@
       if (inspecaoProgramadaBtn) {
         inspecaoProgramadaBtn.addEventListener('click', () => {
           window.open('https://aircraftcontrolsbmi.my.canva.site/inspecao-programada', '_blank', 'noopener,noreferrer');
+        });
+      }
+
+      const controleRodEndBtn = document.getElementById('controleRodEndBtn');
+      if (controleRodEndBtn) {
+        controleRodEndBtn.addEventListener('click', () => {
+          window.location.href = '/rodend';
         });
       }
 
