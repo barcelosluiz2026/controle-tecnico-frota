@@ -609,6 +609,106 @@
     const ADMIN_USER = 'admin';
     const ADMIN_PASSWORD = 'admin123';
     const DEFAULT_PASSWORD = '123456';
+
+    const SHARED_AUTH_STORAGE_KEY = 'omni_shared_auth_v1';
+    const PANES_SESSION_STORAGE_KEY = 'omni_panes_session_v1';
+    const RODEND_SESSION_STORAGE_KEY = 'omni_rodend_session_v1';
+
+    function getRodEndSessionPayload() {
+      if (!currentUser || !currentUser.username) return null;
+      return {
+        currentUser,
+        updatedAt: new Date().toISOString()
+      };
+    }
+
+    function saveRodEndSessionState() {
+      try {
+        const payload = getRodEndSessionPayload();
+        if (!payload) {
+          localStorage.removeItem(RODEND_SESSION_STORAGE_KEY);
+          return;
+        }
+
+        localStorage.setItem(RODEND_SESSION_STORAGE_KEY, JSON.stringify(payload));
+
+        const sharedPayload = {
+          username: currentUser.username || '',
+          role: currentUser.role || '',
+          fullName: currentUser.fullName || '',
+          isAdmin: !!currentUser.isAdmin || (currentUser.role || '') === 'admin',
+          source: 'rodend',
+          updatedAt: new Date().toISOString()
+        };
+        localStorage.setItem(SHARED_AUTH_STORAGE_KEY, JSON.stringify(sharedPayload));
+      } catch (error) {
+        console.error('Erro ao salvar sessão do ROD END:', error);
+      }
+    }
+
+    function clearUnifiedSessionState() {
+      localStorage.removeItem(SHARED_AUTH_STORAGE_KEY);
+      localStorage.removeItem(PANES_SESSION_STORAGE_KEY);
+      localStorage.removeItem(RODEND_SESSION_STORAGE_KEY);
+    }
+
+    function applyRodEndSession(user) {
+      currentUser = {
+        username: user?.username || '',
+        isAdmin: !!user?.isAdmin || (user?.role || '') === 'admin',
+        id: user?.id || '',
+        role: user?.role || '',
+        fullName: user?.fullName || ''
+      };
+
+      document.getElementById('user-display').textContent = currentUser.username || '';
+      document.getElementById('manage-users-btn').classList.toggle('hidden', !currentUser.isAdmin);
+
+      loginScreen.classList.add('hidden');
+      changePasswordScreen.classList.add('hidden');
+      mainApp.classList.remove('hidden');
+
+      dashboardView.classList.remove('hidden');
+      userManagementView.classList.add('hidden');
+      aircraftDetailsView.classList.add('hidden');
+      componentOptions.classList.remove('hidden');
+      colorSelectionView.classList.add('hidden');
+
+      saveRodEndSessionState();
+    }
+
+    function restoreRodEndSessionState() {
+      try {
+        const rawRod = localStorage.getItem(RODEND_SESSION_STORAGE_KEY);
+        if (rawRod) {
+          const savedRod = JSON.parse(rawRod);
+          if (savedRod?.currentUser?.username) {
+            applyRodEndSession(savedRod.currentUser);
+            return true;
+          }
+        }
+
+        const rawShared = localStorage.getItem(SHARED_AUTH_STORAGE_KEY);
+        if (rawShared) {
+          const shared = JSON.parse(rawShared);
+          if (shared?.username) {
+            applyRodEndSession({
+              username: shared.username,
+              isAdmin: !!shared.isAdmin || (shared.role || '') === 'admin',
+              role: shared.role || '',
+              fullName: shared.fullName || '',
+              id: shared.id || ''
+            });
+            return true;
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao restaurar sessão do ROD END:', error);
+      }
+
+      return false;
+    }
+
     
     const MAX_CLEARANCE = {
       'EC175': {
@@ -687,7 +787,42 @@
       normalized.record_type = normalized.record_type || normalized.type || '';
       normalized.id = normalized.id || normalized.__backendId || '';
       normalized.__backendId = normalized.__backendId || normalized.id || '';
+
+      [
+        'measure1_current', 'measure1_max', 'measure1_alert',
+        'measure2_current', 'measure2_max', 'measure2_alert'
+      ].forEach((field) => {
+        if (normalized[field] !== undefined && normalized[field] !== null && normalized[field] !== '') {
+          const parsed = Number(normalized[field]);
+          normalized[field] = Number.isFinite(parsed) ? parsed : 0;
+        }
+      });
+
+      normalized.needs_password_change = !!normalized.needs_password_change;
       return normalized;
+    }
+
+    function getRecordMoment(record) {
+      const candidates = [record?.modified_at, record?.updated_at, record?.created_at, record?.last_inspection_date];
+      for (const value of candidates) {
+        const date = new Date(value || '');
+        const time = date.getTime();
+        if (!Number.isNaN(time)) return time;
+      }
+      return 0;
+    }
+
+    function dedupeBy(records, keyFn) {
+      const map = new Map();
+      (records || []).forEach((record) => {
+        const key = keyFn(record);
+        if (!key) return;
+        const previous = map.get(key);
+        if (!previous || getRecordMoment(record) >= getRecordMoment(previous)) {
+          map.set(key, record);
+        }
+      });
+      return Array.from(map.values());
     }
 
     function buildRodendId(type, payload = {}) {
@@ -763,45 +898,89 @@
     }
 
     async function loadRecords() {
-      const data = await apiRequest('/records', { method: 'GET' });
-      allRecords = Array.isArray(data) ? data.map(normalizeRecord) : [];
-      refreshUiAfterDataChange();
-      return allRecords;
+      try {
+        const data = await apiRequest('/records', { method: 'GET' });
+        allRecords = Array.isArray(data) ? data.map(normalizeRecord) : [];
+        refreshUiAfterDataChange();
+        return allRecords;
+      } catch (error) {
+        console.error('Erro ao carregar registros do ROD END:', error);
+        throw error;
+      }
     }
 
     async function createRecord(payload) {
-      const prepared = preparePayload(payload);
-      const data = await apiRequest('/records', {
-        method: 'POST',
-        body: JSON.stringify(prepared)
-      });
-      await loadRecords();
-      return {
-        isOk: true,
-        item: normalizeRecord(data?.item || prepared)
-      };
+      try {
+        const prepared = preparePayload(payload);
+        const data = await apiRequest('/records', {
+          method: 'POST',
+          body: JSON.stringify(prepared)
+        });
+        await loadRecords();
+        return {
+          isOk: true,
+          item: normalizeRecord(data?.item || prepared)
+        };
+      } catch (error) {
+        console.error('Erro ao criar registro do ROD END:', error);
+        return { isOk: false, error: error.message || 'Erro ao criar registro' };
+      }
     }
 
     async function updateRecord(payload) {
-      const prepared = preparePayload(payload, payload?.id || payload?.__backendId);
-      const data = await apiRequest(`/records/${encodeURIComponent(prepared.id)}`, {
-        method: 'PUT',
-        body: JSON.stringify(prepared)
-      });
-      await loadRecords();
-      return {
-        isOk: true,
-        item: normalizeRecord(data?.item || prepared)
-      };
+      try {
+        const prepared = preparePayload(payload, payload?.id || payload?.__backendId);
+        const data = await apiRequest(`/records/${encodeURIComponent(prepared.id)}`, {
+          method: 'PUT',
+          body: JSON.stringify(prepared)
+        });
+        await loadRecords();
+        return {
+          isOk: true,
+          item: normalizeRecord(data?.item || prepared)
+        };
+      } catch (error) {
+        console.error('Erro ao atualizar registro do ROD END:', error);
+        return { isOk: false, error: error.message || 'Erro ao atualizar registro' };
+      }
     }
 
     async function deleteRecord(payload) {
-      const recordId = payload?.id || payload?.__backendId;
-      await apiRequest(`/records/${encodeURIComponent(recordId)}`, {
-        method: 'DELETE'
-      });
-      await loadRecords();
-      return { isOk: true };
+      try {
+        const recordId = payload?.id || payload?.__backendId;
+        if (!recordId) {
+          return { isOk: false, error: 'Registro inválido para exclusão' };
+        }
+        await apiRequest(`/records/${encodeURIComponent(recordId)}`, {
+          method: 'DELETE'
+        });
+        await loadRecords();
+        return { isOk: true };
+      } catch (error) {
+        console.error('Erro ao excluir registro do ROD END:', error);
+        return { isOk: false, error: error.message || 'Erro ao excluir registro' };
+      }
+    }
+
+    function getSelectedUnit() {
+      return document.querySelector('input[name="unit"]:checked')?.value || 'inch';
+    }
+
+    function parseInspectionDate(value) {
+      const clean = String(value || '').trim();
+      if (!clean) return null;
+      const date = new Date(`${clean}T00:00:00`);
+      return Number.isNaN(date.getTime()) ? null : date.toISOString();
+    }
+
+    function validateMeasurementPair(measure1, measure2) {
+      if (!Number.isFinite(measure1) || !Number.isFinite(measure2)) {
+        return 'Preencha as duas medições com valores numéricos válidos.';
+      }
+      if (measure1 < 0 || measure2 < 0) {
+        return 'As medições não podem ser negativas.';
+      }
+      return '';
     }
 
     // ========== AUTHENTICATION ==========
@@ -896,7 +1075,8 @@
 
     // ========== DATA HELPERS ==========
     function getUserRecords() {
-      return allRecords.filter(r => r.record_type === 'rodend_user');
+      const users = allRecords.filter(r => r.record_type === 'rodend_user');
+      return dedupeBy(users, (r) => (r.username || '').trim().toLowerCase());
     }
 
     function getDataRecords() {
@@ -904,31 +1084,24 @@
     }
 
     function getAircraftList() {
-      const dataRecords = getDataRecords();
-      const aircraftMap = new Map();
-      
-      dataRecords.forEach(record => {
-        if (record.aircraft_prefix && record.aircraft_model) {
-          const key = `${record.aircraft_prefix}_${record.aircraft_model}`;
-          if (!aircraftMap.has(key)) {
-            aircraftMap.set(key, {
-              prefix: record.aircraft_prefix,
-              model: record.aircraft_model
-            });
-          }
-        }
-      });
-      
-      return Array.from(aircraftMap.values());
+      const aircraftRecords = getDataRecords().filter(r => r.aircraft_prefix && r.aircraft_model);
+      const uniqueAircraft = dedupeBy(aircraftRecords, (r) => `${r.aircraft_prefix}__${r.aircraft_model}`);
+      return uniqueAircraft
+        .map((record) => ({ prefix: record.aircraft_prefix, model: record.aircraft_model }))
+        .sort((a, b) => `${a.model}_${a.prefix}`.localeCompare(`${b.model}_${b.prefix}`));
     }
 
     function getComponentsForAircraft(prefix, model) {
-      const dataRecords = getDataRecords();
-      return dataRecords.filter(r => 
+      const components = getDataRecords().filter(r => 
         r.aircraft_prefix === prefix && 
         r.aircraft_model === model && 
         r.component_type !== '_aircraft_marker'
       );
+
+      return dedupeBy(
+        components,
+        (r) => `${r.aircraft_prefix}__${r.aircraft_model}__${r.component_type}__${r.component_color}`
+      ).sort((a, b) => (a.component_color || '').localeCompare(b.component_color || ''));
     }
 
     function getComponentsByType(prefix, model, type) {
@@ -1120,7 +1293,7 @@
         if (result.isOk) {
           showToast('Usuário excluído com sucesso!', 'success');
         } else {
-          showToast('Erro ao excluir usuário', 'error');
+          showToast(result.error || 'Erro ao excluir usuário', 'error');
         }
         confirmDiv.remove();
       });
@@ -1691,7 +1864,7 @@
         if (result.isOk) {
           showToast('Componente excluído com sucesso!', 'success');
         } else {
-          showToast('Erro ao excluir componente', 'error');
+          showToast(result.error || 'Erro ao excluir componente', 'error');
         }
         confirmDiv.remove();
       });
@@ -1987,9 +2160,7 @@
         
         if (result.isOk) {
           showToast('Senha alterada com sucesso!', 'success');
-          document.getElementById('user-display').textContent = currentUser.username;
-          changePasswordScreen.classList.add('hidden');
-          mainApp.classList.remove('hidden');
+          applyRodEndSession(currentUser);
           this.reset();
         } else {
           errorDiv.querySelector('p').textContent = 'Erro ao alterar senha';
@@ -2009,12 +2180,17 @@
     // Logout
     document.getElementById('logout-btn').addEventListener('click', function() {
       currentUser = { username: '', isAdmin: false };
+      clearUnifiedSessionState();
       mainApp.classList.add('hidden');
+      changePasswordScreen.classList.add('hidden');
       loginScreen.classList.remove('hidden');
       dashboardView.classList.remove('hidden');
       userManagementView.classList.add('hidden');
       aircraftDetailsView.classList.add('hidden');
+      componentOptions.classList.remove('hidden');
+      colorSelectionView.classList.add('hidden');
       document.getElementById('manage-users-btn').classList.add('hidden');
+      document.getElementById('login-form').reset();
     });
 
     // User Management
@@ -2051,59 +2227,64 @@
       submitBtn.disabled = true;
       submitBtn.textContent = 'Criando...';
       
-      const username = document.getElementById('new-username').value.trim();
-      
-      // Check if user already exists
-      if (username === ADMIN_USER || getUserRecords().find(u => u.username === username)) {
-        showToast('Usuário já existe!', 'error');
+      try {
+        const username = document.getElementById('new-username').value.trim();
+        if (!username) {
+          showToast('Informe o nome do usuário.', 'error');
+          return;
+        }
+        
+        if (username === ADMIN_USER || getUserRecords().find(u => u.username === username)) {
+          showToast('Usuário já existe!', 'error');
+          return;
+        }
+        
+        const result = await createRecord({
+          type: 'rodend_user',
+          username: username,
+          password: DEFAULT_PASSWORD,
+          needs_password_change: true,
+          aircraft_prefix: '',
+          aircraft_model: '',
+          component_type: '',
+          component_color: '',
+          measure1_name: '',
+          measure1_part_number: '',
+          measure1_serial_number: '',
+          measure1_current: 0,
+          measure1_max: 0,
+          measure1_alert: 0,
+          measure2_name: '',
+          measure2_part_number: '',
+          measure2_serial_number: '',
+          measure2_current: 0,
+          measure2_max: 0,
+          measure2_alert: 0,
+          link_serial_number: '',
+          last_inspection_date: '',
+          inspection_history: '',
+          notes: '',
+          created_by: currentUser.username,
+          modified_by: '',
+          created_at: new Date().toISOString(),
+          modified_at: ''
+        });
+        
+        if (result.isOk) {
+          showToast(`Usuário ${username} criado com sucesso!`, 'success');
+          addUserModal.classList.add('hidden');
+          userForm.reset();
+        } else {
+          showToast(result.error || 'Erro ao criar usuário', 'error');
+        }
+      } catch (error) {
+        console.error(error);
+        showToast(error.message || 'Erro ao criar usuário', 'error');
+      } finally {
         isSubmitting = false;
         submitBtn.disabled = false;
         submitBtn.textContent = 'Criar Usuário';
-        return;
       }
-      
-      const result = await createRecord({
-        type: 'rodend_user',
-        username: username,
-        password: DEFAULT_PASSWORD,
-        needs_password_change: true,
-        aircraft_prefix: '',
-        aircraft_model: '',
-        component_type: '',
-        component_color: '',
-        measure1_name: '',
-        measure1_part_number: '',
-        measure1_serial_number: '',
-        measure1_current: 0,
-        measure1_max: 0,
-        measure1_alert: 0,
-        measure2_name: '',
-        measure2_part_number: '',
-        measure2_serial_number: '',
-        measure2_current: 0,
-        measure2_max: 0,
-        measure2_alert: 0,
-        link_serial_number: '',
-        last_inspection_date: '',
-        inspection_history: '',
-        notes: '',
-        created_by: currentUser.username,
-        modified_by: '',
-        created_at: new Date().toISOString(),
-        modified_at: ''
-      });
-      
-      if (result.isOk) {
-        showToast(`Usuário ${username} criado com sucesso!`, 'success');
-        addUserModal.classList.add('hidden');
-        userForm.reset();
-      } else {
-        showToast('Erro ao criar usuário', 'error');
-      }
-      
-      isSubmitting = false;
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Criar Usuário';
     });
 
     // Back to Dashboard
@@ -2246,60 +2427,67 @@
       submitBtn.disabled = true;
       submitBtn.textContent = 'Cadastrando...';
       
-      const prefix = document.getElementById('aircraft-prefix').value.toUpperCase().trim();
-      const model = document.getElementById('aircraft-model-input').value;
+      try {
+        const prefix = document.getElementById('aircraft-prefix').value.toUpperCase().trim();
+        const model = document.getElementById('aircraft-model-input').value;
+
+        if (!prefix || !model) {
+          showToast('Informe o modelo e o prefixo da aeronave.', 'error');
+          return;
+        }
       
-      const dataRecords = getDataRecords();
-      if (dataRecords.find(r => r.aircraft_prefix === prefix && r.aircraft_model === model)) {
-        showToast('Aeronave já cadastrada!', 'error');
+        const dataRecords = getDataRecords();
+        if (dataRecords.find(r => r.aircraft_prefix === prefix && r.aircraft_model === model)) {
+          showToast('Aeronave já cadastrada!', 'error');
+          return;
+        }
+      
+        const result = await createRecord({
+          type: 'rodend_aircraft',
+          username: '',
+          password: '',
+          needs_password_change: false,
+          aircraft_prefix: prefix,
+          aircraft_model: model,
+          component_type: '_aircraft_marker',
+          component_color: '',
+          measure1_name: '',
+          measure1_part_number: '',
+          measure1_serial_number: '',
+          measure1_current: 0,
+          measure1_max: 0,
+          measure1_alert: 80,
+          measure2_name: '',
+          measure2_part_number: '',
+          measure2_serial_number: '',
+          measure2_current: 0,
+          measure2_max: 0,
+          measure2_alert: 80,
+          link_serial_number: '',
+          last_inspection_date: new Date().toISOString(),
+          inspection_history: '',
+          notes: '',
+          created_by: currentUser.username,
+          modified_by: '',
+          created_at: new Date().toISOString(),
+          modified_at: ''
+        });
+      
+        if (result.isOk) {
+          showToast(`Aeronave ${prefix} cadastrada com sucesso!`, 'success');
+          addAircraftModal.classList.add('hidden');
+          aircraftForm.reset();
+        } else {
+          showToast(result.error || 'Erro ao cadastrar aeronave', 'error');
+        }
+      } catch (error) {
+        console.error(error);
+        showToast(error.message || 'Erro ao cadastrar aeronave', 'error');
+      } finally {
         isSubmitting = false;
         submitBtn.disabled = false;
         submitBtn.textContent = 'Cadastrar';
-        return;
       }
-      
-      const result = await createRecord({
-        type: 'rodend_aircraft',
-        username: '',
-        password: '',
-        needs_password_change: false,
-        aircraft_prefix: prefix,
-        aircraft_model: model,
-        component_type: '_aircraft_marker',
-        component_color: '',
-        measure1_name: '',
-        measure1_part_number: '',
-        measure1_serial_number: '',
-        measure1_current: 0,
-        measure1_max: 0,
-        measure1_alert: 80,
-        measure2_name: '',
-        measure2_part_number: '',
-        measure2_serial_number: '',
-        measure2_current: 0,
-        measure2_max: 0,
-        measure2_alert: 80,
-        link_serial_number: '',
-        last_inspection_date: new Date().toISOString(),
-        inspection_history: '',
-        notes: '',
-        created_by: currentUser.username,
-        modified_by: '',
-        created_at: new Date().toISOString(),
-        modified_at: ''
-      });
-      
-      if (result.isOk) {
-        showToast(`Aeronave ${prefix} cadastrada com sucesso!`, 'success');
-        addAircraftModal.classList.add('hidden');
-        aircraftForm.reset();
-      } else {
-        showToast('Erro ao cadastrar aeronave', 'error');
-      }
-      
-      isSubmitting = false;
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Cadastrar';
     });
 
     // Component Modal
@@ -2322,170 +2510,200 @@
       const isEdit = !!editId;
       submitBtn.disabled = true;
       submitBtn.textContent = isEdit ? 'Salvando...' : 'Cadastrando...';
-      
-      const config = COMPONENT_CONFIG[currentAircraft.model];
-      const componentConfig = config[currentComponentType];
-      const measures = componentConfig.measures;
-      
-      const existingRecord = isEdit ? allRecords.find(r => r.__backendId === editId) : null;
-      const hasHistory = existingRecord && existingRecord.inspection_history && existingRecord.inspection_history !== '[]';
-      const isQuickUpdate = hasHistory && !document.getElementById('full-form-fields').classList.contains('hidden') === false;
-      
-      // Get measurement values
-      let measure1_current, measure2_current, inspection_date;
-      
-      if (isQuickUpdate && document.querySelector('input[name="sn-change"]:checked').value === 'no') {
-        // Quick update - only new measurements
-        const selectedUnit = document.querySelector('input[name="unit"]:checked').value;
-        measure1_current = parseFloat(document.getElementById('quick-measure1').value);
-        measure2_current = parseFloat(document.getElementById('quick-measure2').value);
-        
-        if (selectedUnit === 'mm') {
-          measure1_current = mmToInch(measure1_current);
-          measure2_current = mmToInch(measure2_current);
-        }
-        
-        inspection_date = document.getElementById('quick-inspection-date').value;
-      } else {
-        // Full form - all fields
-        const selectedUnit = document.querySelector('input[name="unit"]:checked').value;
-        measure1_current = parseFloat(document.getElementById('measure1-current').value);
-        measure2_current = parseFloat(document.getElementById('measure2-current').value);
-        
-        if (selectedUnit === 'mm') {
-          measure1_current = mmToInch(measure1_current);
-          measure2_current = mmToInch(measure2_current);
-        }
-        
-        inspection_date = document.getElementById('inspection-date').value;
-      }
-      
-      const inspection_date_iso = new Date(inspection_date + 'T00:00:00').toISOString();
-      const limits = MAX_CLEARANCE[currentAircraft.model][currentComponentType];
-      const measure1_max = limits.max_inch;
-      const measure2_max = limits.max_inch;
 
-      let inspectionHistory = [];
-      if (existingRecord && existingRecord.inspection_history) {
-        try {
-          inspectionHistory = JSON.parse(existingRecord.inspection_history);
-        } catch (e) {
-          inspectionHistory = [];
+      try {
+        if (!currentAircraft?.model || !currentComponentType) {
+          showToast('Selecione a aeronave e o componente antes de salvar.', 'error');
+          return;
         }
-      }
 
-      inspectionHistory.unshift({
-        date: inspection_date_iso,
-        measure1: measure1_current,
-        measure1_max: measure1_max,
-        measure2: measure2_current,
-        measure2_max: measure2_max
-      });
+        const config = COMPONENT_CONFIG[currentAircraft.model];
+        const componentConfig = config?.[currentComponentType];
+        if (!componentConfig) {
+          showToast('Configuração do componente não encontrada.', 'error');
+          return;
+        }
 
-      if (inspectionHistory.length > 3) {
-        inspectionHistory = inspectionHistory.slice(0, 3);
-      }
-      
-      // Prepare data object
-      let data;
-      
-      if (isQuickUpdate && document.querySelector('input[name="sn-change"]:checked').value === 'no') {
-        // Keep existing P/N and S/N, only update measurements
-        data = {
-          type: 'rodend_component',
-          username: '',
-          password: '',
-          needs_password_change: false,
-          aircraft_prefix: currentAircraft.prefix,
-          aircraft_model: currentAircraft.model,
-          component_type: currentComponentType,
-          component_color: document.getElementById('component-color').value,
-          measure1_name: measures[0],
-          measure1_part_number: existingRecord.measure1_part_number,
-          measure1_serial_number: existingRecord.measure1_serial_number,
-          measure1_current: measure1_current,
-          measure1_max: measure1_max,
-          measure1_alert: existingRecord.measure1_alert,
-          measure2_name: measures[1],
-          measure2_part_number: existingRecord.measure2_part_number,
-          measure2_serial_number: existingRecord.measure2_serial_number,
-          measure2_current: measure2_current,
-          measure2_max: measure2_max,
-          measure2_alert: existingRecord.measure2_alert,
-          link_serial_number: existingRecord.link_serial_number,
-          last_inspection_date: inspection_date_iso,
-          inspection_history: JSON.stringify(inspectionHistory),
-          notes: existingRecord.notes || '',
-          created_by: existingRecord.created_by,
-          modified_by: currentUser.username,
-          created_at: existingRecord.created_at,
-          modified_at: new Date().toISOString()
-        };
-      } else {
-        // Full form data (new component or S/N changed)
-        let measure1_pn, measure2_pn;
-        if (componentConfig.singleSerial) {
-          const singlePN = document.getElementById('single-pn').value;
-          measure1_pn = singlePN;
-          measure2_pn = singlePN;
+        const measures = componentConfig.measures;
+        const existingRecord = isEdit ? allRecords.find(r => r.__backendId === editId) : null;
+        const hasHistory = existingRecord && existingRecord.inspection_history && existingRecord.inspection_history !== '[]';
+        const isQuickUpdate = hasHistory && document.getElementById('full-form-fields').classList.contains('hidden');
+        const snChoice = document.querySelector('input[name="sn-change"]:checked')?.value || 'no';
+        const selectedUnit = getSelectedUnit();
+
+        let measure1_current;
+        let measure2_current;
+        let inspection_date_iso;
+
+        if (isQuickUpdate && snChoice === 'no') {
+          measure1_current = parseFloat(document.getElementById('quick-measure1').value);
+          measure2_current = parseFloat(document.getElementById('quick-measure2').value);
+          if (selectedUnit === 'mm') {
+            measure1_current = mmToInch(measure1_current);
+            measure2_current = mmToInch(measure2_current);
+          }
+          inspection_date_iso = parseInspectionDate(document.getElementById('quick-inspection-date').value);
         } else {
-          measure1_pn = document.getElementById('measure1-pn').value;
-          measure2_pn = document.getElementById('measure2-pn').value;
+          measure1_current = parseFloat(document.getElementById('measure1-current').value);
+          measure2_current = parseFloat(document.getElementById('measure2-current').value);
+          if (selectedUnit === 'mm') {
+            measure1_current = mmToInch(measure1_current);
+            measure2_current = mmToInch(measure2_current);
+          }
+          inspection_date_iso = parseInspectionDate(document.getElementById('inspection-date').value);
+        }
+
+        const measurementError = validateMeasurementPair(measure1_current, measure2_current);
+        if (measurementError) {
+          showToast(measurementError, 'error');
+          return;
+        }
+
+        if (!inspection_date_iso) {
+          showToast('Informe uma data de inspeção válida.', 'error');
+          return;
+        }
+
+        const componentColor = document.getElementById('component-color').value;
+        if (!componentColor) {
+          showToast('Cor do componente não identificada.', 'error');
+          return;
+        }
+
+        const limits = MAX_CLEARANCE[currentAircraft.model]?.[currentComponentType];
+        if (!limits) {
+          showToast('Limite do componente não encontrado.', 'error');
+          return;
+        }
+
+        const measure1_max = limits.max_inch;
+        const measure2_max = limits.max_inch;
+
+        let inspectionHistory = [];
+        if (existingRecord && existingRecord.inspection_history) {
+          try {
+            inspectionHistory = JSON.parse(existingRecord.inspection_history);
+            if (!Array.isArray(inspectionHistory)) inspectionHistory = [];
+          } catch (e) {
+            inspectionHistory = [];
+          }
+        }
+
+        inspectionHistory.unshift({
+          date: inspection_date_iso,
+          measure1: measure1_current,
+          measure1_max: measure1_max,
+          measure2: measure2_current,
+          measure2_max: measure2_max
+        });
+        inspectionHistory = inspectionHistory.slice(0, 3);
+
+        let data;
+        if (isQuickUpdate && snChoice === 'no' && existingRecord) {
+          data = {
+            type: 'rodend_component',
+            username: '',
+            password: '',
+            needs_password_change: false,
+            aircraft_prefix: currentAircraft.prefix,
+            aircraft_model: currentAircraft.model,
+            component_type: currentComponentType,
+            component_color: componentColor,
+            measure1_name: measures[0],
+            measure1_part_number: existingRecord.measure1_part_number,
+            measure1_serial_number: existingRecord.measure1_serial_number,
+            measure1_current: measure1_current,
+            measure1_max: measure1_max,
+            measure1_alert: existingRecord.measure1_alert,
+            measure2_name: measures[1],
+            measure2_part_number: existingRecord.measure2_part_number,
+            measure2_serial_number: existingRecord.measure2_serial_number,
+            measure2_current: measure2_current,
+            measure2_max: measure2_max,
+            measure2_alert: existingRecord.measure2_alert,
+            link_serial_number: existingRecord.link_serial_number,
+            last_inspection_date: inspection_date_iso,
+            inspection_history: JSON.stringify(inspectionHistory),
+            notes: existingRecord.notes || '',
+            created_by: existingRecord.created_by,
+            modified_by: currentUser.username,
+            created_at: existingRecord.created_at,
+            modified_at: new Date().toISOString()
+          };
+        } else {
+          let measure1_pn;
+          let measure2_pn;
+          if (componentConfig.singleSerial) {
+            const singlePN = (document.getElementById('single-pn').value || '').trim();
+            if (!singlePN) {
+              showToast('Informe o Part Number do componente.', 'error');
+              return;
+            }
+            measure1_pn = singlePN;
+            measure2_pn = singlePN;
+          } else {
+            measure1_pn = (document.getElementById('measure1-pn').value || '').trim();
+            measure2_pn = (document.getElementById('measure2-pn').value || '').trim();
+            if (!measure1_pn || !measure2_pn) {
+              showToast('Informe os Part Numbers dos dois lados do componente.', 'error');
+              return;
+            }
+          }
+          
+          data = {
+            type: 'rodend_component',
+            username: '',
+            password: '',
+            needs_password_change: false,
+            aircraft_prefix: currentAircraft.prefix,
+            aircraft_model: currentAircraft.model,
+            component_type: currentComponentType,
+            component_color: componentColor,
+            measure1_name: measures[0],
+            measure1_part_number: measure1_pn,
+            measure1_serial_number: componentConfig.singleSerial ? '' : (document.getElementById('measure1-serial').value || ''),
+            measure1_current: measure1_current,
+            measure1_max: measure1_max,
+            measure1_alert: parseInt(document.getElementById('measure1-alert').value || '80', 10),
+            measure2_name: measures[1],
+            measure2_part_number: measure2_pn,
+            measure2_serial_number: componentConfig.singleSerial ? '' : (document.getElementById('measure2-serial').value || ''),
+            measure2_current: measure2_current,
+            measure2_max: measure2_max,
+            measure2_alert: parseInt(document.getElementById('measure2-alert').value || '80', 10),
+            link_serial_number: componentConfig.singleSerial ? (document.getElementById('link-serial').value || '') : '',
+            last_inspection_date: inspection_date_iso,
+            inspection_history: JSON.stringify(inspectionHistory),
+            notes: document.getElementById('notes').value || '',
+            created_by: isEdit && existingRecord ? existingRecord.created_by : currentUser.username,
+            modified_by: isEdit ? currentUser.username : '',
+            created_at: isEdit && existingRecord ? existingRecord.created_at : new Date().toISOString(),
+            modified_at: isEdit ? new Date().toISOString() : ''
+          };
         }
         
-        data = {
-          type: 'rodend_component',
-          username: '',
-          password: '',
-          needs_password_change: false,
-          aircraft_prefix: currentAircraft.prefix,
-          aircraft_model: currentAircraft.model,
-          component_type: currentComponentType,
-          component_color: document.getElementById('component-color').value,
-          measure1_name: measures[0],
-          measure1_part_number: measure1_pn,
-          measure1_serial_number: componentConfig.singleSerial ? '' : (document.getElementById('measure1-serial').value || ''),
-          measure1_current: measure1_current,
-          measure1_max: measure1_max,
-          measure1_alert: parseInt(document.getElementById('measure1-alert').value),
-          measure2_name: measures[1],
-          measure2_part_number: measure2_pn,
-          measure2_serial_number: componentConfig.singleSerial ? '' : (document.getElementById('measure2-serial').value || ''),
-          measure2_current: measure2_current,
-          measure2_max: measure2_max,
-          measure2_alert: parseInt(document.getElementById('measure2-alert').value),
-          link_serial_number: componentConfig.singleSerial ? (document.getElementById('link-serial').value || '') : '',
-          last_inspection_date: inspection_date_iso,
-          inspection_history: JSON.stringify(inspectionHistory),
-          notes: document.getElementById('notes').value || '',
-          created_by: isEdit ? existingRecord.created_by : currentUser.username,
-          modified_by: isEdit ? currentUser.username : '',
-          created_at: isEdit ? existingRecord.created_at : new Date().toISOString(),
-          modified_at: isEdit ? new Date().toISOString() : ''
-        };
-      }
-      
-      let result;
-      if (isEdit) {
-        result = await updateRecord({ ...existingRecord, ...data });
-      } else {
-        result = await createRecord(data);
-      }
-      
-      if (result.isOk) {
-        showToast(isEdit ? 'Componente atualizado!' : 'Componente cadastrado!', 'success');
-        componentModal.classList.add('hidden');
-        componentForm.reset();
-        if (!colorSelectionView.classList.contains('hidden')) {
-          showComponentDetails(currentComponentType);
+        const result = isEdit
+          ? await updateRecord({ ...existingRecord, ...data })
+          : await createRecord(data);
+        
+        if (result.isOk) {
+          showToast(isEdit ? 'Componente atualizado!' : 'Componente cadastrado!', 'success');
+          componentModal.classList.add('hidden');
+          componentForm.reset();
+          if (!colorSelectionView.classList.contains('hidden')) {
+            renderComponentsForType(currentComponentType);
+          }
+        } else {
+          showToast(result.error || 'Erro ao salvar componente', 'error');
         }
-      } else {
-        showToast('Erro ao salvar componente', 'error');
+      } catch (error) {
+        console.error(error);
+        showToast(error.message || 'Erro ao salvar componente', 'error');
+      } finally {
+        isSubmitting = false;
+        submitBtn.disabled = false;
+        submitBtn.textContent = isEdit ? 'Salvar Alterações' : 'Cadastrar';
       }
-      
-      isSubmitting = false;
-      submitBtn.disabled = false;
-      submitBtn.textContent = isEdit ? 'Salvar Alterações' : 'Cadastrar';
     });
 
     // Unit Selection Event Listeners
@@ -2552,6 +2770,7 @@
       await onConfigChange(defaultConfig);
       try {
         await loadRecords();
+        restoreRodEndSessionState();
       } catch (error) {
         console.error(error);
         showToast('Erro ao carregar dados do ROD END', 'error');
