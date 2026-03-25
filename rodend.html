@@ -198,12 +198,6 @@
       background: rgba(0, 0, 0, 0.7);
       backdrop-filter: blur(8px);
     }
-
-    .measure-label-nowrap {
-      white-space: nowrap;
-      font-size: 0.92rem;
-      line-height: 1.1rem;
-    }
     
     .batman-zoom {
       position: fixed;
@@ -431,7 +425,7 @@
         <h2 id="component-type-title" class="text-2xl font-bold text-white"></h2>
        </div><button id="add-component-btn" class="btn-primary px-6 py-3 rounded-lg font-semibold text-white"> + Novo Componente </button>
       </div>
-      <div id="components-list" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"></div>
+      <div id="components-list" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3"></div>
       <div id="components-empty" class="hidden text-center py-12">
        <div class="w-20 h-20 mx-auto mb-4 rounded-2xl bg-slate-700/50 flex items-center justify-center">
         <svg class="w-10 h-10 text-slate-500" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
@@ -509,9 +503,9 @@
       </div>
      </div><!-- Unit Selection -->
      <div class="glass-card rounded-lg p-4"><label class="block text-sm font-medium text-slate-300 mb-3">Unidade de Medida</label>
-      <div class="flex gap-3"><label class="flex-1 cursor-pointer"> <input type="radio" name="unit" value="inch" class="hidden unit-radio">
+      <div class="flex gap-3"><label class="flex-1 cursor-pointer"> <input type="radio" name="unit" value="inch" class="hidden unit-radio" checked>
         <div class="unit-option input-field px-4 py-3 rounded-lg text-center transition-all border-2 border-blue-500"><span class="text-white font-semibold">📏 Polegadas</span>
-        </div></label> <label class="flex-1 cursor-pointer"> <input type="radio" name="unit" value="mm" class="hidden unit-radio" checked>
+        </div></label> <label class="flex-1 cursor-pointer"> <input type="radio" name="unit" value="mm" class="hidden unit-radio">
         <div class="unit-option input-field px-4 py-3 rounded-lg text-center transition-all border-2 border-transparent"><span class="text-white font-semibold">📐 Milímetros</span>
         </div></label>
       </div>
@@ -1372,7 +1366,7 @@
       availableColors.forEach(color => {
         const existingComp = existingComponents.find(c => c.component_color === color);
         const card = document.createElement('div');
-        card.className = 'glass-card rounded-xl p-6 cursor-pointer hover:border-blue-500/50 transition-all';
+        card.className = 'glass-card rounded-xl p-6 cursor-pointer hover:border-blue-500/50 transition-all w-full max-w-[340px]';
         
         if (existingComp) {
           const status = getComponentStatus(existingComp);
@@ -1450,8 +1444,8 @@
             : '';
           const partNumberDisplay = useSinglePartNumberDisplay ? `
             <div class="w-full mb-3 text-center">
-              <p class="text-white text-xs font-bold leading-tight">${singlePNBase}</p>
-              ${singlePNSuffix ? `<p class="text-slate-300 text-xs leading-tight">(P/N ${singlePNSuffix})</p>` : ''}
+              <p class="text-white text-[11px] font-bold leading-tight text-center">${singlePNBase}</p>
+              ${singlePNSuffix ? `<p class="text-slate-300 text-[11px] leading-tight text-center">(P/N ${singlePNSuffix})</p>` : ''}
             </div>
           ` : '';
           
@@ -1463,8 +1457,8 @@
               
               <div class="w-full space-y-2 mb-3">
                 <div class="measure-zoom-trigger bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-lg p-3 border border-blue-500/20 cursor-pointer hover:border-blue-500/50 transition-all" data-measure="1">
-                  <p class="text-slate-300 text-xs mb-1 measure-label-nowrap">${existingComp.measure1_name}</p>
-                  ${!useSinglePartNumberDisplay ? `<p class="text-slate-300 text-xs mb-1 measure-label-nowrap">${existingComp.measure1_part_number || ''}</p>` : ''}
+                  <p class="text-slate-300 text-xs mb-1">${existingComp.measure1_name}</p>
+                  ${!useSinglePartNumberDisplay ? `<p class="text-slate-300 text-xs mb-1">${existingComp.measure1_part_number || ''}</p>` : ''}
                   <p class="text-white text-2xl font-bold">${inchToMm(existingComp.measure1_current).toFixed(2)} mm</p>
                   <div class="progress-bar mt-1">
                     <div class="progress-fill ${m1Percent >= 100 ? 'bg-red-500' : m1Percent >= existingComp.measure1_alert ? 'bg-amber-500' : 'bg-green-500'}" 
@@ -1473,8 +1467,8 @@
                 </div>
                 
                 <div class="measure-zoom-trigger bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-lg p-3 border border-blue-500/20 cursor-pointer hover:border-blue-500/50 transition-all" data-measure="2">
-                  <p class="text-slate-300 text-xs mb-1 measure-label-nowrap">${existingComp.measure2_name}</p>
-                  ${!useSinglePartNumberDisplay ? `<p class="text-slate-300 text-xs mb-1 measure-label-nowrap">${existingComp.measure2_part_number || ''}</p>` : ''}
+                  <p class="text-slate-300 text-xs mb-1">${existingComp.measure2_name}</p>
+                  ${!useSinglePartNumberDisplay ? `<p class="text-slate-300 text-xs mb-1">${existingComp.measure2_part_number || ''}</p>` : ''}
                   <p class="text-white text-2xl font-bold">${inchToMm(existingComp.measure2_current).toFixed(2)} mm</p>
                   <div class="progress-bar mt-1">
                     <div class="progress-fill ${m2Percent >= 100 ? 'bg-red-500' : m2Percent >= existingComp.measure2_alert ? 'bg-amber-500' : 'bg-green-500'}" 
@@ -1675,9 +1669,9 @@
           `;
         } else {
           currentSNInfo.innerHTML = `
-            <p class="text-slate-300 text-sm mb-1 measure-label-nowrap"><strong>${config.measures[0]}:</strong></p>
+            <p class="text-slate-300 text-sm mb-1"><strong>${config.measures[0]}:</strong></p>
             <p class="text-slate-400 text-xs mb-2">P/N: ${existingComp.measure1_part_number}${existingComp.measure1_serial_number ? ' | S/N: ' + existingComp.measure1_serial_number : ''}</p>
-            <p class="text-slate-300 text-sm mb-1 measure-label-nowrap"><strong>${config.measures[1]}:</strong></p>
+            <p class="text-slate-300 text-sm mb-1"><strong>${config.measures[1]}:</strong></p>
             <p class="text-slate-400 text-xs">P/N: ${existingComp.measure2_part_number}${existingComp.measure2_serial_number ? ' | S/N: ' + existingComp.measure2_serial_number : ''}</p>
           `;
         }
