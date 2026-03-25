@@ -402,14 +402,14 @@
    </div><!-- ========== AIRCRAFT DETAILS VIEW ========== -->
    <div id="aircraft-details-view" class="hidden w-full p-4 md:p-6 lg:p-8">
     <div class="max-w-7xl mx-auto">
-     <div class="flex items-center justify-between mb-8">
+     <div class="flex items-center justify-between mb-8 gap-3 flex-wrap">
       <div class="flex-1"><button id="back-to-dashboard" class="text-slate-400 hover:text-white mb-4 flex items-center gap-2 transition-colors">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
         </svg> Voltar ao Dashboard </button>
        <div class="flex items-center gap-4">
         <h1 id="aircraft-title" class="text-3xl md:text-4xl font-bold text-white"></h1><span id="aircraft-model-badge" class="px-4 py-2 bg-blue-500/20 text-blue-300 rounded-lg font-medium text-sm"></span>
        </div>
-      </div><button id="delete-aircraft-btn" class="glass-card px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors"> 🗑️ Excluir Aeronave </button>
+      </div><div class="flex items-center gap-3 flex-wrap"><button id="view-diagram-btn" class="hidden glass-card px-4 py-2 rounded-lg text-white hover:bg-white/10 transition-colors">📐 Ver esquema AW139</button><button id="delete-aircraft-btn" class="glass-card px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors"> 🗑️ Excluir Aeronave </button></div>
      </div><!-- Component Options -->
      <div id="component-options" class="space-y-6">
       <div>
@@ -418,16 +418,12 @@
       </div>
      </div><!-- Color Selection View -->
      <div id="color-selection-view" class="hidden space-y-6">
-      <div class="flex items-center justify-between gap-3 flex-wrap">
+      <div class="flex items-center justify-between">
        <div><button id="back-to-components" class="text-slate-400 hover:text-white mb-4 flex items-center gap-2 transition-colors">
          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
          </svg> Voltar aos Componentes </button>
         <h2 id="component-type-title" class="text-2xl font-bold text-white"></h2>
-       </div>
-       <div class="flex items-center gap-3 flex-wrap">
-        <button id="view-diagram-btn" class="hidden glass-card px-4 py-3 rounded-lg font-semibold text-white hover:bg-white/10 transition-colors"> 📐 Ver esquema </button>
-        <button id="add-component-btn" class="btn-primary px-6 py-3 rounded-lg font-semibold text-white"> + Novo Componente </button>
-       </div>
+       </div><button id="add-component-btn" class="btn-primary px-6 py-3 rounded-lg font-semibold text-white"> + Novo Componente </button>
       </div>
       <div id="components-list" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3"></div>
       <div id="components-empty" class="hidden text-center py-12">
@@ -589,49 +585,42 @@
      </div>
     </form>
    </div>
-  </div><!-- ========== AW139 DIAGRAM MODAL ========== -->
+  </div><!-- ========== DIAGRAM MODAL ========== -->
   <div id="diagram-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
    <div id="diagram-modal-backdrop" class="modal-backdrop absolute inset-0"></div>
-   <div class="relative glass-card rounded-2xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto animate-slide-in">
+   <div class="relative glass-card rounded-2xl p-6 max-w-4xl w-full animate-slide-in">
     <div class="flex items-center justify-between mb-6">
      <div>
-      <h3 id="diagram-modal-title" class="text-2xl font-bold text-white">Esquema técnico</h3>
-      <p class="text-slate-400 text-sm mt-1">Referência visual para identificar Upper Rod End e Lower Rod End no AW139.</p>
+      <h3 id="diagram-modal-title" class="text-2xl font-bold text-white">Esquema técnico AW139</h3>
+      <p class="text-slate-400 text-sm mt-1">Referência visual para Upper Rod End e Lower Rod End.</p>
      </div>
      <button id="diagram-modal-close" class="text-slate-400 hover:text-white transition-colors">
-      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
      </button>
     </div>
-    <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_280px] gap-6 items-start">
-     <div class="bg-white rounded-2xl p-4 flex items-center justify-center min-h-[320px]">
-      <img id="diagram-image" src="/aw139_pitch_link.png" alt="Esquema técnico do AW139 Pitch Link" class="max-w-full max-h-[60vh] object-contain rounded-xl" onerror="this.style.display='none'; document.getElementById('diagram-image-fallback').classList.remove('hidden');">
-      <div id="diagram-image-fallback" class="hidden text-center text-slate-700 px-6">
-       <p class="font-bold mb-2">Imagem não encontrada</p>
+    <div class="space-y-4">
+     <div class="rounded-2xl bg-slate-900/60 border border-slate-700 p-4 flex items-center justify-center">
+      <img id="diagram-image" src="/aw139_pitch_link.png" alt="Esquema técnico do AW139 Pitch Link" class="max-w-full max-h-[65vh] object-contain rounded-xl" onerror="this.style.display='none'; document.getElementById('diagram-image-fallback').classList.remove('hidden');">
+      <div id="diagram-image-fallback" class="hidden text-center text-slate-300">
+       <p class="font-semibold mb-2">Imagem não encontrada.</p>
        <p class="text-sm">Salve o arquivo como <strong>aw139_pitch_link.png</strong> na mesma pasta do <strong>app.py</strong>.</p>
       </div>
      </div>
-     <div class="space-y-4">
+     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div class="glass-card rounded-xl p-4">
-       <p class="text-white font-semibold mb-2">Legenda rápida</p>
-       <div class="space-y-2 text-sm">
-        <div class="flex items-start gap-2">
-         <span class="text-cyan-400 font-bold">1.</span>
-         <p class="text-slate-300"><strong class="text-white">Upper Rod End</strong>: referência da medição superior.</p>
-        </div>
-        <div class="flex items-start gap-2">
-         <span class="text-cyan-400 font-bold">2.</span>
-         <p class="text-slate-300"><strong class="text-white">Lower Rod End</strong>: referência da medição inferior.</p>
-        </div>
-       </div>
+       <p class="text-white font-bold mb-1">Upper Rod End</p>
+       <p class="text-slate-300 text-sm">Corresponde à medição superior do conjunto.</p>
       </div>
       <div class="glass-card rounded-xl p-4">
-       <p class="text-white font-semibold mb-2">Uso recomendado</p>
-       <p class="text-slate-300 text-sm leading-6">Use esta referência apenas como apoio visual durante o preenchimento. O cadastro e a medição continuam sendo feitos normalmente nos campos do componente.</p>
+       <p class="text-white font-bold mb-1">Lower Rod End</p>
+       <p class="text-slate-300 text-sm">Corresponde à medição inferior do conjunto.</p>
       </div>
      </div>
     </div>
    </div>
-  </div><!-- ========== PRINT CONTAINER ========== -->
+  </div>
+
+  <!-- ========== PRINT CONTAINER ========== -->
   <div id="print-container" class="hidden"></div>
   <script>
     // ========== GLOBAL STATE ==========
@@ -651,6 +640,21 @@
     const componentOptions = document.getElementById('component-options');
     const colorSelectionView = document.getElementById('color-selection-view');
     const viewDiagramBtn = document.getElementById('view-diagram-btn');
+
+    function updateDiagramButtonVisibility() {
+      if (!viewDiagramBtn) return;
+      const shouldShow = currentAircraft && currentAircraft.model === 'AW139';
+      viewDiagramBtn.classList.toggle('hidden', !shouldShow);
+    }
+
+    function openTechnicalDiagram() {
+      document.getElementById('diagram-modal-title').textContent = currentAircraft && currentAircraft.model ? `${currentAircraft.model} - Pitch Link` : 'Esquema técnico AW139';
+      document.getElementById('diagram-modal').classList.remove('hidden');
+    }
+
+    function closeTechnicalDiagram() {
+      document.getElementById('diagram-modal').classList.add('hidden');
+    }
 
     // ========== CONSTANTS ==========
     const ADMIN_USER = 'admin';
@@ -1383,29 +1387,6 @@
         btn.addEventListener('click', () => showComponentDetails(componentType));
         buttonsContainer.appendChild(btn);
       });
-    }
-
-    function shouldShowTechnicalDiagram() {
-      return currentAircraft.model === 'AW139' && currentComponentType === 'Main Rotor Link';
-    }
-
-    function updateTechnicalDiagramButton() {
-      if (!viewDiagramBtn) return;
-      if (shouldShowTechnicalDiagram()) {
-        viewDiagramBtn.classList.remove('hidden');
-      } else {
-        viewDiagramBtn.classList.add('hidden');
-      }
-    }
-
-    function openTechnicalDiagram() {
-      if (!shouldShowTechnicalDiagram()) return;
-      document.getElementById('diagram-modal-title').textContent = `${currentAircraft.model} - ${currentComponentType}`;
-      document.getElementById('diagram-modal').classList.remove('hidden');
-    }
-
-    function closeTechnicalDiagram() {
-      document.getElementById('diagram-modal').classList.add('hidden');
     }
 
     function showComponentDetails(componentType) {
@@ -2447,18 +2428,7 @@
       componentOptions.classList.remove('hidden');
       document.getElementById('components-list').innerHTML = '';
       document.getElementById('components-empty').classList.add('hidden');
-      if (viewDiagramBtn) viewDiagramBtn.classList.add('hidden');
-      closeTechnicalDiagram();
     });
-    if (viewDiagramBtn) {
-      viewDiagramBtn.addEventListener('click', () => {
-        openTechnicalDiagram();
-      });
-    }
-
-    document.getElementById('diagram-modal-close').addEventListener('click', () => closeTechnicalDiagram());
-    document.getElementById('diagram-modal-backdrop').addEventListener('click', () => closeTechnicalDiagram());
-
 
     // Add Aircraft Modal
     const addAircraftModal = document.getElementById('add-aircraft-modal');
