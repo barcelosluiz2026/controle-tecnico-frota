@@ -1879,27 +1879,58 @@
       });
     }
 
+    
     // ========== PRINT REPORT ==========
+    function getReportRules(model, componentType) {
+      const rules = {
+        'EC175': {
+          'Main Rotor Link': { positions: 5, physicalPerPosition: 2, measurementsPerPosition: 2, statusRule: 'pior entre Upper / Lower' },
+          'Tail Rotor Link': { positions: 3, physicalPerPosition: 1, measurementsPerPosition: 2, statusRule: 'pior entre Inboard / Outboard' },
+          'Tail Rotor Damper': { positions: 3, physicalPerPosition: 2, measurementsPerPosition: 2, statusRule: 'pior entre RH / LH' }
+        },
+        'AW139': {
+          'Main Rotor Link': { positions: 5, physicalPerPosition: 2, measurementsPerPosition: 2, statusRule: 'pior entre Upper / Lower' },
+          'Tail Rotor Link': { positions: 4, physicalPerPosition: 2, measurementsPerPosition: 2, statusRule: 'pior entre Upper / Lower' }
+        }
+      };
+
+      return rules?.[model]?.[componentType] || {
+        positions: 0,
+        physicalPerPosition: 1,
+        measurementsPerPosition: 2,
+        statusRule: 'pior medição do conjunto'
+      };
+    }
+
+    function getReportComponentTypes(model) {
+      return Object.keys(COMPONENT_CONFIG?.[model] || {});
+    }
+
+    function formatPercent(value) {
+      if (!Number.isFinite(value)) return '0%';
+      return `${value.toFixed(1)}%`;
+    }
+
+    function getComponentWorstPercent(component) {
+      const m1Percent = (component.measure1_current / component.measure1_max) * 100;
+      const m2Percent = (component.measure2_current / component.measure2_max) * 100;
+      return Math.max(
+        Number.isFinite(m1Percent) ? m1Percent : 0,
+        Number.isFinite(m2Percent) ? m2Percent : 0
+      );
+    }
+
     function generateReport() {
       const dataRecords = getDataRecords();
       const components = dataRecords.filter(r => r.component_type !== '_aircraft_marker');
-      
-      // Filter components near limit (>= alert threshold)
-      const alertComponents = components.filter(comp => {
-        const m1Percent = (comp.measure1_current / comp.measure1_max) * 100;
-        const m2Percent = (comp.measure2_current / comp.measure2_max) * 100;
-        const maxPercent = Math.max(m1Percent, m2Percent);
-        return maxPercent >= comp.measure1_alert;
-      });
-      
-      if (alertComponents.length === 0) {
-        showToast('Nenhum componente perto do limite!', 'error');
+
+      if (components.length === 0) {
+        showToast('Nenhum componente cadastrado para gerar relatório.', 'error');
         return;
       }
-      
-      // Group by aircraft (prefix + model)
+
       const groupedByAircraft = {};
-      alertComponents.forEach(comp => {
+      components.forEach(comp => {
         const key = `${comp.aircraft_prefix}_${comp.aircraft_model}`;
         if (!groupedByAircraft[key]) {
           groupedByAircraft[key] = {
@@ -1910,196 +1941,143 @@
         }
         groupedByAircraft[key].components.push(comp);
       });
-      
-      // Generate HTML report
+
       const now = new Date();
       const dateStr = now.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
       const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-      
+
       let html = `
-        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 1200px; margin: 0 auto; background: white !important; color: black !important;">
-          <div style="text-align: center; margin-bottom: 30px; border-bottom: 3px solid #333; padding-bottom: 20px;">
-            <h1 style="margin: 0; font-size: 24px; color: #000;">RELATÓRIO DE FOLGAS PRÓXIMAS AO LIMITE</h1>
-            <p style="margin: 10px 0 0 0; font-size: 14px; color: #666;">Sistema de Monitoramento de Helicópteros</p>
-            <p style="margin: 5px 0 0 0; font-size: 12px; color: #666;">Gerado em: ${dateStr} às ${timeStr}</p>
+        <div style="font-family: Inter, Arial, sans-serif; color: #111827; padding: 24px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px; border-bottom:2px solid #1d4ed8; padding-bottom:12px;">
+            <div>
+              <h1 style="font-size: 28px; font-weight: 800; margin: 0 0 8px 0;">Relatório Geral ROD END</h1>
+              <p style="margin:0; color:#475569;">Data/Hora: ${dateStr} ${timeStr}</p>
+              <p style="margin:4px 0 0 0; color:#475569;">Gerado por: ${currentUser.username}</p>
+            </div>
           </div>
       `;
-      
-      // Iterate through each aircraft
-      Object.values(groupedByAircraft).forEach((aircraft, aircraftIdx) => {
+
+      const aircraftKeys = Object.keys(groupedByAircraft).sort((a, b) => a.localeCompare(b));
+
+      aircraftKeys.forEach((key) => {
+        const aircraft = groupedByAircraft[key];
+        const modelComponentTypes = getReportComponentTypes(aircraft.model);
+        const aircraftComponents = aircraft.components;
+
         html += `
-          <div style="margin-bottom: 40px; ${aircraftIdx > 0 ? 'page-break-before: always;' : ''}">
-            <div style="background: #f0f0f0; padding: 15px; margin-bottom: 20px; border-left: 5px solid #333;">
-              <h2 style="margin: 0; font-size: 20px; color: #000;">${aircraft.prefix} - ${aircraft.model}</h2>
-              <p style="margin: 5px 0 0 0; font-size: 14px; color: #666;">Total de componentes em alerta: ${aircraft.components.length}</p>
+          <div style="margin-bottom: 28px; page-break-inside: avoid;">
+            <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:12px; padding:14px 16px; margin-bottom:12px;">
+              <h2 style="font-size:22px; font-weight:800; margin:0; color:#1e3a8a;">${aircraft.prefix} • ${aircraft.model}</h2>
             </div>
         `;
-        
-        // Summary table for this aircraft
-        const summary = {};
-        aircraft.components.forEach(comp => {
-          const m1Percent = (comp.measure1_current / comp.measure1_max) * 100;
-          const m2Percent = (comp.measure2_current / comp.measure2_max) * 100;
-          
-          // Measure 1
-          if (m1Percent >= comp.measure1_alert) {
-            const m1Key = `${comp.measure1_name}|${comp.measure1_part_number}`;
-            if (!summary[m1Key]) {
-              summary[m1Key] = {
-                description: comp.measure1_name,
-                partNumber: comp.measure1_part_number,
-                count: 0
-              };
-            }
-            summary[m1Key].count++;
-          }
-          
-          // Measure 2
-          if (m2Percent >= comp.measure2_alert) {
-            const m2Key = `${comp.measure2_name}|${comp.measure2_part_number}`;
-            if (!summary[m2Key]) {
-              summary[m2Key] = {
-                description: comp.measure2_name,
-                partNumber: comp.measure2_part_number,
-                count: 0
-              };
-            }
-            summary[m2Key].count++;
-          }
-        });
-        
-        html += `
-          <div style="margin-bottom: 25px;">
-            <h3 style="font-size: 16px; color: #000; margin-bottom: 10px; border-bottom: 2px solid #ccc; padding-bottom: 5px;">Resumo Quantitativo</h3>
-            <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 20px;">
-              <thead>
-                <tr style="background: #333; color: white;">
-                  <th style="padding: 10px; text-align: left; border: 1px solid #ccc;">Descrição</th>
-                  <th style="padding: 10px; text-align: left; border: 1px solid #ccc;">Part Number</th>
-                  <th style="padding: 10px; text-align: center; border: 1px solid #ccc;">Quantidade</th>
+
+        modelComponentTypes.forEach((componentType) => {
+          const rules = getReportRules(aircraft.model, componentType);
+          const compsOfType = aircraftComponents
+            .filter(comp => comp.component_type === componentType)
+            .sort((a, b) => String(a.component_color || '').localeCompare(String(b.component_color || '')));
+
+          const registeredPositions = compsOfType.length;
+          const expectedPositions = rules.positions;
+          const missingPositions = Math.max(expectedPositions - registeredPositions, 0);
+
+          let normalCount = 0;
+          let attentionCount = 0;
+          let criticalCount = 0;
+          const alertRows = [];
+
+          compsOfType.forEach((comp) => {
+            const status = getComponentStatus(comp);
+            const worstPercent = getComponentWorstPercent(comp);
+            if (status.status === 'critical') criticalCount += 1;
+            else if (status.status === 'attention') attentionCount += 1;
+            else normalCount += 1;
+
+            if (status.status !== 'normal') {
+              alertRows.push(`
+                <tr>
+                  <td style="padding:6px 8px; border-bottom:1px solid #e5e7eb;">${comp.component_color || '-'}</td>
+                  <td style="padding:6px 8px; border-bottom:1px solid #e5e7eb;">${status.label}</td>
+                  <td style="padding:6px 8px; border-bottom:1px solid #e5e7eb; text-align:right;">${formatPercent(worstPercent)}</td>
+                  <td style="padding:6px 8px; border-bottom:1px solid #e5e7eb;">${comp.last_inspection_date ? new Date(comp.last_inspection_date).toLocaleDateString('pt-BR') : '-'}</td>
                 </tr>
-              </thead>
-              <tbody>
-        `;
-        
-        Object.values(summary).forEach((item, idx) => {
+              `);
+            }
+          });
+
+          const totalPhysicalExpected = expectedPositions * rules.physicalPerPosition;
+          const totalMeasurementsExpected = expectedPositions * rules.measurementsPerPosition;
+          const totalPhysicalRegistered = registeredPositions * rules.physicalPerPosition;
+          const totalMeasurementsRegistered = registeredPositions * rules.measurementsPerPosition;
+
           html += `
-            <tr style="background: ${idx % 2 === 0 ? '#f9f9f9' : 'white'};">
-              <td style="padding: 8px; border: 1px solid #ccc;">${item.description}</td>
-              <td style="padding: 8px; border: 1px solid #ccc; font-family: monospace;">${item.partNumber}</td>
-              <td style="padding: 8px; border: 1px solid #ccc; text-align: center; font-weight: bold;">${item.count}</td>
-            </tr>
+            <div style="border:1px solid #dbeafe; border-radius:12px; overflow:hidden; margin-bottom:14px;">
+              <div style="background:#f8fafc; padding:12px 14px; border-bottom:1px solid #e5e7eb;">
+                <h3 style="margin:0; font-size:18px; font-weight:800; color:#0f172a;">${componentType}</h3>
+                <p style="margin:4px 0 0 0; font-size:12px; color:#64748b;">Status operacional: ${rules.statusRule}</p>
+              </div>
+
+              <div style="padding:14px;">
+                <table style="width:100%; border-collapse:collapse; font-size:14px; margin-bottom:12px;">
+                  <thead>
+                    <tr style="background:#f8fafc;">
+                      <th style="text-align:left; padding:8px; border:1px solid #e5e7eb;">Posições Previstas</th>
+                      <th style="text-align:left; padding:8px; border:1px solid #e5e7eb;">Posições Cadastradas</th>
+                      <th style="text-align:left; padding:8px; border:1px solid #e5e7eb;">Componentes Físicos</th>
+                      <th style="text-align:left; padding:8px; border:1px solid #e5e7eb;">Medições</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td style="padding:8px; border:1px solid #e5e7eb;">${expectedPositions}</td>
+                      <td style="padding:8px; border:1px solid #e5e7eb;">${registeredPositions}${missingPositions > 0 ? ` <span style="color:#b45309;">(faltando ${missingPositions})</span>` : ''}</td>
+                      <td style="padding:8px; border:1px solid #e5e7eb;">${totalPhysicalRegistered} cadastrados / ${totalPhysicalExpected} previstos</td>
+                      <td style="padding:8px; border:1px solid #e5e7eb;">${totalMeasurementsRegistered} registradas / ${totalMeasurementsExpected} previstas</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
+                  <div style="background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; padding:8px 12px; border-radius:10px; font-size:13px; font-weight:700;">Normais: ${normalCount}</div>
+                  <div style="background:#fffbeb; border:1px solid #fcd34d; color:#92400e; padding:8px 12px; border-radius:10px; font-size:13px; font-weight:700;">Atenção: ${attentionCount}</div>
+                  <div style="background:#fef2f2; border:1px solid #fca5a5; color:#991b1b; padding:8px 12px; border-radius:10px; font-size:13px; font-weight:700;">Críticos: ${criticalCount}</div>
+                </div>
+
+                ${alertRows.length > 0 ? `
+                  <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                    <thead>
+                      <tr style="background:#f8fafc;">
+                        <th style="text-align:left; padding:6px 8px; border-bottom:1px solid #cbd5e1;">Cor / Posição</th>
+                        <th style="text-align:left; padding:6px 8px; border-bottom:1px solid #cbd5e1;">Status</th>
+                        <th style="text-align:right; padding:6px 8px; border-bottom:1px solid #cbd5e1;">% pior medição</th>
+                        <th style="text-align:left; padding:6px 8px; border-bottom:1px solid #cbd5e1;">Última inspeção</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${alertRows.join('')}
+                    </tbody>
+                  </table>
+                ` : `<p style="margin:0; color:#475569; font-size:13px;">Nenhuma posição em atenção/crítica neste grupo.</p>`}
+              </div>
+            </div>
           `;
         });
-        
-        html += `
-              </tbody>
-            </table>
-          </div>
-        `;
-        
-        // Detailed table for this aircraft
-        html += `
-          <div style="margin-bottom: 20px;">
-            <h3 style="font-size: 16px; color: #000; margin-bottom: 10px; border-bottom: 2px solid #ccc; padding-bottom: 5px;">Detalhamento dos Componentes</h3>
-            <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
-              <thead>
-                <tr style="background: #333; color: white;">
-                  <th style="padding: 8px; text-align: left; border: 1px solid #ccc;">Componente</th>
-                  <th style="padding: 8px; text-align: left; border: 1px solid #ccc;">Cor</th>
-                  <th style="padding: 8px; text-align: left; border: 1px solid #ccc;">Descrição</th>
-                  <th style="padding: 8px; text-align: left; border: 1px solid #ccc;">P/N</th>
-                  <th style="padding: 8px; text-align: left; border: 1px solid #ccc;">S/N</th>
-                  <th style="padding: 8px; text-align: center; border: 1px solid #ccc;">Mediç  o</th>
-                  <th style="padding: 8px; text-align: center; border: 1px solid #ccc;">%</th>
-                  <th style="padding: 8px; text-align: center; border: 1px solid #ccc;">Data</th>
-                  <th style="padding: 8px; text-align: center; border: 1px solid #ccc;">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-        `;
-        
-        aircraft.components.forEach((comp, idx) => {
-          const m1Percent = (comp.measure1_current / comp.measure1_max) * 100;
-          const m2Percent = (comp.measure2_current / comp.measure2_max) * 100;
-          const inspectionDate = new Date(comp.last_inspection_date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-          
-          const colorMap = {
-            'Yellow': '🟡 Amarelo',
-            'Green': '🟢 Verde',
-            'Blue': '🔵 Azul',
-            'Red': '🔴 Vermelho',
-            'Black': '⚫ Preto',
-            'White': '⚪ Branco'
-          };
-          
-          // Row for measure 1
-          if (m1Percent >= comp.measure1_alert) {
-            const m1Status = m1Percent >= 100 ? 'CRÍTICO' : 'ATENÇÃO';
-            const m1Color = m1Percent >= 100 ? '#ef4444' : '#f59e0b';
-            
-            html += `
-              <tr style="background: ${idx % 2 === 0 ? '#f9f9f9' : 'white'};">
-                <td style="padding: 8px; border: 1px solid #ccc;">${comp.component_type}</td>
-                <td style="padding: 8px; border: 1px solid #ccc;">${colorMap[comp.component_color] || comp.component_color}</td>
-                <td style="padding: 8px; border: 1px solid #ccc;">${comp.measure1_name}</td>
-                <td style="padding: 8px; border: 1px solid #ccc; font-family: monospace; font-size: 10px;">${comp.measure1_part_number}</td>
-                <td style="padding: 8px; border: 1px solid #ccc; font-family: monospace; font-size: 10px;">${comp.measure1_serial_number || '-'}</td>
-                <td style="padding: 8px; border: 1px solid #ccc; text-align: center; font-weight: bold;">${comp.measure1_current.toFixed(3)}"</td>
-                <td style="padding: 8px; border: 1px solid #ccc; text-align: center; font-weight: bold; color: ${m1Color};">${m1Percent.toFixed(1)}%</td>
-                <td style="padding: 8px; border: 1px solid #ccc; text-align: center;">${inspectionDate}</td>
-                <td style="padding: 8px; border: 1px solid #ccc; text-align: center; font-weight: bold; color: ${m1Color};">${m1Status}</td>
-              </tr>
-            `;
-          }
-          
-          // Row for measure 2
-          if (m2Percent >= comp.measure2_alert) {
-            const m2Status = m2Percent >= 100 ? 'CRÍTICO' : 'ATENÇÃO';
-            const m2Color = m2Percent >= 100 ? '#ef4444' : '#f59e0b';
-            
-            html += `
-              <tr style="background: ${idx % 2 === 0 ? '#f9f9f9' : 'white'};">
-                <td style="padding: 8px; border: 1px solid #ccc;">${comp.component_type}</td>
-                <td style="padding: 8px; border: 1px solid #ccc;">${colorMap[comp.component_color] || comp.component_color}</td>
-                <td style="padding: 8px; border: 1px solid #ccc;">${comp.measure2_name}</td>
-                <td style="padding: 8px; border: 1px solid #ccc; font-family: monospace; font-size: 10px;">${comp.measure2_part_number}</td>
-                <td style="padding: 8px; border: 1px solid #ccc; font-family: monospace; font-size: 10px;">${comp.measure2_serial_number || '-'}</td>
-                <td style="padding: 8px; border: 1px solid #ccc; text-align: center; font-weight: bold;">${comp.measure2_current.toFixed(3)}"</td>
-                <td style="padding: 8px; border: 1px solid #ccc; text-align: center; font-weight: bold; color: ${m2Color};">${m2Percent.toFixed(1)}%</td>
-                <td style="padding: 8px; border: 1px solid #ccc; text-align: center;">${inspectionDate}</td>
-                <td style="padding: 8px; border: 1px solid #ccc; text-align: center; font-weight: bold; color: ${m2Color};">${m2Status}</td>
-              </tr>
-            `;
-          }
-        });
-        
-        html += `
-              </tbody>
-            </table>
-          </div>
-        </div>
-        `;
+
+        html += `</div>`;
       });
-      
-      html += `
-          <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #ccc; text-align: center; font-size: 11px; color: #666;">
-            <p>Relatório gerado automaticamente pelo Sistema de Controle de Folga ROD END</p>
-            <p>Usuário: ${currentUser.username} | Data/Hora: ${dateStr} ${timeStr}</p>
-          </div>
-        </div>
-      `;
-      
-      // Insert into print container and trigger print
+
+      html += `</div>`;
+
       const printContainer = document.getElementById('print-container');
       printContainer.innerHTML = html;
       printContainer.classList.remove('hidden');
-      
+
       setTimeout(() => {
         window.print();
         printContainer.classList.add('hidden');
       }, 250);
     }
+
 
     // ========== EVENT LISTENERS ==========
 
