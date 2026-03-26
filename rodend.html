@@ -1911,32 +1911,47 @@
       return 3;
     }
 
+    function getShortMeasureLabel(label) {
+      const clean = String(label || '').trim();
+      const map = {
+        'Rod End Upper': 'Upper',
+        'Rod End Lower': 'Lower',
+        'Upper Rod End': 'Upper',
+        'Lower Rod End': 'Lower',
+        'RH DAMPER ROD END': 'RH',
+        'LH DAMPER ROD END': 'LH',
+        'Inboard': 'Inboard',
+        'Outboard': 'Outboard'
+      };
+      return map[clean] || clean || 'Med';
+    }
+
     function buildMeasurementSummary(component) {
-      const label1 = component.measure1_name || 'Medição 1';
-      const label2 = component.measure2_name || 'Medição 2';
-      return `${label1}: ${formatMm(component.measure1_current)} | ${label2}: ${formatMm(component.measure2_current)}`;
+      const label1 = getShortMeasureLabel(component.measure1_name);
+      const label2 = getShortMeasureLabel(component.measure2_name);
+      return `<div>${label1}: ${formatMm(component.measure1_current)}</div><div>${label2}: ${formatMm(component.measure2_current)}</div>`;
     }
 
     function buildPartNumberSummary(component) {
-      const label1 = component.measure1_name || 'Medição 1';
-      const label2 = component.measure2_name || 'Medição 2';
+      const label1 = getShortMeasureLabel(component.measure1_name);
+      const label2 = getShortMeasureLabel(component.measure2_name);
       const pn1 = String(component.measure1_part_number || '').trim();
       const pn2 = String(component.measure2_part_number || '').trim();
 
       if (pn1 && pn2 && pn1 === pn2) return pn1;
-      return `${label1}: ${pn1 || '-'} | ${label2}: ${pn2 || '-'}`;
+      return `<div>${label1}: ${pn1 || '-'}</div><div>${label2}: ${pn2 || '-'}</div>`;
     }
 
     function buildSerialSummary(component) {
-      const label1 = component.measure1_name || 'Medição 1';
-      const label2 = component.measure2_name || 'Medição 2';
+      const label1 = getShortMeasureLabel(component.measure1_name);
+      const label2 = getShortMeasureLabel(component.measure2_name);
       const sn1 = String(component.measure1_serial_number || '').trim();
       const sn2 = String(component.measure2_serial_number || '').trim();
       const linkSn = String(component.link_serial_number || '').trim();
 
       if (linkSn && !sn1 && !sn2) return linkSn;
       if (sn1 && sn2 && sn1 === sn2) return sn1;
-      return `${label1}: ${sn1 || '-'} | ${label2}: ${sn2 || '-'}${linkSn ? ` | Link: ${linkSn}` : ''}`;
+      return `<div>${label1}: ${sn1 || '-'}</div><div>${label2}: ${sn2 || '-'}</div>${linkSn ? `<div>Link: ${linkSn}</div>` : ''}`;
     }
 
     function generateReport() {
@@ -2014,17 +2029,17 @@
               <h2 style="font-size:20px; font-weight:800; margin:0; color:#0f172a;">${group.prefix}</h2>
             </div>
             <div style="border:1px solid #cbd5e1; border-top:none; border-radius:0 0 12px 12px; overflow:hidden;">
-              <table style="width:100%; border-collapse:collapse; font-size:12px;">
+              <table style="width:100%; border-collapse:collapse; font-size:11px; table-layout:fixed;">
                 <thead>
                   <tr style="background:#eff6ff;">
-                    <th style="text-align:left; padding:8px; border-bottom:1px solid #cbd5e1;">Componente</th>
-                    <th style="text-align:left; padding:8px; border-bottom:1px solid #cbd5e1;">Cor / Posição</th>
-                    <th style="text-align:left; padding:8px; border-bottom:1px solid #cbd5e1;">Status</th>
-                    <th style="text-align:left; padding:8px; border-bottom:1px solid #cbd5e1;">P/N</th>
-                    <th style="text-align:left; padding:8px; border-bottom:1px solid #cbd5e1;">S/N</th>
-                    <th style="text-align:left; padding:8px; border-bottom:1px solid #cbd5e1;">Medida encontrada</th>
-                    <th style="text-align:left; padding:8px; border-bottom:1px solid #cbd5e1;">Data inspeção</th>
-                    <th style="text-align:left; padding:8px; border-bottom:1px solid #cbd5e1;">Observação</th>
+                    <th style="width:12%; text-align:left; padding:8px; border-bottom:1px solid #cbd5e1;">Componente</th>
+                    <th style="width:8%; text-align:left; padding:8px; border-bottom:1px solid #cbd5e1;">Cor / Posição</th>
+                    <th style="width:8%; text-align:left; padding:8px; border-bottom:1px solid #cbd5e1;">Status</th>
+                    <th style="width:20%; text-align:left; padding:8px; border-bottom:1px solid #cbd5e1;">P/N</th>
+                    <th style="width:12%; text-align:left; padding:8px; border-bottom:1px solid #cbd5e1;">S/N</th>
+                    <th style="width:18%; text-align:left; padding:8px; border-bottom:1px solid #cbd5e1;">Medida encontrada</th>
+                    <th style="width:10%; text-align:left; padding:8px; border-bottom:1px solid #cbd5e1;">Data inspeção</th>
+                    <th style="width:12%; text-align:left; padding:8px; border-bottom:1px solid #cbd5e1;">Observação</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2033,14 +2048,14 @@
         items.forEach(({ comp, status }) => {
           html += `
             <tr>
-              <td style="padding:8px; border-bottom:1px solid #e5e7eb; vertical-align:top;">${comp.component_type || '-'}</td>
-              <td style="padding:8px; border-bottom:1px solid #e5e7eb; vertical-align:top;">${comp.component_color || '-'}</td>
+              <td style="padding:8px; border-bottom:1px solid #e5e7eb; vertical-align:top; line-height:1.45; word-break:break-word;">${comp.component_type || '-'}</td>
+              <td style="padding:8px; border-bottom:1px solid #e5e7eb; vertical-align:top; line-height:1.45; word-break:break-word;">${comp.component_color || '-'}</td>
               <td style="padding:8px; border-bottom:1px solid #e5e7eb; vertical-align:top; font-weight:700; color:${status.status === 'critical' ? '#991b1b' : '#92400e'};">${status.label}</td>
-              <td style="padding:8px; border-bottom:1px solid #e5e7eb; vertical-align:top;">${buildPartNumberSummary(comp)}</td>
-              <td style="padding:8px; border-bottom:1px solid #e5e7eb; vertical-align:top;">${buildSerialSummary(comp)}</td>
-              <td style="padding:8px; border-bottom:1px solid #e5e7eb; vertical-align:top;">${buildMeasurementSummary(comp)}</td>
-              <td style="padding:8px; border-bottom:1px solid #e5e7eb; vertical-align:top;">${formatInspectionDate(comp.last_inspection_date)}</td>
-              <td style="padding:8px; border-bottom:1px solid #e5e7eb; vertical-align:top;">${getRelevantObservation(comp.notes)}</td>
+              <td style="padding:8px; border-bottom:1px solid #e5e7eb; vertical-align:top; line-height:1.45; word-break:break-word;">${buildPartNumberSummary(comp)}</td>
+              <td style="padding:8px; border-bottom:1px solid #e5e7eb; vertical-align:top; line-height:1.45; word-break:break-word;">${buildSerialSummary(comp)}</td>
+              <td style="padding:8px; border-bottom:1px solid #e5e7eb; vertical-align:top; line-height:1.45; word-break:break-word;">${buildMeasurementSummary(comp)}</td>
+              <td style="padding:8px; border-bottom:1px solid #e5e7eb; vertical-align:top; line-height:1.45; word-break:break-word;">${formatInspectionDate(comp.last_inspection_date)}</td>
+              <td style="padding:8px; border-bottom:1px solid #e5e7eb; vertical-align:top; line-height:1.45; word-break:break-word;">${getRelevantObservation(comp.notes)}</td>
             </tr>
           `;
         });
