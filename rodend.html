@@ -1458,7 +1458,7 @@
               <div class="w-full space-y-2 mb-3">
                 <div class="measure-zoom-trigger bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-lg p-3 border border-blue-500/20 cursor-pointer hover:border-blue-500/50 transition-all w-full" data-measure="1">
                   <p class="text-slate-300 text-xs mb-1">${existingComp.measure1_name}</p>
-                  ${!useSinglePartNumberDisplay ? `<p class="text-slate-300 text-xs mb-1 whitespace-nowrap text-center">${existingComp.measure1_part_number || ''}</p>` : ''}
+                  ${!useSinglePartNumberDisplay ? `<p class="text-slate-300 text-xs mb-1 whitespace-nowrap text-left">${existingComp.measure1_part_number || ''}</p>` : ''}
                   <p class="text-white text-2xl font-bold">${inchToMm(existingComp.measure1_current).toFixed(2)} mm</p>
                   <div class="progress-bar mt-1">
                     <div class="progress-fill ${m1Percent >= 100 ? 'bg-red-500' : m1Percent >= existingComp.measure1_alert ? 'bg-amber-500' : 'bg-green-500'}" 
@@ -1468,7 +1468,7 @@
                 
                 <div class="measure-zoom-trigger bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-lg p-3 border border-blue-500/20 cursor-pointer hover:border-blue-500/50 transition-all w-full" data-measure="2">
                   <p class="text-slate-300 text-xs mb-1">${existingComp.measure2_name}</p>
-                  ${!useSinglePartNumberDisplay ? `<p class="text-slate-300 text-xs mb-1 whitespace-nowrap text-center">${existingComp.measure2_part_number || ''}</p>` : ''}
+                  ${!useSinglePartNumberDisplay ? `<p class="text-slate-300 text-xs mb-1 whitespace-nowrap text-left">${existingComp.measure2_part_number || ''}</p>` : ''}
                   <p class="text-white text-2xl font-bold">${inchToMm(existingComp.measure2_current).toFixed(2)} mm</p>
                   <div class="progress-bar mt-1">
                     <div class="progress-fill ${m2Percent >= 100 ? 'bg-red-500' : m2Percent >= existingComp.measure2_alert ? 'bg-amber-500' : 'bg-green-500'}" 
