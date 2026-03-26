@@ -1881,6 +1881,8 @@
 
     
     
+    
+    
     // ========== PRINT REPORT ==========
     function getReportModelOrder(model) {
       const order = { 'EC175': 1, 'AW139': 2 };
@@ -1890,7 +1892,7 @@
     function formatMm(valueInInch) {
       const value = Number(valueInInch);
       if (!Number.isFinite(value)) return '-';
-      return `${inchToMm(value).toFixed(2)} mm`;
+      return `${inchToMm(value).toFixed(2).replace('.', ',')} mm`;
     }
 
     function formatInspectionDate(value) {
@@ -1901,8 +1903,7 @@
 
     function getRelevantObservation(notes) {
       const clean = String(notes || '').trim();
-      if (!clean) return '-';
-      return clean;
+      return clean || '-';
     }
 
     function getStatusPriority(status) {
@@ -1911,47 +1912,89 @@
       return 3;
     }
 
+    function getStatusLabel(status) {
+      if (status === 'critical') return 'Crítico';
+      if (status === 'attention') return 'Atenção';
+      return 'Normal';
+    }
+
     function getShortMeasureLabel(label) {
       const clean = String(label || '').trim();
       const map = {
-        'Rod End Upper': 'Upper',
-        'Rod End Lower': 'Lower',
-        'Upper Rod End': 'Upper',
-        'Lower Rod End': 'Lower',
-        'RH DAMPER ROD END': 'RH',
-        'LH DAMPER ROD END': 'LH',
+        'Rod End Upper': 'Rod End Upper',
+        'Rod End Lower': 'Rod End Lower',
+        'Upper Rod End': 'Upper Rod End',
+        'Lower Rod End': 'Lower Rod End',
+        'RH DAMPER ROD END': 'RH DAMPER ROD END',
+        'LH DAMPER ROD END': 'LH DAMPER ROD END',
         'Inboard': 'Inboard',
         'Outboard': 'Outboard'
       };
-      return map[clean] || clean || 'Med';
+      return map[clean] || clean || 'Descrição';
     }
 
-    function buildMeasurementSummary(component) {
-      const label1 = getShortMeasureLabel(component.measure1_name);
-      const label2 = getShortMeasureLabel(component.measure2_name);
-      return `<div>${label1}: ${formatMm(component.measure1_current)}</div><div>${label2}: ${formatMm(component.measure2_current)}</div>`;
+    function getSingleMeasureStatus(valueInInch, maxInInch, alertPercent) {
+      const value = Number(valueInInch);
+      const max = Number(maxInInch);
+      const alert = Number(alertPercent);
+      if (!Number.isFinite(value) || !Number.isFinite(max) || max <= 0) return 'normal';
+      const percent = (value / max) * 100;
+      if (percent >= 100) return 'critical';
+      if (Number.isFinite(alert) && percent >= alert) return 'attention';
+      return 'normal';
     }
 
-    function buildPartNumberSummary(component) {
-      const label1 = getShortMeasureLabel(component.measure1_name);
-      const label2 = getShortMeasureLabel(component.measure2_name);
-      const pn1 = String(component.measure1_part_number || '').trim();
-      const pn2 = String(component.measure2_part_number || '').trim();
+    function createSubRows(component) {
+      const rows = [];
 
-      if (pn1 && pn2 && pn1 === pn2) return pn1;
-      return `<div>${label1}: ${pn1 || '-'}</div><div>${label2}: ${pn2 || '-'}</div>`;
-    }
+      const pushRow = (label, pn, sn, measure, status) => {
+        rows.push({
+          color: component.component_color || '-',
+          description: label || '-',
+          pn: pn || '-',
+          sn: sn || '-',
+          measure: measure || '-',
+          status: getStatusLabel(status),
+          statusColor: status === 'critical' ? '#991b1b' : status === 'attention' ? '#92400e' : '#065f46',
+          date: formatInspectionDate(component.last_inspection_date),
+          notes: getRelevantObservation(component.notes)
+        });
+      };
 
-    function buildSerialSummary(component) {
-      const label1 = getShortMeasureLabel(component.measure1_name);
-      const label2 = getShortMeasureLabel(component.measure2_name);
-      const sn1 = String(component.measure1_serial_number || '').trim();
-      const sn2 = String(component.measure2_serial_number || '').trim();
-      const linkSn = String(component.link_serial_number || '').trim();
+      const measure1Label = getShortMeasureLabel(component.measure1_name);
+      const measure2Label = getShortMeasureLabel(component.measure2_name);
 
-      if (linkSn && !sn1 && !sn2) return linkSn;
-      if (sn1 && sn2 && sn1 === sn2) return sn1;
-      return `<div>${label1}: ${sn1 || '-'}</div><div>${label2}: ${sn2 || '-'}</div>${linkSn ? `<div>Link: ${linkSn}</div>` : ''}`;
+      const measure1Pn = String(component.measure1_part_number || '').trim();
+      const measure2Pn = String(component.measure2_part_number || '').trim();
+      const measure1Sn = String(component.measure1_serial_number || '').trim();
+      const measure2Sn = String(component.measure2_serial_number || '').trim();
+
+      const status1 = getSingleMeasureStatus(component.measure1_current, component.measure1_max, component.measure1_alert);
+      const status2 = getSingleMeasureStatus(component.measure2_current, component.measure2_max, component.measure2_alert);
+
+      const include1 = status1 === 'critical' || status1 === 'attention';
+      const include2 = status2 === 'critical' || status2 === 'attention';
+
+      if (include1) {
+        pushRow(measure1Label, measure1Pn, measure1Sn, formatMm(component.measure1_current), status1);
+      }
+
+      if (include2) {
+        pushRow(measure2Label, measure2Pn, measure2Sn, formatMm(component.measure2_current), status2);
+      }
+
+      if (!include1 && !include2) {
+        const overallStatus = getComponentStatus(component).status;
+        pushRow(
+          `${measure1Label} / ${measure2Label}`,
+          measure1Pn === measure2Pn ? measure1Pn : `${measure1Pn} | ${measure2Pn}`,
+          measure1Sn === measure2Sn ? (measure1Sn || '-') : `${measure1Sn || '-'} | ${measure2Sn || '-'}`,
+          `${measure1Label}: ${formatMm(component.measure1_current)} | ${measure2Label}: ${formatMm(component.measure2_current)}`,
+          overallStatus
+        );
+      }
+
+      return rows;
     }
 
     function generateReport() {
@@ -1976,17 +2019,20 @@
       flagged.forEach(({ comp, status }) => {
         const model = comp.aircraft_model || '';
         const prefix = comp.aircraft_prefix || '';
-        const key = `${model}__${prefix}`;
+        const componentType = comp.component_type || '';
+        const key = `${model}__${prefix}__${componentType}`;
         if (!grouped[key]) {
-          grouped[key] = { model, prefix, items: [] };
+          grouped[key] = { model, prefix, componentType, items: [] };
         }
         grouped[key].items.push({ comp, status });
       });
 
-      const aircraftGroups = Object.values(grouped).sort((a, b) => {
+      const groups = Object.values(grouped).sort((a, b) => {
         const modelOrder = getReportModelOrder(a.model) - getReportModelOrder(b.model);
         if (modelOrder !== 0) return modelOrder;
-        return String(a.prefix).localeCompare(String(b.prefix));
+        const prefixCmp = String(a.prefix).localeCompare(String(b.prefix));
+        if (prefixCmp !== 0) return prefixCmp;
+        return String(a.componentType).localeCompare(String(b.componentType));
       });
 
       const now = new Date();
@@ -1994,81 +2040,60 @@
       const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
       let html = `
-        <div style="font-family: Inter, Arial, sans-serif; color: #111827; padding: 24px;">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px; border-bottom:2px solid #1d4ed8; padding-bottom:12px;">
-            <div>
-              <h1 style="font-size: 28px; font-weight: 800; margin: 0 0 8px 0;">Relatório ROD END - Itens que Requerem Atenção</h1>
-              <p style="margin:0; color:#475569;">Data/Hora: ${dateStr} ${timeStr}</p>
-              <p style="margin:4px 0 0 0; color:#475569;">Gerado por: ${currentUser.username}</p>
-            </div>
+        <div style="font-family: Arial, sans-serif; color: #000; padding: 12px;">
+          <div style="margin-bottom: 10px;">
+            <div style="font-size: 22px; font-weight: 700;">Relatório ROD END - Itens que Requerem Atenção</div>
+            <div style="font-size: 12px;">Data/Hora: ${dateStr} ${timeStr}</div>
+            <div style="font-size: 12px;">Gerado por: ${currentUser.username}</div>
           </div>
       `;
 
-      let currentModel = '';
-      aircraftGroups.forEach((group) => {
-        if (group.model !== currentModel) {
-          currentModel = group.model;
-          html += `
-            <div style="margin: 18px 0 12px 0; background:#dbeafe; color:#1e3a8a; border:1px solid #93c5fd; border-radius:12px; padding:10px 14px; font-size:20px; font-weight:800;">
-              Modelo ${currentModel}
-            </div>
-          `;
-        }
-
+      groups.forEach((group) => {
         const items = group.items.sort((a, b) => {
           const prio = getStatusPriority(a.status.status) - getStatusPriority(b.status.status);
           if (prio !== 0) return prio;
-          const typeCmp = String(a.comp.component_type || '').localeCompare(String(b.comp.component_type || ''));
-          if (typeCmp !== 0) return typeCmp;
           return String(a.comp.component_color || '').localeCompare(String(b.comp.component_color || ''));
         });
 
         html += `
-          <div style="margin-bottom: 22px; page-break-inside: avoid;">
-            <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:12px 12px 0 0; padding:12px 14px;">
-              <h2 style="font-size:20px; font-weight:800; margin:0; color:#0f172a;">${group.prefix}</h2>
-            </div>
-            <div style="border:1px solid #cbd5e1; border-top:none; border-radius:0 0 12px 12px; overflow:hidden;">
-              <table style="width:100%; border-collapse:collapse; font-size:11px; table-layout:fixed;">
-                <thead>
-                  <tr style="background:#eff6ff;">
-                    <th style="width:12%; text-align:left; padding:8px; border-bottom:1px solid #cbd5e1;">Componente</th>
-                    <th style="width:8%; text-align:left; padding:8px; border-bottom:1px solid #cbd5e1;">Cor / Posição</th>
-                    <th style="width:8%; text-align:left; padding:8px; border-bottom:1px solid #cbd5e1;">Status</th>
-                    <th style="width:20%; text-align:left; padding:8px; border-bottom:1px solid #cbd5e1;">P/N</th>
-                    <th style="width:12%; text-align:left; padding:8px; border-bottom:1px solid #cbd5e1;">S/N</th>
-                    <th style="width:18%; text-align:left; padding:8px; border-bottom:1px solid #cbd5e1;">Medida encontrada</th>
-                    <th style="width:10%; text-align:left; padding:8px; border-bottom:1px solid #cbd5e1;">Data inspeção</th>
-                    <th style="width:12%; text-align:left; padding:8px; border-bottom:1px solid #cbd5e1;">Observação</th>
-                  </tr>
-                </thead>
-                <tbody>
+          <table style="width:100%; border-collapse:collapse; margin-bottom: 14px; font-size:12px;">
+            <tr>
+              <td style="border:1px solid #000; padding:4px; font-weight:700; width:8%;">${group.model}</td>
+              <td style="border:1px solid #000; padding:4px; font-weight:700; width:12%;">${group.prefix}</td>
+              <td colspan="6" style="border:1px solid #000; padding:4px; font-weight:700; text-align:center;">${group.componentType.toUpperCase()}</td>
+            </tr>
+            <tr>
+              <th style="border:1px solid #000; padding:4px; text-align:left; width:8%;">COR</th>
+              <th style="border:1px solid #000; padding:4px; text-align:left; width:18%;">Descrição</th>
+              <th style="border:1px solid #000; padding:4px; text-align:left; width:24%;">P/N</th>
+              <th style="border:1px solid #000; padding:4px; text-align:left; width:10%;">S/N</th>
+              <th style="border:1px solid #000; padding:4px; text-align:left; width:12%;">Medida</th>
+              <th style="border:1px solid #000; padding:4px; text-align:left; width:12%;">Status</th>
+              <th style="border:1px solid #000; padding:4px; text-align:left; width:12%;">Data Inspeção</th>
+              <th style="border:1px solid #000; padding:4px; text-align:left; width:16%;">Observação</th>
+            </tr>
         `;
 
-        items.forEach(({ comp, status }) => {
-          html += `
-            <tr>
-              <td style="padding:8px; border-bottom:1px solid #e5e7eb; vertical-align:top; line-height:1.45; word-break:break-word;">${comp.component_type || '-'}</td>
-              <td style="padding:8px; border-bottom:1px solid #e5e7eb; vertical-align:top; line-height:1.45; word-break:break-word;">${comp.component_color || '-'}</td>
-              <td style="padding:8px; border-bottom:1px solid #e5e7eb; vertical-align:top; font-weight:700; color:${status.status === 'critical' ? '#991b1b' : '#92400e'};">${status.label}</td>
-              <td style="padding:8px; border-bottom:1px solid #e5e7eb; vertical-align:top; line-height:1.45; word-break:break-word;">${buildPartNumberSummary(comp)}</td>
-              <td style="padding:8px; border-bottom:1px solid #e5e7eb; vertical-align:top; line-height:1.45; word-break:break-word;">${buildSerialSummary(comp)}</td>
-              <td style="padding:8px; border-bottom:1px solid #e5e7eb; vertical-align:top; line-height:1.45; word-break:break-word;">${buildMeasurementSummary(comp)}</td>
-              <td style="padding:8px; border-bottom:1px solid #e5e7eb; vertical-align:top; line-height:1.45; word-break:break-word;">${formatInspectionDate(comp.last_inspection_date)}</td>
-              <td style="padding:8px; border-bottom:1px solid #e5e7eb; vertical-align:top; line-height:1.45; word-break:break-word;">${getRelevantObservation(comp.notes)}</td>
-            </tr>
-          `;
+        items.forEach(({ comp }) => {
+          const subRows = createSubRows(comp);
+          subRows.forEach((row) => {
+            html += `
+              <tr>
+                <td style="border:1px solid #000; padding:4px; vertical-align:top;">${row.color}</td>
+                <td style="border:1px solid #000; padding:4px; vertical-align:top;">${row.description}</td>
+                <td style="border:1px solid #000; padding:4px; vertical-align:top;">${row.pn}</td>
+                <td style="border:1px solid #000; padding:4px; vertical-align:top;">${row.sn}</td>
+                <td style="border:1px solid #000; padding:4px; vertical-align:top;">${row.measure}</td>
+                <td style="border:1px solid #000; padding:4px; vertical-align:top; color:${row.statusColor}; font-weight:700;">${row.status}</td>
+                <td style="border:1px solid #000; padding:4px; vertical-align:top;">${row.date}</td>
+                <td style="border:1px solid #000; padding:4px; vertical-align:top;">${row.notes}</td>
+              </tr>
+            `;
+          });
         });
 
-        html += `
-                </tbody>
-              </table>
-            </div>
-          </div>
-        `;
+        html += `</table>`;
       });
-
-      html += `</div>`;
 
       const printContainer = document.getElementById('print-container');
       printContainer.innerHTML = html;
