@@ -1021,7 +1021,7 @@
       const parsed = Number(valueInInch);
       if (!Number.isFinite(parsed)) return '-';
 
-      if (unit === 'inch') {
+      if (unit === 'inch' || unit === 'in' || unit === 'polegadas') {
         return `${parsed.toFixed(3)} in`;
       }
 
@@ -2611,6 +2611,7 @@
 
         inspectionHistory.unshift({
           date: inspection_date_iso,
+          unit: selectedUnit,
           measure1: measure1_current,
           measure1_max: measure1_max,
           measure2: measure2_current,
@@ -2642,6 +2643,7 @@
             measure2_max: measure2_max,
             measure2_alert: existingRecord.measure2_alert,
             link_serial_number: existingRecord.link_serial_number,
+            measurement_unit: selectedUnit,
             last_inspection_date: inspection_date_iso,
             inspection_history: JSON.stringify(inspectionHistory),
             notes: existingRecord.notes || '',
