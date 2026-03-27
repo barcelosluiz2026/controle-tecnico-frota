@@ -1395,6 +1395,8 @@
           }
           
           // Build history HTML
+          const latestDisplayUnit = existingComp.measurement_unit || inspectionHistory?.[0]?.unit || 'mm';
+
           let historyHTML = '';
           if (inspectionHistory.length > 0) {
             historyHTML = '<div class="w-full mt-3 space-y-1.5">';
@@ -1470,7 +1472,7 @@
                 <div class="measure-zoom-trigger bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-lg p-3 border border-blue-500/20 cursor-pointer hover:border-blue-500/50 transition-all w-full" data-measure="1">
                   <p class="text-slate-300 text-xs mb-1">${existingComp.measure1_name}</p>
                   ${!useSinglePartNumberDisplay ? `<p class="text-slate-300 text-xs mb-1 whitespace-nowrap text-left">${existingComp.measure1_part_number || ''}</p>` : ''}
-                  <p class="text-white text-2xl font-bold">${formatStoredMeasurement(existingComp.measure1_current, existingComp.measurement_unit || 'mm')}</p>
+                  <p class="text-white text-2xl font-bold">${formatStoredMeasurement(existingComp.measure1_current, latestDisplayUnit)}</p>
                   <div class="progress-bar mt-1">
                     <div class="progress-fill ${m1Percent >= 100 ? 'bg-red-500' : m1Percent >= existingComp.measure1_alert ? 'bg-amber-500' : 'bg-green-500'}" 
                          style="width: ${Math.min(m1Percent, 100)}%"></div>
@@ -1480,7 +1482,7 @@
                 <div class="measure-zoom-trigger bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-lg p-3 border border-blue-500/20 cursor-pointer hover:border-blue-500/50 transition-all w-full" data-measure="2">
                   <p class="text-slate-300 text-xs mb-1">${existingComp.measure2_name}</p>
                   ${!useSinglePartNumberDisplay ? `<p class="text-slate-300 text-xs mb-1 whitespace-nowrap text-left">${existingComp.measure2_part_number || ''}</p>` : ''}
-                  <p class="text-white text-2xl font-bold">${formatStoredMeasurement(existingComp.measure2_current, existingComp.measurement_unit || 'mm')}</p>
+                  <p class="text-white text-2xl font-bold">${formatStoredMeasurement(existingComp.measure2_current, latestDisplayUnit)}</p>
                   <div class="progress-bar mt-1">
                     <div class="progress-fill ${m2Percent >= 100 ? 'bg-red-500' : m2Percent >= existingComp.measure2_alert ? 'bg-amber-500' : 'bg-green-500'}" 
                          style="width: ${Math.min(m2Percent, 100)}%"></div>
@@ -2694,6 +2696,7 @@
             measure2_max: measure2_max,
             measure2_alert: parseInt(document.getElementById('measure2-alert').value || '80', 10),
             link_serial_number: componentConfig.singleSerial ? (document.getElementById('link-serial').value || '') : '',
+            measurement_unit: selectedUnit,
             last_inspection_date: inspection_date_iso,
             inspection_history: JSON.stringify(inspectionHistory),
             notes: document.getElementById('notes').value || '',
