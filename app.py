@@ -64,6 +64,33 @@ class Record(db.Model):
         return payload
 
 
+class AccessLog(db.Model):
+    __tablename__ = "access_logs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(120), nullable=False, index=True)
+    action = db.Column(db.String(50), nullable=False, index=True)
+    result = db.Column(db.String(30), nullable=False, index=True)
+    source = db.Column(db.String(50), nullable=False, default="panes")
+    ip_address = db.Column(db.String(120), nullable=True)
+    user_agent = db.Column(Text, nullable=True)
+    details = db.Column(Text, nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), index=True)
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "username": self.username,
+            "action": self.action,
+            "result": self.result,
+            "source": self.source,
+            "ip_address": self.ip_address,
+            "user_agent": self.user_agent,
+            "details": self.details,
+            "created_at": self.created_at.astimezone(timezone.utc).isoformat() if self.created_at else None,
+        }
+
+
 with app.app_context():
     db.create_all()
 
@@ -189,9 +216,62 @@ def options_handler(_):
     return ("", 204)
 
 
+def get_client_ip() -> str | None:
+    forwarded_for = request.headers.get("X-Forwarded-For", "")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip() or None
+    real_ip = request.headers.get("X-Real-IP", "").strip()
+    if real_ip:
+        return real_ip
+    return request.remote_addr
+
+
+def create_access_log(username: str, action: str, result: str, source: str = "panes", details: str | None = None):
+    log = AccessLog(
+        username=str(username or "desconhecido")[:120],
+        action=str(action or "unknown")[:50],
+        result=str(result or "unknown")[:30],
+        source=str(source or "panes")[:50],
+        ip_address=(get_client_ip() or "")[:120] or None,
+        user_agent=(request.headers.get("User-Agent", "") or "")[:2000] or None,
+        details=(str(details)[:4000] if details else None),
+    )
+    db.session.add(log)
+    db.session.commit()
+    return log
+
+
 @app.get("/health")
 def health():
     return jsonify({"ok": True, "service": "controle-panes-api"})
+
+
+@app.post("/api/access-log")
+def create_access_log_endpoint():
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"error": "JSON inválido"}), 400
+
+    username = str(payload.get("username", "")).strip() or "desconhecido"
+    action = str(payload.get("action", "")).strip() or "unknown"
+    result = str(payload.get("result", "")).strip() or "unknown"
+    source = str(payload.get("source", "panes")).strip() or "panes"
+    details = str(payload.get("details", "")).strip() or None
+
+    log = create_access_log(username=username, action=action, result=result, source=source, details=details)
+    return jsonify({"ok": True, "item": log.to_dict()}), 201
+
+
+@app.get("/api/access-log")
+def list_access_logs():
+    limit = request.args.get("limit", default=200, type=int)
+    if limit is None or limit < 1:
+        limit = 200
+    if limit > 1000:
+        limit = 1000
+
+    logs = AccessLog.query.order_by(AccessLog.created_at.desc(), AccessLog.id.desc()).limit(limit).all()
+    return jsonify([log.to_dict() for log in logs])
 
 
 @app.get("/api/records")
