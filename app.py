@@ -1,3 +1,5 @@
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment
 import csv
 import io
 import json
@@ -5,7 +7,7 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 
-from flask import Flask, jsonify, request, send_from_directory, Response
+from flask import Flask, jsonify, request, send_from_directory, Response, send_file
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import Text
 
@@ -89,6 +91,35 @@ class AccessLog(db.Model):
             "ip_address": self.ip_address,
             "user_agent": self.user_agent,
             "details": self.details,
+            "created_at": self.created_at.astimezone(timezone.utc).isoformat() if self.created_at else None,
+        }
+
+
+class AuditLog(db.Model):
+    __tablename__ = "audit_logs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(120), nullable=False, index=True)
+    action = db.Column(db.String(50), nullable=False, index=True)
+    source = db.Column(db.String(50), nullable=False, default="panes", index=True)
+    target_type = db.Column(db.String(80), nullable=True, index=True)
+    target_id = db.Column(db.String(120), nullable=True, index=True)
+    details = db.Column(Text, nullable=True)
+    ip_address = db.Column(db.String(120), nullable=True)
+    user_agent = db.Column(Text, nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), index=True)
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "username": self.username,
+            "action": self.action,
+            "source": self.source,
+            "target_type": self.target_type,
+            "target_id": self.target_id,
+            "details": self.details,
+            "ip_address": self.ip_address,
+            "user_agent": self.user_agent,
             "created_at": self.created_at.astimezone(timezone.utc).isoformat() if self.created_at else None,
         }
 
@@ -295,6 +326,118 @@ def build_csv_response(rows, filename: str):
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
+
+
+def infer_actor_username(payload: dict | None = None) -> str:
+    header_username = str(request.headers.get("X-Actor-Username", "")).strip()
+    if header_username:
+        return header_username[:120]
+
+    if isinstance(payload, dict):
+        for key in ("modified_by", "created_by", "criadoPor", "updatedBy", "createdBy", "username", "responsavel", "login_usuario"):
+            value = str(payload.get(key, "")).strip()
+            if value:
+                return value[:120]
+
+    return "desconhecido"
+
+
+def create_audit_log(username: str, action: str, source: str = "panes", target_type: str | None = None, target_id: str | None = None, details: str | None = None):
+    log = AuditLog(
+        username=str(username or "desconhecido")[:120],
+        action=str(action or "unknown")[:50],
+        source=str(source or "panes")[:50],
+        target_type=(str(target_type)[:80] if target_type else None),
+        target_id=(str(target_id)[:120] if target_id else None),
+        details=(str(details)[:4000] if details else None),
+        ip_address=(get_client_ip() or "")[:120] or None,
+        user_agent=(request.headers.get("User-Agent", "") or "")[:2000] or None,
+    )
+    db.session.add(log)
+    db.session.commit()
+    return log
+
+
+def apply_audit_log_filters(query):
+    username = str(request.args.get("username", "")).strip()
+    action = str(request.args.get("action", "")).strip()
+    source = str(request.args.get("source", "")).strip()
+    text = str(request.args.get("q", "")).strip()
+    date_from = parse_iso_datetime(request.args.get("date_from"))
+    date_to = parse_iso_datetime(request.args.get("date_to"))
+
+    if username:
+        query = query.filter(AuditLog.username.ilike(f"%{username}%"))
+    if action:
+        query = query.filter(AuditLog.action == action)
+    if source:
+        query = query.filter(AuditLog.source == source)
+    if date_from:
+        query = query.filter(AuditLog.created_at >= date_from)
+    if date_to:
+        query = query.filter(AuditLog.created_at <= date_to)
+
+    if text:
+        from sqlalchemy import or_
+        query = query.filter(
+            or_(
+                AuditLog.username.ilike(f"%{text}%"),
+                AuditLog.details.ilike(f"%{text}%"),
+                AuditLog.target_id.ilike(f"%{text}%"),
+                AuditLog.target_type.ilike(f"%{text}%"),
+                AuditLog.ip_address.ilike(f"%{text}%"),
+            )
+        )
+    return query
+
+
+def build_excel_response(rows, filename: str, sheet_name: str = "Auditoria"):
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = sheet_name
+
+    if rows:
+        headers = list(rows[0].keys())
+    else:
+        headers = ["message"]
+        rows = [{"message": "Sem registros"}]
+
+    header_fill = PatternFill(fill_type="solid", fgColor="1F4E78")
+    header_font = Font(color="FFFFFF", bold=True)
+    center = Alignment(vertical="center")
+
+    for col_idx, header in enumerate(headers, start=1):
+        cell = sheet.cell(row=1, column=col_idx, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = center
+
+    for row_idx, row in enumerate(rows, start=2):
+        for col_idx, header in enumerate(headers, start=1):
+            value = row.get(header, "")
+            cell = sheet.cell(row=row_idx, column=col_idx, value=value)
+            cell.alignment = Alignment(vertical="top", wrap_text=True)
+
+    for column_cells in sheet.columns:
+        length = 0
+        column = column_cells[0].column_letter
+        for cell in column_cells:
+            try:
+                length = max(length, len(str(cell.value or "")))
+            except Exception:
+                pass
+        sheet.column_dimensions[column].width = min(max(length + 2, 12), 40)
+
+    stream = io.BytesIO()
+    workbook.save(stream)
+    stream.seek(0)
+    return send_file(
+        stream,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
 @app.get("/health")
 def health():
     return jsonify({"ok": True, "service": "controle-panes-api"})
@@ -439,6 +582,29 @@ def access_log_summary():
         "total_considered": len(logs),
     })
 
+
+
+@app.get("/api/audit-log")
+def list_audit_logs():
+    limit = request.args.get("limit", default=300, type=int)
+    if limit is None or limit < 1:
+        limit = 300
+    if limit > 2000:
+        limit = 2000
+
+    query = AuditLog.query.order_by(AuditLog.created_at.desc(), AuditLog.id.desc())
+    query = apply_audit_log_filters(query)
+    logs = query.limit(limit).all()
+    return jsonify([log.to_dict() for log in logs])
+
+
+@app.get("/api/audit-log/export")
+def export_audit_logs():
+    query = AuditLog.query.order_by(AuditLog.created_at.desc(), AuditLog.id.desc())
+    query = apply_audit_log_filters(query)
+    logs = query.limit(5000).all()
+    return build_excel_response([log.to_dict() for log in logs], "auditoria_acoes.xlsx", "Auditoria Acoes")
+
 @app.get("/api/records")
 def list_records():
     records = Record.query.order_by(Record.created_at.asc(), Record.id.asc()).all()
@@ -466,6 +632,17 @@ def create_record():
     )
     db.session.add(record)
     db.session.commit()
+
+    actor = infer_actor_username(payload)
+    record_type = str(payload.get("type", "")).strip() or "registro"
+    create_audit_log(
+        username=actor,
+        action="create",
+        source="panes",
+        target_type=record_type,
+        target_id=record_id,
+        details=f"Criação de registro tipo={record_type} id={record_id}",
+    )
     return jsonify({"isOk": True, "item": record.to_dict()}), 201
 
 
@@ -484,6 +661,17 @@ def update_record(record_id: str):
     record.data = json.dumps(payload, ensure_ascii=False)
     record.updated_at = datetime.now(timezone.utc)
     db.session.commit()
+
+    actor = infer_actor_username(payload)
+    record_type = str(payload.get("type", "")).strip() or "registro"
+    create_audit_log(
+        username=actor,
+        action="update",
+        source="panes",
+        target_type=record_type,
+        target_id=record_id,
+        details=f"Atualização de registro tipo={record_type} id={record_id}",
+    )
     return jsonify({"isOk": True, "item": record.to_dict()})
 
 
@@ -493,8 +681,24 @@ def delete_record(record_id: str):
     if record is None:
         return jsonify({"error": "Registro não encontrado"}), 404
 
+    payload = None
+    try:
+        payload = record.to_dict()
+    except Exception:
+        payload = {}
+
+    actor = infer_actor_username(payload)
+    target_type = str(payload.get("type") or record.record_type or "registro").strip() or "registro"
     db.session.delete(record)
     db.session.commit()
+    create_audit_log(
+        username=actor,
+        action="delete",
+        source="panes",
+        target_type=target_type,
+        target_id=record_id,
+        details=f"Exclusão de registro tipo={target_type} id={record_id}",
+    )
     return jsonify({"isOk": True, "deletedId": record_id})
 
 
@@ -706,6 +910,15 @@ def rodend_create_record():
     db.session.add(record)
     db.session.commit()
 
+    actor = infer_actor_username(payload)
+    create_audit_log(
+        username=actor,
+        action="create",
+        source="rodend",
+        target_type=payload.get("type"),
+        target_id=payload.get("id"),
+        details=f"Criação de registro ROD END tipo={payload.get('type')} id={payload.get('id')}",
+    )
     return jsonify({"isOk": True, "item": record.to_dict()}), 201
 
 
@@ -730,6 +943,15 @@ def rodend_update_record(record_id: str):
     record.updated_at = datetime.now(timezone.utc)
     db.session.commit()
 
+    actor = infer_actor_username(payload)
+    create_audit_log(
+        username=actor,
+        action="update",
+        source="rodend",
+        target_type=payload.get("type"),
+        target_id=payload.get("id"),
+        details=f"Atualização de registro ROD END tipo={payload.get('type')} id={payload.get('id')}",
+    )
     return jsonify({"isOk": True, "item": record.to_dict()})
 
 
@@ -743,8 +965,24 @@ def rodend_delete_record(record_id: str):
     if not is_rodend_type(current_type):
         return jsonify({"error": "Registro não pertence ao módulo ROD END"}), 400
 
+    payload = None
+    try:
+        payload = record.to_dict()
+    except Exception:
+        payload = {}
+
+    actor = infer_actor_username(payload)
+    target_type = str(payload.get("type") or record.record_type or "rodend_registro").strip() or "rodend_registro"
     db.session.delete(record)
     db.session.commit()
+    create_audit_log(
+        username=actor,
+        action="delete",
+        source="rodend",
+        target_type=target_type,
+        target_id=record_id,
+        details=f"Exclusão de registro ROD END tipo={target_type} id={record_id}",
+    )
     return jsonify({"isOk": True, "deletedId": record_id})
 
 @app.get("/<path:filename>")
