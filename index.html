@@ -18,6 +18,7 @@
         const response = await fetch(`${RENDER_API_BASE}${path}`, {
           headers: {
             'Content-Type': 'application/json',
+            ...((window.currentUser?.username || currentUser?.username) ? { 'X-Actor-Username': (window.currentUser?.username || currentUser?.username) } : {}),
             ...(options.headers || {})
           },
           ...options
@@ -403,6 +404,9 @@
                   <button id="auditoriaAcessoBtn" class="px-4 py-2 rounded font-semibold" style="background-color: ${primaryColor}; color: white; font-size: ${fontSize * 0.9}px;">
                     🛡️ Auditoria de Acesso
                   </button>
+                  <button id="auditoriaAcoesBtn" class="px-4 py-2 rounded font-semibold" style="background-color: ${primaryColor}; color: white; font-size: ${fontSize * 0.9}px;">
+                    🧾 Auditoria de Ações
+                  </button>
                 ` : ''}
                 <button id="dashboardBtn" class="px-4 py-2 rounded font-semibold" style="background-color: ${primaryColor}; color: white; font-size: ${fontSize * 0.9}px;">
                   📊 Dashboard
@@ -665,6 +669,46 @@
                   </div>
                   <div id="accessSummaryPanel"></div>
                   <div id="accessLogsList"></div>
+                </div>
+              </div>
+
+              <div id="auditoriaAcoesModal" class="hidden fixed inset-0 items-center justify-center p-4" style="background-color: rgba(0,0,0,0.7); z-index: 1160;">
+                <div class="w-full max-w-5xl rounded-lg p-6" style="background-color: ${surfaceColor}; max-height: 90vh; overflow-y: auto;">
+                  <div class="flex justify-between items-center mb-4 gap-3">
+                    <h2 class="font-bold" style="font-size: ${fontSize * 1.5}px;">🧾 Auditoria de Ações</h2>
+                    <div class="flex gap-2 flex-wrap">
+                      <button id="exportAuditoriaAcoesBtn" class="px-4 py-2 rounded font-semibold" style="background-color: ${primaryColor}; color: white; font-size: ${fontSize * 0.9}px;">
+                        Exportar Excel
+                      </button>
+                      <button id="refreshAuditoriaAcoesBtn" class="px-4 py-2 rounded font-semibold" style="background-color: ${primaryColor}; color: white; font-size: ${fontSize * 0.9}px;">
+                        Atualizar
+                      </button>
+                      <button id="closeAuditoriaAcoesBtn" class="px-4 py-2 rounded font-semibold" style="background-color: ${secondaryColor}; color: white; font-size: ${fontSize * 0.9}px;">
+                        Fechar
+                      </button>
+                    </div>
+                  </div>
+                  <p style="font-size: ${fontSize * 0.85}px; opacity: 0.7; margin-bottom: 12px;">
+                    Registros de criação, edição e exclusão de dados. Visível apenas para administradores.
+                  </p>
+                  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+                    <input id="actionUsernameFilter" type="text" placeholder="Usuário" class="w-full px-3 py-2 rounded" style="background-color: ${bgColor}; color: ${textColor}; border: 1px solid ${secondaryColor}; font-size: ${fontSize * 0.9}px;">
+                    <select id="actionActionFilter" class="w-full px-3 py-2 rounded" style="background-color: ${bgColor}; color: ${textColor}; border: 1px solid ${secondaryColor}; font-size: ${fontSize * 0.9}px;">
+                      <option value="">Todas ações</option>
+                      <option value="create">create</option>
+                      <option value="update">update</option>
+                      <option value="delete">delete</option>
+                    </select>
+                    <select id="actionSourceFilter" class="w-full px-3 py-2 rounded" style="background-color: ${bgColor}; color: ${textColor}; border: 1px solid ${secondaryColor}; font-size: ${fontSize * 0.9}px;">
+                      <option value="">Todas origens</option>
+                      <option value="panes">panes</option>
+                      <option value="rodend">rodend</option>
+                    </select>
+                    <input id="actionDateFromFilter" type="date" class="w-full px-3 py-2 rounded" style="background-color: ${bgColor}; color: ${textColor}; border: 1px solid ${secondaryColor}; font-size: ${fontSize * 0.9}px;">
+                    <input id="actionDateToFilter" type="date" class="w-full px-3 py-2 rounded" style="background-color: ${bgColor}; color: ${textColor}; border: 1px solid ${secondaryColor}; font-size: ${fontSize * 0.9}px;">
+                    <input id="actionSearchFilter" type="text" placeholder="Buscar em detalhes/ID/tipo" class="w-full px-3 py-2 rounded" style="background-color: ${bgColor}; color: ${textColor}; border: 1px solid ${secondaryColor}; font-size: ${fontSize * 0.9}px;">
+                  </div>
+                  <div id="actionLogsList"></div>
                 </div>
               </div>
             ` : ''}
@@ -1921,6 +1965,111 @@
       });
     }
 
+
+    function buildActionLogQueryParams() {
+      const params = new URLSearchParams();
+      const username = document.getElementById('actionUsernameFilter')?.value?.trim();
+      const action = document.getElementById('actionActionFilter')?.value?.trim();
+      const source = document.getElementById('actionSourceFilter')?.value?.trim();
+      const q = document.getElementById('actionSearchFilter')?.value?.trim();
+      const dateFrom = document.getElementById('actionDateFromFilter')?.value?.trim();
+      const dateTo = document.getElementById('actionDateToFilter')?.value?.trim();
+
+      if (username) params.set('username', username);
+      if (action) params.set('action', action);
+      if (source) params.set('source', source);
+      if (q) params.set('q', q);
+      if (dateFrom) params.set('date_from', `${dateFrom}T00:00:00`);
+      if (dateTo) params.set('date_to', `${dateTo}T23:59:59`);
+
+      return params.toString();
+    }
+
+    function downloadActionLogsExcel() {
+      const query = buildActionLogQueryParams();
+      const url = `${RENDER_API_BASE}/audit-log/export${query ? `?${query}` : ''}`;
+      window.open(url, '_blank');
+    }
+
+    function setupActionLogFilterListeners() {
+      [
+        'actionUsernameFilter',
+        'actionActionFilter',
+        'actionSourceFilter',
+        'actionDateFromFilter',
+        'actionDateToFilter',
+        'actionSearchFilter'
+      ].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+
+        el.addEventListener('change', async () => {
+          await loadActionLogsIntoModal();
+        });
+
+        el.addEventListener('keyup', async (e) => {
+          if (e.key === 'Enter' || id === 'actionSearchFilter') {
+            await loadActionLogsIntoModal();
+          }
+        });
+      });
+    }
+
+    function renderActionLogsList(logs, fontSize, bgColor, textColor, secondaryColor) {
+      if (!Array.isArray(logs) || logs.length === 0) {
+        return `
+          <div class="text-center py-10 rounded" style="background-color: ${bgColor};">
+            <p style="font-size: ${fontSize}px; opacity: 0.7;">Nenhuma ação registrada.</p>
+          </div>
+        `;
+      }
+
+      return `
+        <div class="space-y-3 max-h-[65vh] overflow-y-auto pr-1">
+          ${logs.map(log => `
+            <div class="rounded-lg p-4" style="background-color: ${bgColor}; border: 1px solid ${secondaryColor};">
+              <div class="flex justify-between items-start gap-4 flex-wrap">
+                <div>
+                  <p class="font-bold" style="font-size: ${fontSize}px; color: ${textColor};">${log.username || 'desconhecido'}</p>
+                  <p style="font-size: ${fontSize * 0.85}px; opacity: 0.75;">
+                    ${formatAccessLogDate(log.created_at)} • ${log.source || '-'} • ${log.action || '-'}
+                  </p>
+                  <p style="font-size: ${fontSize * 0.82}px; opacity: 0.75; margin-top: 4px;">Tipo: ${log.target_type || '-'} | ID: ${log.target_id || '-'}</p>
+                  ${log.details ? `<p style="font-size: ${fontSize * 0.82}px; opacity: 0.8; margin-top: 6px;">${log.details}</p>` : ''}
+                </div>
+                <div class="px-3 py-1 rounded-full font-semibold" style="background-color: #3b82f6; color: white; font-size: ${fontSize * 0.8}px;">
+                  ${log.action || '-'}
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    async function loadActionLogsIntoModal() {
+      const target = document.getElementById('actionLogsList');
+      if (!target) return;
+
+      const config = window.elementSdk?.config || defaultConfig;
+      const bgColor = config.background_color || defaultConfig.background_color;
+      const textColor = config.text_color || defaultConfig.text_color;
+      const secondaryColor = config.secondary_action || defaultConfig.secondary_action;
+      const fontSize = config.font_size || defaultConfig.font_size;
+
+      target.innerHTML = `<p style="font-size: ${fontSize}px; opacity: 0.7;">Carregando registros...</p>`;
+
+      try {
+        const query = buildActionLogQueryParams();
+        const response = await fetch(`${RENDER_API_BASE}/audit-log?limit=400${query ? `&${query}` : ''}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const logs = await response.json();
+        target.innerHTML = renderActionLogsList(logs, fontSize, bgColor, textColor, secondaryColor);
+      } catch (error) {
+        target.innerHTML = `<p style="font-size: ${fontSize}px; color: #ef4444;">Erro ao carregar auditoria de ações.</p>`;
+      }
+    }
+
     function setupLoginListeners() {
       const form = document.getElementById('loginForm');
       const errorDiv = document.getElementById('loginError');
@@ -2119,6 +2268,41 @@
       }
 
       setupAccessLogFilterListeners();
+
+      const auditoriaAcoesBtn = document.getElementById('auditoriaAcoesBtn');
+      const auditoriaAcoesModal = document.getElementById('auditoriaAcoesModal');
+      const closeAuditoriaAcoesBtn = document.getElementById('closeAuditoriaAcoesBtn');
+      const refreshAuditoriaAcoesBtn = document.getElementById('refreshAuditoriaAcoesBtn');
+      const exportAuditoriaAcoesBtn = document.getElementById('exportAuditoriaAcoesBtn');
+
+      if (auditoriaAcoesBtn && auditoriaAcoesModal) {
+        auditoriaAcoesBtn.addEventListener('click', async () => {
+          auditoriaAcoesModal.classList.remove('hidden');
+          auditoriaAcoesModal.classList.add('flex');
+          await loadActionLogsIntoModal();
+        });
+      }
+
+      if (closeAuditoriaAcoesBtn && auditoriaAcoesModal) {
+        closeAuditoriaAcoesBtn.addEventListener('click', () => {
+          auditoriaAcoesModal.classList.add('hidden');
+          auditoriaAcoesModal.classList.remove('flex');
+        });
+      }
+
+      if (refreshAuditoriaAcoesBtn) {
+        refreshAuditoriaAcoesBtn.addEventListener('click', async () => {
+          await loadActionLogsIntoModal();
+        });
+      }
+
+      if (exportAuditoriaAcoesBtn) {
+        exportAuditoriaAcoesBtn.addEventListener('click', () => {
+          downloadActionLogsExcel();
+        });
+      }
+
+      setupActionLogFilterListeners();
 
       const relatorioPendenciasBtn = document.getElementById('relatorioPendenciasBtn');
       const relatorioModal = document.getElementById('relatorioModal');
