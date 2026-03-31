@@ -338,6 +338,66 @@ def export_access_logs():
     return build_csv_response([log.to_dict() for log in logs], "auditoria_acesso.csv")
 
 
+
+
+@app.get("/api/access-log/summary")
+def access_log_summary():
+    query = AccessLog.query
+    query = apply_access_log_filters(query)
+    logs = query.order_by(AccessLog.created_at.desc(), AccessLog.id.desc()).limit(5000).all()
+
+    today = datetime.now(timezone.utc).date()
+    login_today = 0
+    fail_today = 0
+    user_counts = {}
+    latest_by_user = {}
+    ip_counts = {}
+
+    for log in logs:
+        created_at = log.created_at.astimezone(timezone.utc) if log.created_at else None
+        if created_at and created_at.date() == today:
+            if log.action == "login" and log.result == "success":
+                login_today += 1
+            if log.result == "fail":
+                fail_today += 1
+
+        username = str(log.username or "desconhecido").strip() or "desconhecido"
+        user_counts[username] = user_counts.get(username, 0) + 1
+
+        if username not in latest_by_user:
+            latest_by_user[username] = {
+                "username": username,
+                "action": log.action,
+                "result": log.result,
+                "created_at": created_at.isoformat() if created_at else None,
+                "ip_address": log.ip_address,
+            }
+
+        ip = str(log.ip_address or "").strip()
+        if ip:
+            ip_counts[ip] = ip_counts.get(ip, 0) + 1
+
+    top_users = [
+        {"username": username, "count": count}
+        for username, count in sorted(user_counts.items(), key=lambda item: (-item[1], item[0]))[:5]
+    ]
+
+    latest_accesses = list(latest_by_user.values())[:8]
+
+    top_ips = [
+        {"ip_address": ip, "count": count}
+        for ip, count in sorted(ip_counts.items(), key=lambda item: (-item[1], item[0]))[:5]
+    ]
+
+    return jsonify({
+        "login_today": login_today,
+        "fail_today": fail_today,
+        "top_users": top_users,
+        "latest_accesses": latest_accesses,
+        "top_ips": top_ips,
+        "total_considered": len(logs),
+    })
+
 @app.get("/api/records")
 def list_records():
     records = Record.query.order_by(Record.created_at.asc(), Record.id.asc()).all()
