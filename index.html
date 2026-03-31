@@ -663,6 +663,7 @@
                     <input id="accessDateToFilter" type="date" class="w-full px-3 py-2 rounded" style="background-color: ${bgColor}; color: ${textColor}; border: 1px solid ${secondaryColor}; font-size: ${fontSize * 0.9}px;">
                     <input id="accessSearchFilter" type="text" placeholder="Buscar em detalhes/IP" class="w-full px-3 py-2 rounded" style="background-color: ${bgColor}; color: ${textColor}; border: 1px solid ${secondaryColor}; font-size: ${fontSize * 0.9}px;">
                   </div>
+                  <div id="accessSummaryPanel"></div>
                   <div id="accessLogsList"></div>
                 </div>
               </div>
@@ -1709,8 +1710,89 @@
       `;
     }
 
+
+    function renderAccessSummaryCards(summary, fontSize, bgColor, secondaryColor) {
+      const topUsers = Array.isArray(summary?.top_users) ? summary.top_users : [];
+      const latestAccesses = Array.isArray(summary?.latest_accesses) ? summary.latest_accesses : [];
+      const topIps = Array.isArray(summary?.top_ips) ? summary.top_ips : [];
+
+      return `
+        <div class="space-y-4 mb-4">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div class="rounded-lg p-4" style="background-color: ${bgColor}; border: 1px solid ${secondaryColor};">
+              <p style="font-size: ${fontSize * 0.82}px; opacity: 0.75;">Logins com sucesso hoje</p>
+              <p class="font-bold" style="font-size: ${fontSize * 1.5}px; margin-top: 4px;">${summary?.login_today ?? 0}</p>
+            </div>
+            <div class="rounded-lg p-4" style="background-color: ${bgColor}; border: 1px solid ${secondaryColor};">
+              <p style="font-size: ${fontSize * 0.82}px; opacity: 0.75;">Falhas hoje</p>
+              <p class="font-bold" style="font-size: ${fontSize * 1.5}px; margin-top: 4px;">${summary?.fail_today ?? 0}</p>
+            </div>
+            <div class="rounded-lg p-4" style="background-color: ${bgColor}; border: 1px solid ${secondaryColor};">
+              <p style="font-size: ${fontSize * 0.82}px; opacity: 0.75;">Registros considerados</p>
+              <p class="font-bold" style="font-size: ${fontSize * 1.5}px; margin-top: 4px;">${summary?.total_considered ?? 0}</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+            <div class="rounded-lg p-4" style="background-color: ${bgColor}; border: 1px solid ${secondaryColor};">
+              <p class="font-semibold mb-2" style="font-size: ${fontSize * 0.92}px;">Usuários que mais acessaram</p>
+              ${topUsers.length ? topUsers.map((item, index) => `
+                <div class="flex justify-between items-center py-1" style="font-size: ${fontSize * 0.82}px;">
+                  <span>${index + 1}. ${item.username}</span>
+                  <strong>${item.count}</strong>
+                </div>
+              `).join('') : `<p style="font-size: ${fontSize * 0.82}px; opacity: 0.7;">Sem dados</p>`}
+            </div>
+
+            <div class="rounded-lg p-4" style="background-color: ${bgColor}; border: 1px solid ${secondaryColor};">
+              <p class="font-semibold mb-2" style="font-size: ${fontSize * 0.92}px;">Últimos acessos por usuário</p>
+              ${latestAccesses.length ? latestAccesses.map((item) => `
+                <div class="py-1" style="font-size: ${fontSize * 0.8}px;">
+                  <div><strong>${item.username}</strong> • ${item.action} • ${item.result === 'success' ? 'sucesso' : 'falha'}</div>
+                  <div style="opacity: 0.7;">${formatAccessLogDate(item.created_at)}</div>
+                </div>
+              `).join('') : `<p style="font-size: ${fontSize * 0.82}px; opacity: 0.7;">Sem dados</p>`}
+            </div>
+
+            <div class="rounded-lg p-4" style="background-color: ${bgColor}; border: 1px solid ${secondaryColor};">
+              <p class="font-semibold mb-2" style="font-size: ${fontSize * 0.92}px;">IPs mais recorrentes</p>
+              ${topIps.length ? topIps.map((item, index) => `
+                <div class="flex justify-between items-center py-1" style="font-size: ${fontSize * 0.82}px;">
+                  <span>${index + 1}. ${item.ip_address}</span>
+                  <strong>${item.count}</strong>
+                </div>
+              `).join('') : `<p style="font-size: ${fontSize * 0.82}px; opacity: 0.7;">Sem dados</p>`}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    async function loadAccessLogSummary() {
+      const target = document.getElementById('accessSummaryPanel');
+      if (!target) return;
+
+      const config = window.elementSdk?.config || defaultConfig;
+      const bgColor = config.background_color || defaultConfig.background_color;
+      const secondaryColor = config.secondary_action || defaultConfig.secondary_action;
+      const fontSize = config.font_size || defaultConfig.font_size;
+
+      target.innerHTML = `<p style="font-size: ${fontSize}px; opacity: 0.7;">Carregando resumo...</p>`;
+
+      try {
+        const query = buildAccessLogQueryParams();
+        const response = await fetch(`${RENDER_API_BASE}/access-log/summary${query ? `?${query}` : ''}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const summary = await response.json();
+        target.innerHTML = renderAccessSummaryCards(summary, fontSize, bgColor, secondaryColor);
+      } catch (error) {
+        target.innerHTML = `<p style="font-size: ${fontSize}px; color: #ef4444;">Erro ao carregar resumo da auditoria.</p>`;
+      }
+    }
+
     async function loadAccessLogsIntoModal() {
       const target = document.getElementById('accessLogsList');
+      await loadAccessLogSummary();
       if (!target) return;
 
       const config = window.elementSdk?.config || defaultConfig;
