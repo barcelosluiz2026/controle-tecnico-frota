@@ -352,6 +352,9 @@ def access_log_summary():
     user_counts = {}
     latest_by_user = {}
     ip_counts = {}
+    fail_by_user = {}
+    fail_by_ip = {}
+    last_success_by_user = {}
 
     for log in logs:
         created_at = log.created_at.astimezone(timezone.utc) if log.created_at else None
@@ -373,9 +376,21 @@ def access_log_summary():
                 "ip_address": log.ip_address,
             }
 
+        if log.result == "success" and username not in last_success_by_user:
+            last_success_by_user[username] = {
+                "username": username,
+                "created_at": created_at.isoformat() if created_at else None,
+                "ip_address": log.ip_address,
+            }
+
         ip = str(log.ip_address or "").strip()
         if ip:
             ip_counts[ip] = ip_counts.get(ip, 0) + 1
+
+        if log.result == "fail":
+            fail_by_user[username] = fail_by_user.get(username, 0) + 1
+            if ip:
+                fail_by_ip[ip] = fail_by_ip.get(ip, 0) + 1
 
     top_users = [
         {"username": username, "count": count}
@@ -389,12 +404,38 @@ def access_log_summary():
         for ip, count in sorted(ip_counts.items(), key=lambda item: (-item[1], item[0]))[:5]
     ]
 
+    top_fail_users = [
+        {"username": username, "count": count}
+        for username, count in sorted(fail_by_user.items(), key=lambda item: (-item[1], item[0]))[:5]
+    ]
+
+    top_fail_ips = [
+        {"ip_address": ip, "count": count}
+        for ip, count in sorted(fail_by_ip.items(), key=lambda item: (-item[1], item[0]))[:8]
+    ]
+
+    suspicious_ips = []
+    for ip, count in sorted(fail_by_ip.items(), key=lambda item: (-item[1], item[0])):
+        severity = "high" if count >= 10 else ("medium" if count >= 5 else "low")
+        if severity in {"high", "medium"}:
+            suspicious_ips.append({
+                "ip_address": ip,
+                "fail_count": count,
+                "severity": severity,
+            })
+
+    last_success_list = list(last_success_by_user.values())[:8]
+
     return jsonify({
         "login_today": login_today,
         "fail_today": fail_today,
         "top_users": top_users,
         "latest_accesses": latest_accesses,
         "top_ips": top_ips,
+        "top_fail_users": top_fail_users,
+        "top_fail_ips": top_fail_ips,
+        "last_success_by_user": last_success_list,
+        "suspicious_ips": suspicious_ips,
         "total_considered": len(logs),
     })
 
