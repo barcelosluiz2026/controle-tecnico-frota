@@ -1715,6 +1715,26 @@
       const topUsers = Array.isArray(summary?.top_users) ? summary.top_users : [];
       const latestAccesses = Array.isArray(summary?.latest_accesses) ? summary.latest_accesses : [];
       const topIps = Array.isArray(summary?.top_ips) ? summary.top_ips : [];
+      const topFailUsers = Array.isArray(summary?.top_fail_users) ? summary.top_fail_users : [];
+      const topFailIps = Array.isArray(summary?.top_fail_ips) ? summary.top_fail_ips : [];
+      const suspiciousIps = Array.isArray(summary?.suspicious_ips) ? summary.suspicious_ips : [];
+      const lastSuccessByUser = Array.isArray(summary?.last_success_by_user) ? summary.last_success_by_user : [];
+
+      const suspiciousBlock = suspiciousIps.length
+        ? suspiciousIps.map((item) => {
+            const bg = item.severity === 'high' ? '#7f1d1d' : '#92400e';
+            const label = item.severity === 'high' ? 'ALTO RISCO' : 'ATENÇÃO';
+            return `
+              <div class="flex justify-between items-center py-2 px-3 rounded" style="background-color: ${bg}; color: white; font-size: ${fontSize * 0.82}px;">
+                <div>
+                  <strong>${item.ip_address}</strong>
+                  <div style="opacity: 0.9;">${item.fail_count} falha(s)</div>
+                </div>
+                <div style="font-weight: 800;">${label}</div>
+              </div>
+            `;
+          }).join('')
+        : `<p style="font-size: ${fontSize * 0.82}px; opacity: 0.7;">Nenhum IP suspeito pelos critérios atuais.</p>`;
 
       return `
         <div class="space-y-4 mb-4">
@@ -1733,6 +1753,11 @@
             </div>
           </div>
 
+          <div class="rounded-lg p-4" style="background-color: ${bgColor}; border: 1px solid ${secondaryColor};">
+            <p class="font-semibold mb-2" style="font-size: ${fontSize * 0.95}px;">IPs suspeitos</p>
+            <div class="space-y-2">${suspiciousBlock}</div>
+          </div>
+
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
             <div class="rounded-lg p-4" style="background-color: ${bgColor}; border: 1px solid ${secondaryColor};">
               <p class="font-semibold mb-2" style="font-size: ${fontSize * 0.92}px;">Usuários que mais acessaram</p>
@@ -1745,13 +1770,13 @@
             </div>
 
             <div class="rounded-lg p-4" style="background-color: ${bgColor}; border: 1px solid ${secondaryColor};">
-              <p class="font-semibold mb-2" style="font-size: ${fontSize * 0.92}px;">Últimos acessos por usuário</p>
-              ${latestAccesses.length ? latestAccesses.map((item) => `
-                <div class="py-1" style="font-size: ${fontSize * 0.8}px;">
-                  <div><strong>${item.username}</strong> • ${item.action} • ${item.result === 'success' ? 'sucesso' : 'falha'}</div>
-                  <div style="opacity: 0.7;">${formatAccessLogDate(item.created_at)}</div>
+              <p class="font-semibold mb-2" style="font-size: ${fontSize * 0.92}px;">Falhas por usuário</p>
+              ${topFailUsers.length ? topFailUsers.map((item, index) => `
+                <div class="flex justify-between items-center py-1" style="font-size: ${fontSize * 0.82}px;">
+                  <span>${index + 1}. ${item.username}</span>
+                  <strong>${item.count}</strong>
                 </div>
-              `).join('') : `<p style="font-size: ${fontSize * 0.82}px; opacity: 0.7;">Sem dados</p>`}
+              `).join('') : `<p style="font-size: ${fontSize * 0.82}px; opacity: 0.7;">Sem falhas registradas</p>`}
             </div>
 
             <div class="rounded-lg p-4" style="background-color: ${bgColor}; border: 1px solid ${secondaryColor};">
@@ -1762,6 +1787,38 @@
                   <strong>${item.count}</strong>
                 </div>
               `).join('') : `<p style="font-size: ${fontSize * 0.82}px; opacity: 0.7;">Sem dados</p>`}
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+            <div class="rounded-lg p-4" style="background-color: ${bgColor}; border: 1px solid ${secondaryColor};">
+              <p class="font-semibold mb-2" style="font-size: ${fontSize * 0.92}px;">Últimos acessos por usuário</p>
+              ${latestAccesses.length ? latestAccesses.map((item) => `
+                <div class="py-1" style="font-size: ${fontSize * 0.8}px;">
+                  <div><strong>${item.username}</strong> • ${item.action} • ${item.result === 'success' ? 'sucesso' : 'falha'}</div>
+                  <div style="opacity: 0.7;">${formatAccessLogDate(item.created_at)}</div>
+                </div>
+              `).join('') : `<p style="font-size: ${fontSize * 0.82}px; opacity: 0.7;">Sem dados</p>`}
+            </div>
+
+            <div class="rounded-lg p-4" style="background-color: ${bgColor}; border: 1px solid ${secondaryColor};">
+              <p class="font-semibold mb-2" style="font-size: ${fontSize * 0.92}px;">Último login com sucesso</p>
+              ${lastSuccessByUser.length ? lastSuccessByUser.map((item) => `
+                <div class="py-1" style="font-size: ${fontSize * 0.8}px;">
+                  <div><strong>${item.username}</strong></div>
+                  <div style="opacity: 0.7;">${formatAccessLogDate(item.created_at)}${item.ip_address ? ` • ${item.ip_address}` : ''}</div>
+                </div>
+              `).join('') : `<p style="font-size: ${fontSize * 0.82}px; opacity: 0.7;">Sem dados</p>`}
+            </div>
+
+            <div class="rounded-lg p-4" style="background-color: ${bgColor}; border: 1px solid ${secondaryColor};">
+              <p class="font-semibold mb-2" style="font-size: ${fontSize * 0.92}px;">Falhas por IP</p>
+              ${topFailIps.length ? topFailIps.map((item, index) => `
+                <div class="flex justify-between items-center py-1" style="font-size: ${fontSize * 0.82}px;">
+                  <span>${index + 1}. ${item.ip_address}</span>
+                  <strong>${item.count}</strong>
+                </div>
+              `).join('') : `<p style="font-size: ${fontSize * 0.82}px; opacity: 0.7;">Sem falhas registradas</p>`}
             </div>
           </div>
         </div>
