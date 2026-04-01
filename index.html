@@ -602,23 +602,30 @@
 
                   <div id="usuariosList" class="space-y-3" style="margin-top: 8px;">
                     ${currentData.filter(d => d.type === 'usuario').map(usuario => `
-                      <div class="rounded p-4 flex justify-between items-center" style="background-color: ${bgColor};">
+                      <div class="rounded p-4 flex justify-between items-center gap-4 flex-wrap" style="background-color: ${bgColor};">
                         <div>
                           <h3 class="font-bold" style="font-size: ${fontSize * 1.1}px;">${usuario.fullName}</h3>
                           <p style="font-size: ${fontSize * 0.9}px; opacity: 0.7;">Login: ${usuario.username}</p>
                           <p style="font-size: ${fontSize * 0.85}px; opacity: 0.6;">${getRoleLabel(usuario.role)}</p>
                         </div>
-                        ${usuario.username !== 'admin' ? `
-                          <button class="delete-usuario-btn px-4 py-2 rounded font-semibold" 
-                                  data-id="${usuario.id}"
-                                  style="background-color: #ef4444; color: white; font-size: ${fontSize * 0.85}px;">
-                            🗑️ Excluir
-                          </button>
-                        ` : `
-                          <span style="font-size: ${fontSize * 0.85}px; opacity: 0.5; font-style: italic;">
-                            🔒 Protegido
-                          </span>
-                        `}
+                        <div class="flex gap-2 flex-wrap">
+                          ${usuario.username !== 'admin' ? `
+                            <button class="edit-usuario-btn px-4 py-2 rounded font-semibold" 
+                                    data-id="${usuario.id}"
+                                    style="background-color: ${primaryColor}; color: white; font-size: ${fontSize * 0.85}px;">
+                              ✏️ Alterar Perfil
+                            </button>
+                            <button class="delete-usuario-btn px-4 py-2 rounded font-semibold" 
+                                    data-id="${usuario.id}"
+                                    style="background-color: #ef4444; color: white; font-size: ${fontSize * 0.85}px;">
+                              🗑️ Excluir
+                            </button>
+                          ` : `
+                            <span style="font-size: ${fontSize * 0.85}px; opacity: 0.5; font-style: italic; align-self: center;">
+                              🔒 Protegido
+                            </span>
+                          `}
+                        </div>
                       </div>
                     `).join('')}
                   </div>
@@ -627,8 +634,9 @@
 
               <div id="addUsuarioModal" class="hidden fixed inset-0 items-center justify-center p-4" style="background-color: rgba(0,0,0,0.7); z-index: 1100;">
                 <div class="w-full max-w-md rounded-lg p-6" style="background-color: ${surfaceColor};">
-                  <h2 class="font-bold mb-4" style="font-size: ${fontSize * 1.5}px;">Novo Usuário</h2>
+                  <h2 id="usuarioModalTitle" class="font-bold mb-4" style="font-size: ${fontSize * 1.5}px;">Novo Usuário</h2>
                   <form id="usuarioForm">
+                    <input type="hidden" id="editingUserId">
                     <div class="mb-4">
                       <label for="newFullName" class="block mb-2" style="font-size: ${fontSize}px;">Nome Completo *</label>
                       <input type="text" id="newFullName" required class="w-full px-4 py-2 rounded" style="background-color: ${bgColor}; color: ${textColor}; border: 1px solid ${secondaryColor}; font-size: ${fontSize}px;">
@@ -640,6 +648,7 @@
                     <div class="mb-4">
                       <label for="newPassword" class="block mb-2" style="font-size: ${fontSize}px;">Senha *</label>
                       <input type="password" id="newPassword" required minlength="4" class="w-full px-4 py-2 rounded" style="background-color: ${bgColor}; color: ${textColor}; border: 1px solid ${secondaryColor}; font-size: ${fontSize}px;">
+                      <p id="passwordHint" style="font-size: ${fontSize * 0.8}px; opacity: 0.7; margin-top: 4px;">Informe a senha do novo usuário.</p>
                     </div>
                     <div class="mb-4">
                       <label class="block mb-2" style="font-size: ${fontSize}px;">Nível de Acesso *</label>
@@ -659,7 +668,7 @@
                       </div>
                     </div>
                     <div class="flex gap-3">
-                      <button type="submit" class="flex-1 px-4 py-2 rounded font-semibold" style="background-color: ${primaryColor}; color: white; font-size: ${fontSize}px;">
+                      <button type="submit" id="usuarioSubmitBtn" class="flex-1 px-4 py-2 rounded font-semibold" style="background-color: ${primaryColor}; color: white; font-size: ${fontSize}px;">
                         Criar Usuário
                       </button>
                       <button type="button" id="cancelUsuarioBtn" class="flex-1 px-4 py-2 rounded font-semibold" style="background-color: ${secondaryColor}; color: white; font-size: ${fontSize}px;">
@@ -2396,11 +2405,81 @@
       const addUsuarioModal = document.getElementById('addUsuarioModal');
       const cancelUsuarioBtn = document.getElementById('cancelUsuarioBtn');
       const usuarioForm = document.getElementById('usuarioForm');
+      const usuarioModalTitle = document.getElementById('usuarioModalTitle');
+      const usuarioSubmitBtn = document.getElementById('usuarioSubmitBtn');
+      const editingUserIdInput = document.getElementById('editingUserId');
+      const passwordHint = document.getElementById('passwordHint');
+
+      function resetUsuarioModal() {
+        usuarioForm?.reset();
+        if (editingUserIdInput) editingUserIdInput.value = '';
+        if (usuarioModalTitle) usuarioModalTitle.textContent = 'Novo Usuário';
+        if (usuarioSubmitBtn) usuarioSubmitBtn.textContent = 'Criar Usuário';
+
+        const usernameInput = document.getElementById('newUsername');
+        const passwordInput = document.getElementById('newPassword');
+
+        if (usernameInput) usernameInput.disabled = false;
+        if (passwordInput) {
+          passwordInput.required = true;
+          passwordInput.value = '';
+          passwordInput.placeholder = '';
+        }
+        if (passwordHint) {
+          passwordHint.textContent = 'Informe a senha do novo usuário.';
+        }
+      }
+
+      function openUsuarioModalForCreate() {
+        resetUsuarioModal();
+        addUsuarioModal.classList.remove('hidden');
+        addUsuarioModal.classList.add('flex');
+      }
+
+      function openUsuarioModalForEdit(usuarioId) {
+        const usuario = currentData.find(d => d.id === usuarioId && d.type === 'usuario');
+        if (!usuario) {
+          showToast('Usuário não encontrado', 'error');
+          return;
+        }
+
+        if (usuario.username === 'admin') {
+          showToast('O usuário admin permanece protegido', 'error');
+          return;
+        }
+
+        resetUsuarioModal();
+
+        if (editingUserIdInput) editingUserIdInput.value = usuario.id;
+        if (usuarioModalTitle) usuarioModalTitle.textContent = 'Alterar Perfil do Usuário';
+        if (usuarioSubmitBtn) usuarioSubmitBtn.textContent = 'Salvar Alterações';
+
+        const fullNameInput = document.getElementById('newFullName');
+        const usernameInput = document.getElementById('newUsername');
+        const passwordInput = document.getElementById('newPassword');
+        const roleInput = document.querySelector(`input[name="newRole"][value="${usuario.role}"]`);
+
+        if (fullNameInput) fullNameInput.value = usuario.fullName || '';
+        if (usernameInput) {
+          usernameInput.value = usuario.username || '';
+          usernameInput.disabled = true;
+        }
+        if (passwordInput) {
+          passwordInput.required = false;
+          passwordInput.placeholder = 'Deixe em branco para manter a senha atual';
+        }
+        if (passwordHint) {
+          passwordHint.textContent = 'Deixe a senha em branco para manter a senha atual.';
+        }
+        if (roleInput) roleInput.checked = true;
+
+        addUsuarioModal.classList.remove('hidden');
+        addUsuarioModal.classList.add('flex');
+      }
 
       if (addUsuarioBtn && addUsuarioModal) {
         addUsuarioBtn.addEventListener('click', () => {
-          addUsuarioModal.classList.remove('hidden');
-          addUsuarioModal.classList.add('flex');
+          openUsuarioModalForCreate();
         });
       }
 
@@ -2408,7 +2487,7 @@
         cancelUsuarioBtn.addEventListener('click', () => {
           addUsuarioModal.classList.add('hidden');
           addUsuarioModal.classList.remove('flex');
-          usuarioForm?.reset();
+          resetUsuarioModal();
         });
       }
 
@@ -2416,7 +2495,10 @@
         usuarioForm.addEventListener('submit', async (e) => {
           e.preventDefault();
           
-          if (currentData.length >= 999) {
+          const editingUserId = editingUserIdInput?.value || '';
+          const isEditing = !!editingUserId;
+
+          if (!isEditing && currentData.length >= 999) {
             showToast('Limite de 999 registros atingido', 'error');
             return;
           }
@@ -2425,6 +2507,42 @@
           const username = document.getElementById('newUsername').value;
           const password = document.getElementById('newPassword').value;
           const role = document.querySelector('input[name="newRole"]:checked')?.value;
+
+          if (isEditing) {
+            const usuarioAtual = currentData.find(d => d.id === editingUserId && d.type === 'usuario');
+            if (!usuarioAtual) {
+              showToast('Usuário não encontrado', 'error');
+              return;
+            }
+
+            if (usuarioAtual.username === 'admin') {
+              showToast('O usuário admin permanece protegido', 'error');
+              return;
+            }
+
+            const payloadAtualizado = {
+              ...usuarioAtual,
+              fullName,
+              role,
+              updatedAt: new Date().toISOString()
+            };
+
+            if (password) {
+              payloadAtualizado.password = password;
+            }
+
+            const result = await window.dataSdk.update(payloadAtualizado);
+
+            if (result.isOk) {
+              addUsuarioModal.classList.add('hidden');
+              addUsuarioModal.classList.remove('flex');
+              resetUsuarioModal();
+              showToast('Perfil do usuário alterado com sucesso!', 'success');
+            } else {
+              showToast('Erro ao alterar perfil do usuário', 'error');
+            }
+            return;
+          }
 
           const usuarioExistente = currentData.find(d => d.type === 'usuario' && d.username === username);
           if (usuarioExistente) {
@@ -2445,13 +2563,20 @@
           if (result.isOk) {
             addUsuarioModal.classList.add('hidden');
             addUsuarioModal.classList.remove('flex');
-            usuarioForm.reset();
+            resetUsuarioModal();
             showToast('Usuário criado com sucesso!', 'success');
           } else {
             showToast('Erro ao criar usuário', 'error');
           }
         });
       }
+
+      document.querySelectorAll('.edit-usuario-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openUsuarioModalForEdit(btn.dataset.id);
+        });
+      });
 
       document.querySelectorAll('.delete-usuario-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
