@@ -3727,6 +3727,29 @@
       });
     }
 
+    async function recalculatePaneStatusAfterChildDeletion(paneId) {
+      const pane = currentData.find(d => d.type === 'pane' && d.id === paneId);
+      if (!pane || pane.paneStatus === 'finalizada') return;
+
+      const etapas = currentData.filter(d => d.type === 'etapa' && d.paneId === paneId);
+      const pendencias = currentData.filter(d => d.type === 'pendencia' && d.paneId === paneId);
+
+      let novoStatus = 'lancada';
+      if (pendencias.length > 0) {
+        if (pendencias.some(p => p.tipoItem === 'ferramenta')) novoStatus = 'aguardando_ferramenta';
+        else if (pendencias.some(p => p.tipoAquisicao === 'transferencia')) novoStatus = 'aguardando_transferencia';
+        else novoStatus = 'aguardando_material';
+      } else if (etapas.length > 0) {
+        novoStatus = 'em_progresso';
+      }
+
+      if (pane.paneStatus !== novoStatus) {
+        const paneAtualizada = { ...pane, paneStatus: novoStatus };
+        const result = await window.dataSdk.update(paneAtualizada);
+        if (result.isOk) selectedPane = paneAtualizada;
+      }
+    }
+
     function setupPaneListeners() {
       const backBtn = document.getElementById('backToAeronaveBtn');
       if (backBtn) {
