@@ -391,6 +391,35 @@ def apply_audit_log_filters(query):
     return query
 
 
+def friendly_audit_row(row: dict) -> dict:
+    action_map = {"create": "Criou registro", "update": "Atualizou registro", "delete": "Excluiu registro"}
+    source_map = {"panes": "Controle Técnico da Frota", "rodend": "Controle Rod End"}
+    type_map = {
+        "aeronave": "Aeronave",
+        "pane": "Discrepância",
+        "etapa": "Etapa",
+        "pendencia": "Pendência",
+        "usuario": "Usuário",
+        "rodend_user": "Usuário Rod End",
+        "rodend_aircraft": "Aeronave Rod End",
+        "rodend_component": "Componente Rod End",
+    }
+    created_at = row.get("created_at") or ""
+    try:
+        created_label = datetime.fromisoformat(str(created_at).replace("Z", "+00:00")).strftime("%d/%m/%Y %H:%M")
+    except Exception:
+        created_label = str(created_at or "")
+    return {
+        "Data/Hora": created_label,
+        "Usuário": row.get("username", ""),
+        "Ação": action_map.get(str(row.get("action", "")).strip(), str(row.get("action", "")).strip()),
+        "Módulo": source_map.get(str(row.get("source", "")).strip(), str(row.get("source", "")).strip()),
+        "Tipo de registro": type_map.get(str(row.get("target_type", "")).strip(), str(row.get("target_type", "")).strip()),
+        "ID do registro": row.get("target_id", ""),
+        "Detalhes": row.get("details", ""),
+        "IP": row.get("ip_address", ""),
+    }
+
 def build_excel_response(rows, filename: str, sheet_name: str = "Auditoria"):
     workbook = Workbook()
     sheet = workbook.active
@@ -603,7 +632,7 @@ def export_audit_logs():
     query = AuditLog.query.order_by(AuditLog.created_at.desc(), AuditLog.id.desc())
     query = apply_audit_log_filters(query)
     logs = query.limit(5000).all()
-    return build_excel_response([log.to_dict() for log in logs], "auditoria_acoes.xlsx", "Auditoria Acoes")
+    return build_excel_response([friendly_audit_row(log.to_dict()) for log in logs], "auditoria_acoes_formatada.xlsx", "Auditoria de Ações")
 
 @app.get("/api/records")
 def list_records():
