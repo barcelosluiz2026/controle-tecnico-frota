@@ -392,8 +392,15 @@ def apply_audit_log_filters(query):
 
 
 def friendly_audit_row(row: dict) -> dict:
-    action_map = {"create": "Criou registro", "update": "Atualizou registro", "delete": "Excluiu registro"}
-    source_map = {"panes": "Controle Técnico da Frota", "rodend": "Controle Rod End"}
+    action_map = {
+        "create": "Criou registro",
+        "update": "Atualizou registro",
+        "delete": "Excluiu registro",
+    }
+    source_map = {
+        "panes": "Controle Técnico da Frota",
+        "rodend": "Controle Rod End",
+    }
     type_map = {
         "aeronave": "Aeronave",
         "pane": "Discrepância",
@@ -404,11 +411,13 @@ def friendly_audit_row(row: dict) -> dict:
         "rodend_aircraft": "Aeronave Rod End",
         "rodend_component": "Componente Rod End",
     }
-    created_at = row.get("created_at") or ""
+
+    raw_created_at = row.get("created_at") or ""
     try:
-        created_label = datetime.fromisoformat(str(created_at).replace("Z", "+00:00")).strftime("%d/%m/%Y %H:%M")
+        created_label = datetime.fromisoformat(str(raw_created_at).replace("Z", "+00:00")).strftime("%d/%m/%Y %H:%M")
     except Exception:
-        created_label = str(created_at or "")
+        created_label = str(raw_created_at or "")
+
     return {
         "Data/Hora": created_label,
         "Usuário": row.get("username", ""),
