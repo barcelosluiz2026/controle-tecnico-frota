@@ -1317,12 +1317,15 @@
             ` : ''}
 
             ${currentUser && currentUser.role !== 'mecanico' && selectedPane.paneStatus !== 'finalizada' ? `
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <button id="addEtapaBtn" class="px-6 py-3 rounded-lg font-semibold" style="background-color: ${primaryColor}; color: white; font-size: ${fontSize}px;">
                   + Adicionar Etapa
                 </button>
                 <button id="addPendenciaBtn" class="px-6 py-3 rounded-lg font-semibold" style="background-color: ${secondaryColor}; color: white; font-size: ${fontSize}px;">
                   + Adicionar Pendência
+                </button>
+                <button id="deletePaneBtn" class="px-6 py-3 rounded-lg font-semibold" style="background-color: #ef4444; color: white; font-size: ${fontSize}px;">
+                  🗑️ Excluir Discrepância
                 </button>
               </div>
               ${(selectedPane.paneStatus === 'lancada' || selectedPane.paneStatus === 'em_progresso') ? `
@@ -3727,26 +3730,33 @@
       });
     }
 
-    async function recalculatePaneStatusAfterChildDeletion(paneId) {
+    async function recalculatePaneStatusAfterDeletion(paneId) {
       const pane = currentData.find(d => d.type === 'pane' && d.id === paneId);
       if (!pane || pane.paneStatus === 'finalizada') return;
 
-      const etapas = currentData.filter(d => d.type === 'etapa' && d.paneId === paneId);
-      const pendencias = currentData.filter(d => d.type === 'pendencia' && d.paneId === paneId);
+      const etapasRestantes = currentData.filter(d => d.type === 'etapa' && d.paneId === paneId);
+      const pendenciasRestantes = currentData.filter(d => d.type === 'pendencia' && d.paneId === paneId);
 
       let novoStatus = 'lancada';
-      if (pendencias.length > 0) {
-        if (pendencias.some(p => p.tipoItem === 'ferramenta')) novoStatus = 'aguardando_ferramenta';
-        else if (pendencias.some(p => p.tipoAquisicao === 'transferencia')) novoStatus = 'aguardando_transferencia';
-        else novoStatus = 'aguardando_material';
-      } else if (etapas.length > 0) {
+
+      if (pendenciasRestantes.length > 0) {
+        if (pendenciasRestantes.some(p => p.tipoItem === 'ferramenta')) {
+          novoStatus = 'aguardando_ferramenta';
+        } else if (pendenciasRestantes.some(p => p.tipoAquisicao === 'transferencia')) {
+          novoStatus = 'aguardando_transferencia';
+        } else {
+          novoStatus = 'aguardando_material';
+        }
+      } else if (etapasRestantes.length > 0) {
         novoStatus = 'em_progresso';
       }
 
       if (pane.paneStatus !== novoStatus) {
         const paneAtualizada = { ...pane, paneStatus: novoStatus };
         const result = await window.dataSdk.update(paneAtualizada);
-        if (result.isOk) selectedPane = paneAtualizada;
+        if (result.isOk) {
+          selectedPane = paneAtualizada;
+        }
       }
     }
 
@@ -3856,6 +3866,68 @@
           } else {
             showToast('Erro ao atualizar pane', 'error');
           }
+        });
+      }
+
+      const deletePaneBtn = document.getElementById('deletePaneBtn');
+      if (deletePaneBtn) {
+        deletePaneBtn.addEventListener('click', async () => {
+          const config = window.elementSdk?.config || defaultConfig;
+          const surfaceColor = config.surface_color || defaultConfig.surface_color;
+          const secondaryColor = config.secondary_action || defaultConfig.secondary_action;
+          const textColor = config.text_color || defaultConfig.text_color;
+          const fontSize = config.font_size || defaultConfig.font_size;
+
+          const etapasDaPane = currentData.filter(d => d.type === 'etapa' && d.paneId === selectedPane.id);
+          const pendenciasDaPane = currentData.filter(d => d.type === 'pendencia' && d.paneId === selectedPane.id);
+
+          const confirmDelete = document.createElement('div');
+          confirmDelete.className = 'fixed inset-0 flex items-center justify-center p-4';
+          confirmDelete.style.cssText = 'background-color: rgba(0,0,0,0.7); z-index: 3000;';
+          confirmDelete.innerHTML = `
+            <div class="w-full max-w-md rounded-lg p-6" style="background-color: ${surfaceColor};">
+              <h3 class="font-bold mb-4" style="font-size: ${fontSize * 1.3}px; color: ${textColor};">Confirmar Exclusão</h3>
+              <p style="font-size: ${fontSize}px; color: ${textColor}; margin-bottom: 20px;">
+                Tem certeza que deseja excluir esta discrepância?<br><br>
+                <strong>${selectedPane.paneDescricao}</strong><br>
+                <span style="opacity: 0.75;">ATA ${selectedPane.paneAta || '--'}</span><br><br>
+                <span style="color: #ef4444;">⚠️ Também serão excluídas ${etapasDaPane.length} etapa(s) e ${pendenciasDaPane.length} pendência(s).</span>
+              </p>
+              <div class="flex gap-3">
+                <button id="confirmDeletePane" class="flex-1 px-4 py-2 rounded font-semibold" style="background-color: #ef4444; color: white; font-size: ${fontSize}px;">
+                  Sim, Excluir
+                </button>
+                <button id="cancelDeletePane" class="flex-1 px-4 py-2 rounded font-semibold" style="background-color: ${secondaryColor}; color: white; font-size: ${fontSize}px;">
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          `;
+          document.body.appendChild(confirmDelete);
+
+          document.getElementById('cancelDeletePane').addEventListener('click', () => {
+            document.body.removeChild(confirmDelete);
+          });
+
+          document.getElementById('confirmDeletePane').addEventListener('click', async () => {
+            for (const etapa of etapasDaPane) {
+              await window.dataSdk.delete(etapa);
+            }
+            for (const pendencia of pendenciasDaPane) {
+              await window.dataSdk.delete(pendencia);
+            }
+            const result = await window.dataSdk.delete(selectedPane);
+            document.body.removeChild(confirmDelete);
+
+            if (result.isOk) {
+              showToast('Discrepância excluída com sucesso!', 'success');
+              selectedPane = null;
+              currentView = 'aeronave';
+              renderCurrentView();
+            } else {
+              showToast('Erro ao excluir discrepância', 'error');
+            }
+          });
         });
       }
 
@@ -4050,6 +4122,7 @@
           document.getElementById('confirmDeleteEtapa').addEventListener('click', async () => {
             const result = await window.dataSdk.delete(etapa);
             if (result.isOk) {
+              await recalculatePaneStatusAfterDeletion(etapa.paneId);
               showToast('Etapa excluída com sucesso!', 'success');
             } else {
               showToast('Erro ao excluir etapa', 'error');
@@ -4123,14 +4196,7 @@
           document.getElementById('confirmDeletePendencia').addEventListener('click', async () => {
             const result = await window.dataSdk.delete(pendencia);
             if (result.isOk) {
-              const pendenciasRestantes = currentData.filter(d => d.type === 'pendencia' && d.paneId === selectedPane.id && d.id !== pendencia.id);
-              if (pendenciasRestantes.length === 0 && (selectedPane.paneStatus === 'aguardando_transferencia' || selectedPane.paneStatus === 'aguardando_material')) {
-                const paneAtualizada = { 
-                  ...selectedPane, 
-                  paneStatus: 'em_progresso'
-                };
-                await window.dataSdk.update(paneAtualizada);
-              }
+              await recalculatePaneStatusAfterDeletion(pendencia.paneId);
               showToast('Pendência excluída com sucesso!', 'success');
             } else {
               showToast('Erro ao excluir pendência', 'error');
