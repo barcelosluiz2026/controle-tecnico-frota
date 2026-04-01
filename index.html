@@ -246,6 +246,44 @@
       'Outro': 'https://imgur.com/eSRiGVh.jpg'
     };
 
+    function isAeronaveArquivada(aeronave) {
+      return !!(aeronave && aeronave.type === 'aeronave' && aeronave.arquivada === true);
+    }
+
+    function getAeronavesAtivas() {
+      return currentData.filter(d => d.type === 'aeronave' && !isAeronaveArquivada(d));
+    }
+
+    function getAeronavesArquivadas() {
+      return currentData.filter(d => d.type === 'aeronave' && isAeronaveArquivada(d));
+    }
+
+    function getAeronaveById(aeronaveId) {
+      return currentData.find(d => d.type === 'aeronave' && d.id === aeronaveId) || null;
+    }
+
+    function formatarDataHoraArquivo(value) {
+      if (!value) return '-';
+      const data = new Date(value);
+      if (isNaN(data.getTime())) return '-';
+      return data.toLocaleString('pt-BR');
+    }
+
+    function getResumoHistoricoAeronave(aeronaveId) {
+      const panes = currentData.filter(d => d.type === 'pane' && d.aeronaveId === aeronaveId);
+      const paneIds = new Set(panes.map(p => p.id));
+      const etapas = currentData.filter(d => d.type === 'etapa' && paneIds.has(d.paneId));
+      const pendencias = currentData.filter(d => d.type === 'pendencia' && paneIds.has(d.paneId));
+      return {
+        panes,
+        etapas,
+        pendencias,
+        totalPanes: panes.length,
+        totalEtapas: etapas.length,
+        totalPendencias: pendencias.length,
+      };
+    }
+
     function showToast(message, type = 'success') {
       const config = window.elementSdk?.config || defaultConfig;
       const fontSize = config.font_size || defaultConfig.font_size;
@@ -366,7 +404,7 @@
     }
 
     function renderHome(bgColor, surfaceColor, textColor, primaryColor, secondaryColor, fontFamily, fontSize, titulo, subtitulo) {
-      const aeronaves = currentData.filter(d => d.type === 'aeronave' && !d.archived);
+      const aeronaves = getAeronavesAtivas();
       const imagemFundo = 'https://imgur.com/eSRiGVh.jpg';
       
       return `
@@ -789,12 +827,10 @@
 
     function renderDashboard(bgColor, surfaceColor, textColor, primaryColor, secondaryColor, fontFamily, fontSize, titulo, subtitulo) {
       const imagemFundo = 'https://imgur.com/eSRiGVh.jpg';
-      const aeronaves = currentData.filter(d => d.type === 'aeronave' && !d.archived);
-      const activeAircraftIds = new Set(aeronaves.map(a => a.id));
-      const panes = currentData.filter(d => d.type === 'pane' && activeAircraftIds.has(d.aeronaveId));
-      const activePaneIds = new Set(panes.map(p => p.id));
-      const pendencias = currentData.filter(d => d.type === 'pendencia' && activePaneIds.has(d.paneId));
-      const etapas = currentData.filter(d => d.type === 'etapa' && activePaneIds.has(d.paneId));
+      const aeronaves = getAeronavesAtivas();
+      const panes = currentData.filter(d => d.type === 'pane');
+      const pendencias = currentData.filter(d => d.type === 'pendencia');
+      const etapas = currentData.filter(d => d.type === 'etapa');
 
       const now = new Date();
       const startDate = new Date(now);
@@ -1269,7 +1305,7 @@
     function renderPaneDetail(bgColor, surfaceColor, textColor, primaryColor, secondaryColor, fontFamily, fontSize) {
       if (!selectedPane) return '';
 
-      const aeronave = currentData.find(d => d.type === 'aeronave' && d.id === selectedPane.aeronaveId);
+      const aeronave = getAeronaveById(selectedPane.aeronaveId);
       const imagemFundo = aeronave ? (IMAGENS_FUNDO[aeronave.modelo] || IMAGENS_FUNDO['Outro']) : IMAGENS_FUNDO['Outro'];
 
       const etapas = currentData.filter(d => d.type === 'etapa' && d.paneId === selectedPane.id)
@@ -2437,19 +2473,95 @@
           confirmDelete.style.cssText = `background-color: rgba(0,0,0,0.7); z-index: 2000;`;
           confirmDelete.innerHTML = `
             <div class="w-full max-w-md rounded-lg p-6" style="background-color: ${surfaceColor};">
-              <h3 class="font-bold mb-4" style="font-size: ${fontSize * 1.3}px; color: ${textColor};">Arquivar Aeronave</h3>
+              <h3 class="font-bold mb-4" style="font-size: ${fontSize * 1.3}px; color: ${textColor};">Confirmar Exclusão</h3>
               <p style="font-size: ${fontSize}px; color: ${textColor}; margin-bottom: 20px;">
-                Tem certeza que deseja arquivar a aeronave:<br>
-                <strong>${aeronave.prefixo} - ${aeronave.modelo}</strong><br><br>
-                <span style="color: #f59e0b;">O histórico será mantido no banco de dados.</span><br>
-                ${panes.length > 0 ? `<span style="opacity: 0.85;">Esta aeronave possui ${panes.length} discrepância(s) vinculadas, que serão preservadas.</span><br>` : ''}
-                <span style="opacity: 0.85;">Se cadastrar novamente este prefixo, o sistema poderá reativar o último histórico automaticamente.</span>
+                Tem certeza que deseja excluir o usuário:<br>
+                <strong>${usuario.fullName} (${usuario.username})</strong>
               </p>
               <div class="flex gap-3">
-                <button id="confirmDeleteAeronave" class="flex-1 px-4 py-2 rounded font-semibold" style="background-color: #f59e0b; color: #111827; font-size: ${fontSize}px;">
-                  Arquivar
+                <button id="confirmDeleteUsuario" class="flex-1 px-4 py-2 rounded font-semibold" style="background-color: #ef4444; color: white; font-size: ${fontSize}px;">
+                  Sim, Excluir
                 </button>
-                <button id="cancelDeleteAeronave" class="flex-1 px-4 py-2 rounded font-semibold" style="background-color: ${secondaryColor}; color: white; font-size: ${fontSize}px;">
+                <button id="cancelDeleteUsuario" class="flex-1 px-4 py-2 rounded font-semibold" style="background-color: ${secondaryColor}; color: white; font-size: ${fontSize}px;">
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          `;
+          
+          document.body.appendChild(confirmDelete);
+          
+          document.getElementById('confirmDeleteUsuario').addEventListener('click', async () => {
+            const result = await window.dataSdk.delete(usuario);
+            if (result.isOk) {
+              showToast('Usuário excluído com sucesso!', 'success');
+            } else {
+              showToast('Erro ao excluir usuário', 'error');
+            }
+            document.body.removeChild(confirmDelete);
+          });
+          
+          document.getElementById('cancelDeleteUsuario').addEventListener('click', () => {
+            document.body.removeChild(confirmDelete);
+          });
+        });
+      });
+
+      document.querySelectorAll('.delete-aeronave-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const id = btn.dataset.id;
+          const aeronave = currentData.find(d => d.id === id);
+
+          if (!aeronave) return;
+
+          const historico = getResumoHistoricoAeronave(id);
+
+          const confirmDelete = document.createElement('div');
+          const config = window.elementSdk?.config || defaultConfig;
+          const surfaceColor = config.surface_color || defaultConfig.surface_color;
+          const primaryColor = config.primary_action || defaultConfig.primary_action;
+          const secondaryColor = config.secondary_action || defaultConfig.secondary_action;
+          const textColor = config.text_color || defaultConfig.text_color;
+          const fontSize = config.font_size || defaultConfig.font_size;
+
+          confirmDelete.className = 'fixed inset-0 flex items-center justify-center p-4';
+          confirmDelete.style.cssText = `background-color: rgba(0,0,0,0.7); z-index: 2000;`;
+          confirmDelete.innerHTML = `
+            <div class="w-full max-w-lg rounded-lg p-6" style="background-color: ${surfaceColor};">
+              <h3 class="font-bold mb-4" style="font-size: ${fontSize * 1.3}px; color: ${textColor};">Gerenciar exclusão da aeronave</h3>
+              <p style="font-size: ${fontSize}px; color: ${textColor}; margin-bottom: 14px;">
+                Escolha como deseja remover a aeronave da tela principal:<br>
+                <strong>${aeronave.prefixo} - ${aeronave.modelo}</strong>
+              </p>
+              <div class="rounded-lg p-4 mb-4" style="background-color: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: ${textColor};">
+                <div style="font-size: ${fontSize * 0.95}px; margin-bottom: 6px;"><strong>Histórico encontrado:</strong></div>
+                <div style="font-size: ${fontSize * 0.9}px; opacity: 0.9; line-height: 1.6;">
+                  • ${historico.totalPanes} discrepância(s)<br>
+                  • ${historico.totalEtapas} etapa(s)<br>
+                  • ${historico.totalPendencias} pendência(s)
+                </div>
+              </div>
+              <div class="rounded-lg p-4 mb-4" style="background-color: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.35); color: ${textColor};">
+                <div style="font-size: ${fontSize * 0.95}px; font-weight: 700; margin-bottom: 6px;">Opção 1 — Arquivar e manter histórico</div>
+                <div style="font-size: ${fontSize * 0.88}px; opacity: 0.9; line-height: 1.5;">
+                  Remove a aeronave da tela principal, mas preserva todo o histórico para futura reativação pelo mesmo prefixo.
+                </div>
+              </div>
+              <div class="rounded-lg p-4 mb-5" style="background-color: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.35); color: ${textColor};">
+                <div style="font-size: ${fontSize * 0.95}px; font-weight: 700; margin-bottom: 6px;">Opção 2 — Excluir definitivamente</div>
+                <div style="font-size: ${fontSize * 0.88}px; opacity: 0.9; line-height: 1.5;">
+                  Apaga a aeronave e também todas as discrepâncias, etapas e pendências vinculadas. Esta ação não preserva o histórico.
+                </div>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <button id="archiveAeronaveBtn" class="px-4 py-2 rounded font-semibold" style="background-color: ${primaryColor}; color: white; font-size: ${fontSize * 0.95}px;">
+                  Arquivar e manter histórico
+                </button>
+                <button id="confirmDeleteAeronave" class="px-4 py-2 rounded font-semibold" style="background-color: #ef4444; color: white; font-size: ${fontSize * 0.95}px;">
+                  Excluir definitivamente
+                </button>
+                <button id="cancelDeleteAeronave" class="px-4 py-2 rounded font-semibold" style="background-color: ${secondaryColor}; color: white; font-size: ${fontSize * 0.95}px;">
                   Cancelar
                 </button>
               </div>
@@ -2458,21 +2570,54 @@
 
           document.body.appendChild(confirmDelete);
 
-          document.getElementById('confirmDeleteAeronave').addEventListener('click', async () => {
-            const result = await window.dataSdk.update({
+          document.getElementById('archiveAeronaveBtn').addEventListener('click', async () => {
+            const payloadArquivado = {
               ...aeronave,
-              archived: true,
-              archivedAt: new Date().toISOString(),
-              archivedBy: currentUser?.username || ''
-            });
+              arquivada: true,
+              arquivadaEm: new Date().toISOString(),
+              arquivadaPor: currentUser?.username || 'desconhecido'
+            };
+
+            const result = await window.dataSdk.update(payloadArquivado);
             if (result.isOk) {
-              showToast('Aeronave arquivada com sucesso! Histórico preservado.', 'success');
+              if (selectedAeronave?.id === aeronave.id) {
+                selectedAeronave = null;
+              }
+              showToast('Aeronave arquivada com histórico preservado!', 'success');
             } else {
               showToast('Erro ao arquivar aeronave', 'error');
             }
             document.body.removeChild(confirmDelete);
           });
-          
+
+          document.getElementById('confirmDeleteAeronave').addEventListener('click', async () => {
+            const panes = historico.panes;
+
+            for (const pane of panes) {
+              const etapas = currentData.filter(d => d.type === 'etapa' && d.paneId === pane.id);
+              const pendencias = currentData.filter(d => d.type === 'pendencia' && d.paneId === pane.id);
+
+              for (const etapa of etapas) {
+                await window.dataSdk.delete(etapa);
+              }
+              for (const pendencia of pendencias) {
+                await window.dataSdk.delete(pendencia);
+              }
+              await window.dataSdk.delete(pane);
+            }
+
+            const result = await window.dataSdk.delete(aeronave);
+            if (result.isOk) {
+              if (selectedAeronave?.id === aeronave.id) {
+                selectedAeronave = null;
+              }
+              showToast('Aeronave e histórico excluídos definitivamente!', 'success');
+            } else {
+              showToast('Erro ao excluir aeronave', 'error');
+            }
+            document.body.removeChild(confirmDelete);
+          });
+
           document.getElementById('cancelDeleteAeronave').addEventListener('click', () => {
             document.body.removeChild(confirmDelete);
           });
@@ -2502,7 +2647,7 @@
       if (form) {
         form.addEventListener('submit', async (e) => {
           e.preventDefault();
-          
+
           if (currentData.length >= 999) {
             showToast('Limite de 999 registros atingido', 'error');
             return;
@@ -2511,71 +2656,36 @@
           const prefixo = document.getElementById('prefixo').value.trim().toUpperCase();
           const modelo = document.getElementById('modelo').value;
           const iconeUrl = document.getElementById('iconeUrl').value.trim();
+          const fotoFinal = iconeUrl || IMAGENS_FUNDO[modelo] || IMAGENS_FUNDO['Outro'];
 
-          const aeronaveAtiva = currentData.find(d => d.type === 'aeronave' && d.prefixo === prefixo && !d.archived);
-          if (aeronaveAtiva) {
+          const prefixoExistente = currentData.find(d => d.type === 'aeronave' && String(d.prefixo || '').toUpperCase() === prefixo && !isAeronaveArquivada(d));
+          const aeronaveArquivada = currentData.find(d => d.type === 'aeronave' && String(d.prefixo || '').toUpperCase() === prefixo && isAeronaveArquivada(d));
+          if (prefixoExistente) {
             showToast('Já existe uma aeronave ativa com este prefixo', 'error');
             return;
           }
 
-          const aeronaveArquivada = currentData.find(d => d.type === 'aeronave' && d.prefixo === prefixo && d.archived);
           if (aeronaveArquivada) {
-            const config = window.elementSdk?.config || defaultConfig;
-            const surfaceColor = config.surface_color || defaultConfig.surface_color;
-            const secondaryColor = config.secondary_action || defaultConfig.secondary_action;
-            const textColor = config.text_color || defaultConfig.text_color;
-            const fontSize = config.font_size || defaultConfig.font_size;
-
-            const confirmRestore = document.createElement('div');
-            confirmRestore.className = 'fixed inset-0 flex items-center justify-center p-4';
-            confirmRestore.style.cssText = 'background-color: rgba(0,0,0,0.7); z-index: 2100;';
-            confirmRestore.innerHTML = `
-              <div class="w-full max-w-md rounded-lg p-6" style="background-color: ${surfaceColor};">
-                <h3 class="font-bold mb-4" style="font-size: ${fontSize * 1.25}px; color: ${textColor};">Histórico Encontrado</h3>
-                <p style="font-size: ${fontSize}px; color: ${textColor}; margin-bottom: 20px;">
-                  Já existe uma aeronave arquivada com este prefixo:<br>
-                  <strong>${aeronaveArquivada.prefixo} - ${aeronaveArquivada.modelo}</strong><br><br>
-                  Deseja reativar e recuperar o último histórico?
-                </p>
-                <div class="flex gap-3">
-                  <button id="confirmRestoreAeronave" class="flex-1 px-4 py-2 rounded font-semibold" style="background-color: #22c55e; color: white; font-size: ${fontSize}px;">
-                    Reativar Histórico
-                  </button>
-                  <button id="cancelRestoreAeronave" class="flex-1 px-4 py-2 rounded font-semibold" style="background-color: ${secondaryColor}; color: white; font-size: ${fontSize}px;">
-                    Cancelar
-                  </button>
-                </div>
-              </div>
-            `;
-            document.body.appendChild(confirmRestore);
-
-            document.getElementById('cancelRestoreAeronave').addEventListener('click', () => {
-              document.body.removeChild(confirmRestore);
+            const resultReativacao = await window.dataSdk.update({
+              ...aeronaveArquivada,
+              prefixo,
+              modelo,
+              iconeUrl: fotoFinal,
+              arquivada: false,
+              arquivadaEm: null,
+              arquivadaPor: null,
+              reativadaEm: new Date().toISOString(),
+              reativadaPor: currentUser?.username || 'desconhecido'
             });
 
-            document.getElementById('confirmRestoreAeronave').addEventListener('click', async () => {
-              const restoreResult = await window.dataSdk.update({
-                ...aeronaveArquivada,
-                modelo,
-                iconeUrl: iconeUrl || aeronaveArquivada.iconeUrl || IMAGENS_FUNDO[modelo] || IMAGENS_FUNDO['Outro'],
-                archived: false,
-                archivedAt: null,
-                archivedBy: null,
-                reactivatedAt: new Date().toISOString(),
-                reactivatedBy: currentUser?.username || ''
-              });
-
-              document.body.removeChild(confirmRestore);
-
-              if (restoreResult.isOk) {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-                form.reset();
-                showToast('Aeronave reativada com histórico preservado!', 'success');
-              } else {
-                showToast('Erro ao reativar aeronave', 'error');
-              }
-            });
+            if (resultReativacao.isOk) {
+              modal.classList.add('hidden');
+              modal.classList.remove('flex');
+              form.reset();
+              showToast('Aeronave reativada com histórico recuperado!', 'success');
+            } else {
+              showToast('Erro ao reativar aeronave arquivada', 'error');
+            }
             return;
           }
 
@@ -2584,9 +2694,9 @@
             type: 'aeronave',
             prefixo,
             modelo,
-            archived: false,
-            iconeUrl: iconeUrl || IMAGENS_FUNDO[modelo] || IMAGENS_FUNDO['Outro'],
-            criadoEm: new Date().toISOString()
+            iconeUrl: fotoFinal,
+            criadoEm: new Date().toISOString(),
+            arquivada: false
           });
 
           if (result.isOk) {
@@ -2651,7 +2761,7 @@
     }
 
     function gerarRelatorioEtapasPaneAvionicos(aeronaveId, paneId) {
-      const aeronave = currentData.find(d => d.type === 'aeronave' && d.id === aeronaveId);
+      const aeronave = getAeronaveById(aeronaveId);
       const pane = currentData.find(d => d.type === 'pane' && d.id === paneId && d.aeronaveId === aeronaveId);
 
       if (!aeronave || !pane) {
@@ -2786,7 +2896,7 @@
     }
 
     function gerarRelatorioAvionicos() {
-      const aeronaves = currentData.filter(d => d.type === 'aeronave' && !d.archived);
+      const aeronaves = getAeronavesAtivas();
       const todasPanesAvionicos = [];
 
       aeronaves.forEach(aeronave => {
@@ -2972,7 +3082,7 @@
     }
 
     function gerarRelatorioPendencias(aeronaveId) {
-      const aeronaves = currentData.filter(d => d.type === 'aeronave' && !d.archived);
+      const aeronaves = getAeronavesAtivas();
       const aeronavesParaRelatorio = aeronaveId 
         ? aeronaves.filter(a => a.id === aeronaveId)
         : aeronaves;
@@ -3228,7 +3338,7 @@
             selectedPane = currentData.find(d => d.type === 'pane' && d.id === paneId) || null;
             if (selectedPane) {
               previousView = 'dashboard';
-              selectedAeronave = currentData.find(d => d.type === 'aeronave' && d.id === selectedPane.aeronaveId) || null;
+              selectedAeronave = getAeronaveById(selectedPane.aeronaveId);
               currentView = 'pane';
               renderCurrentView();
             }
@@ -3261,7 +3371,7 @@
       document.querySelectorAll('.dashboard-aeronave-item').forEach(item => {
         item.addEventListener('click', () => {
           const aeronaveId = item.dataset.id;
-          selectedAeronave = currentData.find(d => d.type === 'aeronave' && d.id === aeronaveId) || null;
+          selectedAeronave = getAeronaveById(aeronaveId);
           if (selectedAeronave) {
             currentTab = 'lancadas';
             currentView = 'aeronave';
@@ -3275,7 +3385,7 @@
       const primaryColor = config.primary_action || defaultConfig.primary_action;
       const panes = currentData.filter(d => d.type === 'pane');
       const pendencias = currentData.filter(d => d.type === 'pendencia');
-      const aeronaves = currentData.filter(d => d.type === 'aeronave' && !d.archived);
+      const aeronaves = getAeronavesAtivas();
       const colors = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#14b8a6'];
 
       const now = new Date();
@@ -3404,7 +3514,7 @@
               if (!activeElements.length) return;
               const index = activeElements[0].index;
               const aeronaveId = sortedAeronaves[index]?.id;
-              selectedAeronave = currentData.find(d => d.type === 'aeronave' && d.id === aeronaveId) || null;
+              selectedAeronave = getAeronaveById(aeronaveId);
               if (selectedAeronave) {
                 currentTab = 'lancadas';
                 currentView = 'aeronave';
