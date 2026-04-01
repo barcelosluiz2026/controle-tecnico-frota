@@ -366,7 +366,7 @@
     }
 
     function renderHome(bgColor, surfaceColor, textColor, primaryColor, secondaryColor, fontFamily, fontSize, titulo, subtitulo) {
-      const aeronaves = currentData.filter(d => d.type === 'aeronave');
+      const aeronaves = currentData.filter(d => d.type === 'aeronave' && !d.archived);
       const imagemFundo = 'https://imgur.com/eSRiGVh.jpg';
       
       return `
@@ -789,10 +789,12 @@
 
     function renderDashboard(bgColor, surfaceColor, textColor, primaryColor, secondaryColor, fontFamily, fontSize, titulo, subtitulo) {
       const imagemFundo = 'https://imgur.com/eSRiGVh.jpg';
-      const aeronaves = currentData.filter(d => d.type === 'aeronave');
-      const panes = currentData.filter(d => d.type === 'pane');
-      const pendencias = currentData.filter(d => d.type === 'pendencia');
-      const etapas = currentData.filter(d => d.type === 'etapa');
+      const aeronaves = currentData.filter(d => d.type === 'aeronave' && !d.archived);
+      const activeAircraftIds = new Set(aeronaves.map(a => a.id));
+      const panes = currentData.filter(d => d.type === 'pane' && activeAircraftIds.has(d.aeronaveId));
+      const activePaneIds = new Set(panes.map(p => p.id));
+      const pendencias = currentData.filter(d => d.type === 'pendencia' && activePaneIds.has(d.paneId));
+      const etapas = currentData.filter(d => d.type === 'etapa' && activePaneIds.has(d.paneId));
 
       const now = new Date();
       const startDate = new Date(now);
@@ -2572,9 +2574,70 @@
           const modelo = document.getElementById('modelo').value;
           const iconeUrl = document.getElementById('iconeUrl').value.trim();
 
-          const prefixoExistente = currentData.find(d => d.type === 'aeronave' && d.prefixo === prefixo);
-          if (prefixoExistente) {
-            showToast('Já existe uma aeronave com este prefixo', 'error');
+          const aeronaveAtiva = currentData.find(d => d.type === 'aeronave' && d.prefixo === prefixo && !d.archived);
+          if (aeronaveAtiva) {
+            showToast('Já existe uma aeronave ativa com este prefixo', 'error');
+            return;
+          }
+
+          const aeronaveArquivada = currentData.find(d => d.type === 'aeronave' && d.prefixo === prefixo && d.archived);
+          if (aeronaveArquivada) {
+            const config = window.elementSdk?.config || defaultConfig;
+            const surfaceColor = config.surface_color || defaultConfig.surface_color;
+            const secondaryColor = config.secondary_action || defaultConfig.secondary_action;
+            const textColor = config.text_color || defaultConfig.text_color;
+            const fontSize = config.font_size || defaultConfig.font_size;
+
+            const confirmRestore = document.createElement('div');
+            confirmRestore.className = 'fixed inset-0 flex items-center justify-center p-4';
+            confirmRestore.style.cssText = 'background-color: rgba(0,0,0,0.7); z-index: 2100;';
+            confirmRestore.innerHTML = `
+              <div class="w-full max-w-md rounded-lg p-6" style="background-color: ${surfaceColor};">
+                <h3 class="font-bold mb-4" style="font-size: ${fontSize * 1.25}px; color: ${textColor};">Histórico Encontrado</h3>
+                <p style="font-size: ${fontSize}px; color: ${textColor}; margin-bottom: 20px;">
+                  Já existe uma aeronave arquivada com este prefixo:<br>
+                  <strong>${aeronaveArquivada.prefixo} - ${aeronaveArquivada.modelo}</strong><br><br>
+                  Deseja reativar e recuperar o último histórico?
+                </p>
+                <div class="flex gap-3">
+                  <button id="confirmRestoreAeronave" class="flex-1 px-4 py-2 rounded font-semibold" style="background-color: #22c55e; color: white; font-size: ${fontSize}px;">
+                    Reativar Histórico
+                  </button>
+                  <button id="cancelRestoreAeronave" class="flex-1 px-4 py-2 rounded font-semibold" style="background-color: ${secondaryColor}; color: white; font-size: ${fontSize}px;">
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            `;
+            document.body.appendChild(confirmRestore);
+
+            document.getElementById('cancelRestoreAeronave').addEventListener('click', () => {
+              document.body.removeChild(confirmRestore);
+            });
+
+            document.getElementById('confirmRestoreAeronave').addEventListener('click', async () => {
+              const restoreResult = await window.dataSdk.update({
+                ...aeronaveArquivada,
+                modelo,
+                iconeUrl: iconeUrl || aeronaveArquivada.iconeUrl || IMAGENS_FUNDO[modelo] || IMAGENS_FUNDO['Outro'],
+                archived: false,
+                archivedAt: null,
+                archivedBy: null,
+                reactivatedAt: new Date().toISOString(),
+                reactivatedBy: currentUser?.username || ''
+              });
+
+              document.body.removeChild(confirmRestore);
+
+              if (restoreResult.isOk) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                form.reset();
+                showToast('Aeronave reativada com histórico preservado!', 'success');
+              } else {
+                showToast('Erro ao reativar aeronave', 'error');
+              }
+            });
             return;
           }
 
@@ -2583,6 +2646,7 @@
             type: 'aeronave',
             prefixo,
             modelo,
+            archived: false,
             iconeUrl: iconeUrl || IMAGENS_FUNDO[modelo] || IMAGENS_FUNDO['Outro'],
             criadoEm: new Date().toISOString()
           });
@@ -2784,7 +2848,7 @@
     }
 
     function gerarRelatorioAvionicos() {
-      const aeronaves = currentData.filter(d => d.type === 'aeronave');
+      const aeronaves = currentData.filter(d => d.type === 'aeronave' && !d.archived);
       const todasPanesAvionicos = [];
 
       aeronaves.forEach(aeronave => {
@@ -2970,7 +3034,7 @@
     }
 
     function gerarRelatorioPendencias(aeronaveId) {
-      const aeronaves = currentData.filter(d => d.type === 'aeronave');
+      const aeronaves = currentData.filter(d => d.type === 'aeronave' && !d.archived);
       const aeronavesParaRelatorio = aeronaveId 
         ? aeronaves.filter(a => a.id === aeronaveId)
         : aeronaves;
@@ -3273,7 +3337,7 @@
       const primaryColor = config.primary_action || defaultConfig.primary_action;
       const panes = currentData.filter(d => d.type === 'pane');
       const pendencias = currentData.filter(d => d.type === 'pendencia');
-      const aeronaves = currentData.filter(d => d.type === 'aeronave');
+      const aeronaves = currentData.filter(d => d.type === 'aeronave' && !d.archived);
       const colors = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#14b8a6'];
 
       const now = new Date();
