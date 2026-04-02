@@ -200,7 +200,7 @@ def montar_ranking_panes(tipo: str | None = None, limit: int = 10):
         agora = datetime.now(timezone.utc)
         delta = agora - criado_em
         horas = round(delta.total_seconds() / 3600, 1)
-        dias = round(delta.total_seconds() / 86400, 1)
+        dias = max(1, int(delta.total_seconds() // 86400))
 
         aeronave_id = str(payload.get("aeronaveId", "")).strip()
         aeronave = aeronaves.get(aeronave_id, {})
