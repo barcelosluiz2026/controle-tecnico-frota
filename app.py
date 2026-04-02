@@ -218,6 +218,7 @@ def get_sla_info(dias_em_aberto: int) -> dict:
     }
 
 
+
 def montar_ranking_panes(tipo: str | None = None, limit: int = 10):
     records = Record.query.order_by(Record.created_at.asc(), Record.id.asc()).all()
 
@@ -295,6 +296,7 @@ def montar_ranking_panes(tipo: str | None = None, limit: int = 10):
         )
     )
     return panes[:limit]
+
 
 
 
