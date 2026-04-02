@@ -602,23 +602,30 @@
 
                   <div id="usuariosList" class="space-y-3" style="margin-top: 8px;">
                     ${currentData.filter(d => d.type === 'usuario').map(usuario => `
-                      <div class="rounded p-4 flex justify-between items-center" style="background-color: ${bgColor};">
+                      <div class="rounded p-4 flex justify-between items-center gap-4 flex-wrap" style="background-color: ${bgColor};">
                         <div>
                           <h3 class="font-bold" style="font-size: ${fontSize * 1.1}px;">${usuario.fullName}</h3>
                           <p style="font-size: ${fontSize * 0.9}px; opacity: 0.7;">Login: ${usuario.username}</p>
                           <p style="font-size: ${fontSize * 0.85}px; opacity: 0.6;">${getRoleLabel(usuario.role)}</p>
                         </div>
-                        ${usuario.username !== 'admin' ? `
-                          <button class="delete-usuario-btn px-4 py-2 rounded font-semibold" 
-                                  data-id="${usuario.id}"
-                                  style="background-color: #ef4444; color: white; font-size: ${fontSize * 0.85}px;">
-                            🗑️ Excluir
-                          </button>
-                        ` : `
-                          <span style="font-size: ${fontSize * 0.85}px; opacity: 0.5; font-style: italic;">
-                            🔒 Protegido
-                          </span>
-                        `}
+                        <div class="flex gap-2 flex-wrap">
+                          ${usuario.username !== 'admin' ? `
+                            <button class="edit-usuario-btn px-4 py-2 rounded font-semibold" 
+                                    data-id="${usuario.id}"
+                                    style="background-color: ${primaryColor}; color: white; font-size: ${fontSize * 0.85}px;">
+                              ✏️ Alterar Perfil
+                            </button>
+                            <button class="delete-usuario-btn px-4 py-2 rounded font-semibold" 
+                                    data-id="${usuario.id}"
+                                    style="background-color: #ef4444; color: white; font-size: ${fontSize * 0.85}px;">
+                              🗑️ Excluir
+                            </button>
+                          ` : `
+                            <span style="font-size: ${fontSize * 0.85}px; opacity: 0.5; font-style: italic; align-self: center;">
+                              🔒 Protegido
+                            </span>
+                          `}
+                        </div>
                       </div>
                     `).join('')}
                   </div>
@@ -627,8 +634,9 @@
 
               <div id="addUsuarioModal" class="hidden fixed inset-0 items-center justify-center p-4" style="background-color: rgba(0,0,0,0.7); z-index: 1100;">
                 <div class="w-full max-w-md rounded-lg p-6" style="background-color: ${surfaceColor};">
-                  <h2 class="font-bold mb-4" style="font-size: ${fontSize * 1.5}px;">Novo Usuário</h2>
+                  <h2 id="usuarioModalTitle" class="font-bold mb-4" style="font-size: ${fontSize * 1.5}px;">Novo Usuário</h2>
                   <form id="usuarioForm">
+                    <input type="hidden" id="editingUserId">
                     <div class="mb-4">
                       <label for="newFullName" class="block mb-2" style="font-size: ${fontSize}px;">Nome Completo *</label>
                       <input type="text" id="newFullName" required class="w-full px-4 py-2 rounded" style="background-color: ${bgColor}; color: ${textColor}; border: 1px solid ${secondaryColor}; font-size: ${fontSize}px;">
@@ -640,6 +648,7 @@
                     <div class="mb-4">
                       <label for="newPassword" class="block mb-2" style="font-size: ${fontSize}px;">Senha *</label>
                       <input type="password" id="newPassword" required minlength="4" class="w-full px-4 py-2 rounded" style="background-color: ${bgColor}; color: ${textColor}; border: 1px solid ${secondaryColor}; font-size: ${fontSize}px;">
+                      <p id="passwordHint" style="font-size: ${fontSize * 0.8}px; opacity: 0.7; margin-top: 4px;">Informe a senha do novo usuário.</p>
                     </div>
                     <div class="mb-4">
                       <label class="block mb-2" style="font-size: ${fontSize}px;">Nível de Acesso *</label>
@@ -659,7 +668,7 @@
                       </div>
                     </div>
                     <div class="flex gap-3">
-                      <button type="submit" class="flex-1 px-4 py-2 rounded font-semibold" style="background-color: ${primaryColor}; color: white; font-size: ${fontSize}px;">
+                      <button type="submit" id="usuarioSubmitBtn" class="flex-1 px-4 py-2 rounded font-semibold" style="background-color: ${primaryColor}; color: white; font-size: ${fontSize}px;">
                         Criar Usuário
                       </button>
                       <button type="button" id="cancelUsuarioBtn" class="flex-1 px-4 py-2 rounded font-semibold" style="background-color: ${secondaryColor}; color: white; font-size: ${fontSize}px;">
@@ -2396,11 +2405,81 @@
       const addUsuarioModal = document.getElementById('addUsuarioModal');
       const cancelUsuarioBtn = document.getElementById('cancelUsuarioBtn');
       const usuarioForm = document.getElementById('usuarioForm');
+      const usuarioModalTitle = document.getElementById('usuarioModalTitle');
+      const usuarioSubmitBtn = document.getElementById('usuarioSubmitBtn');
+      const editingUserIdInput = document.getElementById('editingUserId');
+      const passwordHint = document.getElementById('passwordHint');
+
+      function resetUsuarioModal() {
+        usuarioForm?.reset();
+        if (editingUserIdInput) editingUserIdInput.value = '';
+        if (usuarioModalTitle) usuarioModalTitle.textContent = 'Novo Usuário';
+        if (usuarioSubmitBtn) usuarioSubmitBtn.textContent = 'Criar Usuário';
+
+        const usernameInput = document.getElementById('newUsername');
+        const passwordInput = document.getElementById('newPassword');
+
+        if (usernameInput) usernameInput.disabled = false;
+        if (passwordInput) {
+          passwordInput.required = true;
+          passwordInput.value = '';
+          passwordInput.placeholder = '';
+        }
+        if (passwordHint) {
+          passwordHint.textContent = 'Informe a senha do novo usuário.';
+        }
+      }
+
+      function openUsuarioModalForCreate() {
+        resetUsuarioModal();
+        addUsuarioModal.classList.remove('hidden');
+        addUsuarioModal.classList.add('flex');
+      }
+
+      function openUsuarioModalForEdit(usuarioId) {
+        const usuario = currentData.find(d => d.id === usuarioId && d.type === 'usuario');
+        if (!usuario) {
+          showToast('Usuário não encontrado', 'error');
+          return;
+        }
+
+        if (usuario.username === 'admin') {
+          showToast('O usuário admin permanece protegido', 'error');
+          return;
+        }
+
+        resetUsuarioModal();
+
+        if (editingUserIdInput) editingUserIdInput.value = usuario.id;
+        if (usuarioModalTitle) usuarioModalTitle.textContent = 'Alterar Perfil do Usuário';
+        if (usuarioSubmitBtn) usuarioSubmitBtn.textContent = 'Salvar Alterações';
+
+        const fullNameInput = document.getElementById('newFullName');
+        const usernameInput = document.getElementById('newUsername');
+        const passwordInput = document.getElementById('newPassword');
+        const roleInput = document.querySelector(`input[name="newRole"][value="${usuario.role}"]`);
+
+        if (fullNameInput) fullNameInput.value = usuario.fullName || '';
+        if (usernameInput) {
+          usernameInput.value = usuario.username || '';
+          usernameInput.disabled = true;
+        }
+        if (passwordInput) {
+          passwordInput.required = false;
+          passwordInput.placeholder = 'Deixe em branco para manter a senha atual';
+        }
+        if (passwordHint) {
+          passwordHint.textContent = 'Deixe a senha em branco para manter a senha atual.';
+        }
+        if (roleInput) roleInput.checked = true;
+
+        addUsuarioModal.classList.remove('hidden');
+        addUsuarioModal.classList.add('flex');
+      }
 
       if (addUsuarioBtn && addUsuarioModal) {
         addUsuarioBtn.addEventListener('click', () => {
-          addUsuarioModal.classList.remove('hidden');
-          addUsuarioModal.classList.add('flex');
+          openUsuarioModalForCreate();
         });
       }
 
@@ -2408,7 +2487,7 @@
         cancelUsuarioBtn.addEventListener('click', () => {
           addUsuarioModal.classList.add('hidden');
           addUsuarioModal.classList.remove('flex');
-          usuarioForm?.reset();
+          resetUsuarioModal();
         });
       }
 
@@ -2416,7 +2495,10 @@
         usuarioForm.addEventListener('submit', async (e) => {
           e.preventDefault();
           
-          if (currentData.length >= 999) {
+          const editingUserId = editingUserIdInput?.value || '';
+          const isEditing = !!editingUserId;
+
+          if (!isEditing && currentData.length >= 999) {
             showToast('Limite de 999 registros atingido', 'error');
             return;
           }
@@ -2425,6 +2507,42 @@
           const username = document.getElementById('newUsername').value;
           const password = document.getElementById('newPassword').value;
           const role = document.querySelector('input[name="newRole"]:checked')?.value;
+
+          if (isEditing) {
+            const usuarioAtual = currentData.find(d => d.id === editingUserId && d.type === 'usuario');
+            if (!usuarioAtual) {
+              showToast('Usuário não encontrado', 'error');
+              return;
+            }
+
+            if (usuarioAtual.username === 'admin') {
+              showToast('O usuário admin permanece protegido', 'error');
+              return;
+            }
+
+            const payloadAtualizado = {
+              ...usuarioAtual,
+              fullName,
+              role,
+              updatedAt: new Date().toISOString()
+            };
+
+            if (password) {
+              payloadAtualizado.password = password;
+            }
+
+            const result = await window.dataSdk.update(payloadAtualizado);
+
+            if (result.isOk) {
+              addUsuarioModal.classList.add('hidden');
+              addUsuarioModal.classList.remove('flex');
+              resetUsuarioModal();
+              showToast('Perfil do usuário alterado com sucesso!', 'success');
+            } else {
+              showToast('Erro ao alterar perfil do usuário', 'error');
+            }
+            return;
+          }
 
           const usuarioExistente = currentData.find(d => d.type === 'usuario' && d.username === username);
           if (usuarioExistente) {
@@ -2445,13 +2563,20 @@
           if (result.isOk) {
             addUsuarioModal.classList.add('hidden');
             addUsuarioModal.classList.remove('flex');
-            usuarioForm.reset();
+            resetUsuarioModal();
             showToast('Usuário criado com sucesso!', 'success');
           } else {
             showToast('Erro ao criar usuário', 'error');
           }
         });
       }
+
+      document.querySelectorAll('.edit-usuario-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openUsuarioModalForEdit(btn.dataset.id);
+        });
+      });
 
       document.querySelectorAll('.delete-usuario-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
@@ -3290,142 +3415,144 @@
       janelaRelatorio.document.close();
     }
 
-    function getDashboardRankingStyle(item, primaryColor, secondaryColor) {
-      const faixa = item?.antiguidadeFaixa || 'recente';
-      const styles = {
-        recente: {
-          borderLeft: primaryColor,
-          tempoBg: 'rgba(59,130,246,0.16)',
-          tempoColor: '#bfdbfe',
-          horasColor: '#93c5fd',
-          slaBg: 'rgba(34,197,94,0.16)',
-          slaColor: '#bbf7d0'
-        },
-        atencao: {
-          borderLeft: '#f59e0b',
-          tempoBg: 'rgba(245,158,11,0.18)',
-          tempoColor: '#fde68a',
-          horasColor: '#fcd34d',
-          slaBg: 'rgba(245,158,11,0.18)',
-          slaColor: '#fde68a'
-        },
-        critico: {
-          borderLeft: '#f97316',
-          tempoBg: 'rgba(249,115,22,0.18)',
-          tempoColor: '#fdba74',
-          horasColor: '#fdba74',
-          slaBg: 'rgba(249,115,22,0.18)',
-          slaColor: '#fdba74'
-        },
-        muito_critico: {
-          borderLeft: '#ef4444',
-          tempoBg: 'rgba(239,68,68,0.18)',
-          tempoColor: '#fecaca',
-          horasColor: '#fca5a5',
-          slaBg: 'rgba(239,68,68,0.18)',
-          slaColor: '#fecaca'
-        }
-      };
-      return styles[faixa] || styles.recente;
+
+function getDashboardRankingStyle(item, primaryColor, secondaryColor) {
+  const faixa = item?.antiguidadeFaixa || 'recente';
+  const styles = {
+    recente: {
+      borderLeft: primaryColor,
+      tempoBg: 'rgba(59,130,246,0.16)',
+      tempoColor: '#bfdbfe',
+      horasColor: '#93c5fd',
+      slaBg: 'rgba(34,197,94,0.16)',
+      slaColor: '#bbf7d0'
+    },
+    atencao: {
+      borderLeft: '#f59e0b',
+      tempoBg: 'rgba(245,158,11,0.18)',
+      tempoColor: '#fde68a',
+      horasColor: '#fcd34d',
+      slaBg: 'rgba(245,158,11,0.18)',
+      slaColor: '#fde68a'
+    },
+    critico: {
+      borderLeft: '#f97316',
+      tempoBg: 'rgba(249,115,22,0.18)',
+      tempoColor: '#fdba74',
+      horasColor: '#fdba74',
+      slaBg: 'rgba(249,115,22,0.18)',
+      slaColor: '#fdba74'
+    },
+    muito_critico: {
+      borderLeft: '#ef4444',
+      tempoBg: 'rgba(239,68,68,0.18)',
+      tempoColor: '#fecaca',
+      horasColor: '#fca5a5',
+      slaBg: 'rgba(239,68,68,0.18)',
+      slaColor: '#fecaca'
     }
+  };
+  return styles[faixa] || styles.recente;
+}
 
-    function renderStatusSectionRankingDashboard(statusKey, items, options = {}) {
-      const { fontSize, bgColor, primaryColor, secondaryColor, showTopBorder = false } = options;
-      if (!Array.isArray(items) || items.length === 0) return '';
+function renderStatusSectionRankingDashboard(statusKey, items, options = {}) {
+  const { fontSize, bgColor, primaryColor, secondaryColor, showTopBorder = false } = options;
+  if (!Array.isArray(items) || items.length === 0) return '';
 
-      const statusTitle = items[0]?.statusLabel || 'Sem status';
-      const headerBorder = showTopBorder ? 'border-top: 1px solid rgba(241,245,249,0.08); padding-top: 14px;' : '';
+  const statusTitle = items[0]?.statusLabel || 'Sem status';
+  const headerBorder = showTopBorder ? 'border-top: 1px solid rgba(241,245,249,0.08); padding-top: 14px;' : '';
 
-      return `
-        <div style="${headerBorder}">
-          <div class="flex items-center justify-between gap-3 mb-3 flex-wrap">
-            <h3 class="font-bold" style="font-size: ${fontSize * 0.95}px; opacity: 0.95;">${statusTitle}</h3>
-            <span style="font-size: ${fontSize * 0.75}px; opacity: 0.68;">${items.length} item${items.length === 1 ? '' : 's'}</span>
-          </div>
-          <div class="space-y-3">
-            ${items.map((item, index) => {
-              const visual = getDashboardRankingStyle(item, primaryColor, secondaryColor);
-              return `
-                <div class="rounded p-4 cursor-pointer dashboard-pane-ranking-item" data-id="${item.id}" style="background-color: ${bgColor}; border-left: 4px solid ${visual.borderLeft};">
-                  <div class="flex items-start justify-between gap-3">
-                    <div style="min-width: 0; flex: 1;">
-                      <p class="font-bold" style="font-size: ${fontSize * 0.98}px; margin-bottom: 6px;">${index + 1}. ${item.prefixo || 'Sem prefixo'} • ATA ${item.ata || 'N/I'}</p>
-                      <p style="font-size: ${fontSize * 0.9}px; opacity: 0.92; line-height: 1.4; word-break: break-word;">${item.descricao || 'Sem descrição'}</p>
-                      <div class="flex gap-2 flex-wrap" style="margin-top: 8px;">
-                        <span class="px-2 py-1 rounded" style="background-color: ${secondaryColor}; color: white; font-size: ${fontSize * 0.78}px;">${item.statusLabel || item.status || 'Sem status'}</span>
-                        <span class="px-2 py-1 rounded" style="background-color: ${visual.tempoBg}; color: ${visual.tempoColor}; font-size: ${fontSize * 0.78}px;">${item.diasTexto || `${item.diasEmAberto} dia${item.diasEmAberto === 1 ? '' : 's'} pendente`}</span>
-                        <span class="px-2 py-1 rounded" style="background-color: ${visual.slaBg}; color: ${visual.slaColor}; font-size: ${fontSize * 0.78}px;">${item.slaLabel || 'Sem SLA'}</span>
-                      </div>
-                    </div>
-                    <div class="text-right" style="flex-shrink: 0; min-width: 92px;">
-                      <p class="font-bold" style="font-size: ${fontSize * 1.05}px; color: ${visual.horasColor};">${item.horasEmAberto}h</p>
-                      <p style="font-size: ${fontSize * 0.75}px; opacity: 0.7;">em aberto</p>
-                    </div>
+  return `
+    <div style="${headerBorder}">
+      <div class="flex items-center justify-between gap-3 mb-3 flex-wrap">
+        <h3 class="font-bold" style="font-size: ${fontSize * 0.95}px; opacity: 0.95;">${statusTitle}</h3>
+        <span style="font-size: ${fontSize * 0.75}px; opacity: 0.68;">${items.length} item${items.length === 1 ? '' : 's'}</span>
+      </div>
+      <div class="space-y-3">
+        ${items.map((item, index) => {
+          const visual = getDashboardRankingStyle(item, primaryColor, secondaryColor);
+          return `
+            <div class="rounded p-4 cursor-pointer dashboard-pane-ranking-item" data-id="${item.id}" style="background-color: ${bgColor}; border-left: 4px solid ${visual.borderLeft};">
+              <div class="flex items-start justify-between gap-3">
+                <div style="min-width: 0; flex: 1;">
+                  <p class="font-bold" style="font-size: ${fontSize * 0.98}px; margin-bottom: 6px;">${index + 1}. ${item.prefixo || 'Sem prefixo'} • ATA ${item.ata || 'N/I'}</p>
+                  <p style="font-size: ${fontSize * 0.9}px; opacity: 0.92; line-height: 1.4; word-break: break-word;">${item.descricao || 'Sem descrição'}</p>
+                  <div class="flex gap-2 flex-wrap" style="margin-top: 8px;">
+                    <span class="px-2 py-1 rounded" style="background-color: ${secondaryColor}; color: white; font-size: ${fontSize * 0.78}px;">${item.statusLabel || item.status || 'Sem status'}</span>
+                    <span class="px-2 py-1 rounded" style="background-color: ${visual.tempoBg}; color: ${visual.tempoColor}; font-size: ${fontSize * 0.78}px;">${item.diasTexto || `${item.diasEmAberto} dia${item.diasEmAberto === 1 ? '' : 's'} pendente`}</span>
+                    <span class="px-2 py-1 rounded" style="background-color: ${visual.slaBg}; color: ${visual.slaColor}; font-size: ${fontSize * 0.78}px;">${item.slaLabel || 'Sem SLA'}</span>
                   </div>
                 </div>
-              `;
-            }).join('')}
-          </div>
-        </div>
-      `;
+                <div class="text-right" style="flex-shrink: 0; min-width: 92px;">
+                  <p class="font-bold" style="font-size: ${fontSize * 1.05}px; color: ${visual.horasColor};">${item.horasEmAberto}h</p>
+                  <p style="font-size: ${fontSize * 0.75}px; opacity: 0.7;">em aberto</p>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `;
+}
+
+
+async function carregarRankingPanesDashboard(tipo, containerId) {
+  const config = window.elementSdk?.config || defaultConfig;
+  const fontSize = config.font_size || defaultConfig.font_size;
+  const bgColor = config.background_color || defaultConfig.background_color;
+  const primaryColor = config.primary_action || defaultConfig.primary_action;
+  const secondaryColor = config.secondary_action || defaultConfig.secondary_action;
+  const container = document.getElementById(containerId);
+
+  if (!container) return;
+
+  try {
+    const response = await fetch(`${RENDER_API_BASE}/ranking-panes?tipo=${encodeURIComponent(tipo)}&limit=20`);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
     }
 
-    async function carregarRankingPanesDashboard(tipo, containerId) {
-      const config = window.elementSdk?.config || defaultConfig;
-      const fontSize = config.font_size || defaultConfig.font_size;
-      const bgColor = config.background_color || defaultConfig.background_color;
-      const primaryColor = config.primary_action || defaultConfig.primary_action;
-      const secondaryColor = config.secondary_action || defaultConfig.secondary_action;
-      const container = document.getElementById(containerId);
+    const ranking = await response.json();
 
-      if (!container) return;
-
-      try {
-        const response = await fetch(`${RENDER_API_BASE}/ranking-panes?tipo=${encodeURIComponent(tipo)}&limit=20`);
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-
-        const ranking = await response.json();
-
-        if (!Array.isArray(ranking) || ranking.length === 0) {
-          container.innerHTML = `<p style="font-size: ${fontSize}px; opacity: 0.7;">Nenhuma discrepância aberta encontrada para este grupo.</p>`;
-          return;
-        }
-
-        const statusOrder = ['lancada', 'em_progresso', 'aguardando_material', 'aguardando_ferramenta', 'aguardando_transferencia'];
-        const grouped = statusOrder
-          .map(statusKey => ({
-            statusKey,
-            items: ranking.filter(item => (item.status || '') === statusKey)
-          }))
-          .filter(group => group.items.length > 0);
-
-        container.innerHTML = grouped.map((group, index) => renderStatusSectionRankingDashboard(group.statusKey, group.items, {
-          fontSize,
-          bgColor,
-          primaryColor,
-          secondaryColor,
-          showTopBorder: index > 0
-        })).join('');
-
-        container.querySelectorAll('.dashboard-pane-ranking-item').forEach(itemEl => {
-          itemEl.addEventListener('click', () => {
-            const paneId = itemEl.dataset.id;
-            selectedPane = currentData.find(d => d.type === 'pane' && d.id === paneId) || null;
-            if (selectedPane) {
-              previousView = 'dashboard';
-              selectedAeronave = getAeronaveById(selectedPane.aeronaveId);
-              currentView = 'pane';
-              renderCurrentView();
-            }
-          });
-        });
-      } catch (error) {
-        console.error('Erro ao carregar ranking de panes:', error);
-        container.innerHTML = `<p style="font-size: ${fontSize}px; color: #fca5a5;">Erro ao carregar ranking.</p>`;
-      }
+    if (!Array.isArray(ranking) || ranking.length === 0) {
+      container.innerHTML = `<p style="font-size: ${fontSize}px; opacity: 0.7;">Nenhuma discrepância aberta encontrada para este grupo.</p>`;
+      return;
     }
+
+    const statusOrder = ['lancada', 'em_progresso', 'aguardando_material', 'aguardando_ferramenta', 'aguardando_transferencia'];
+    const grouped = statusOrder
+      .map(statusKey => ({
+        statusKey,
+        items: ranking.filter(item => (item.status || '') === statusKey)
+      }))
+      .filter(group => group.items.length > 0);
+
+    container.innerHTML = grouped.map((group, index) => renderStatusSectionRankingDashboard(group.statusKey, group.items, {
+      fontSize,
+      bgColor,
+      primaryColor,
+      secondaryColor,
+      showTopBorder: index > 0
+    })).join('');
+
+    container.querySelectorAll('.dashboard-pane-ranking-item').forEach(itemEl => {
+      itemEl.addEventListener('click', () => {
+        const paneId = itemEl.dataset.id;
+        selectedPane = currentData.find(d => d.type === 'pane' && d.id === paneId) || null;
+        if (selectedPane) {
+          previousView = 'dashboard';
+          selectedAeronave = currentData.find(d => d.type === 'aeronave' && d.id === selectedPane.aeronaveId) || null;
+          currentView = 'pane';
+          renderCurrentView();
+        }
+      });
+    });
+  } catch (error) {
+    console.error('Erro ao carregar ranking de discrepâncias:', error);
+    container.innerHTML = `<p style="font-size: ${fontSize}px; color: #fca5a5;">Erro ao carregar ranking.</p>`;
+  }
+}
 
 
 
