@@ -163,67 +163,27 @@ def pane_status_aberta(status: str) -> bool:
     return normalize_tipo(status) != "finalizada" and str(status or "").strip().lower() != "finalizada"
 
 
-def normalize_status(status: str) -> str:
-    return str(status or "").strip().lower()
-
-
-def get_status_label(status: str) -> str:
-    status_map = {
-        "lancada": "Monitoradas",
-        "em_progresso": "Em Progresso",
-        "aguardando_material": "Aguardando Material",
-        "aguardando_ferramenta": "Aguardando Ferramenta",
-        "aguardando_transferencia": "Aguardando Transferência",
-        "finalizada": "Finalizadas",
-    }
-    normalized = normalize_status(status)
-    return status_map.get(normalized, str(status or "Sem status").strip() or "Sem status")
-
-
-def get_status_order(status: str) -> int:
-    order_map = {
-        "lancada": 0,
-        "em_progresso": 1,
-        "aguardando_material": 2,
-        "aguardando_ferramenta": 3,
-        "aguardando_transferencia": 4,
-        "finalizada": 5,
-    }
-    return order_map.get(normalize_status(status), 99)
-
-
-def get_sla_info(dias_em_aberto: int) -> dict:
-    if dias_em_aberto <= 7:
-        return {
-            "slaStatus": "dentro_sla",
-            "slaLabel": "Dentro do SLA",
-            "antiguidadeFaixa": "recente",
-        }
-    if dias_em_aberto <= 15:
-        return {
-            "slaStatus": "atencao",
-            "slaLabel": "Atenção SLA",
-            "antiguidadeFaixa": "atencao",
-        }
-    if dias_em_aberto <= 30:
-        return {
-            "slaStatus": "vencido",
-            "slaLabel": "SLA Vencido",
-            "antiguidadeFaixa": "critico",
-        }
-    return {
-        "slaStatus": "vencido_critico",
-        "slaLabel": "SLA Muito Vencido",
-        "antiguidadeFaixa": "muito_critico",
-    }
-
-
-
 def montar_ranking_panes(tipo: str | None = None, limit: int = 10):
     records = Record.query.order_by(Record.created_at.asc(), Record.id.asc()).all()
 
     aeronaves = {}
     panes = []
+
+    status_label_map = {
+        "lancada": "Monitoradas",
+        "em_progresso": "Em Progresso",
+        "aguardando_material": "Aguardando Material",
+        "aguardando_ferramenta": "Aguardando Ferramenta",
+        "aguardando_transferencia": "Aguardando Transferência",
+    }
+
+    status_order_map = {
+        "lancada": 1,
+        "em_progresso": 2,
+        "aguardando_material": 3,
+        "aguardando_ferramenta": 4,
+        "aguardando_transferencia": 5,
+    }
 
     for record in records:
         try:
@@ -241,7 +201,7 @@ def montar_ranking_panes(tipo: str | None = None, limit: int = 10):
             continue
 
         pane_tipo = normalize_tipo(payload.get("paneTipo"))
-        pane_status = str(payload.get("paneStatus", "")).strip()
+        pane_status = str(payload.get("paneStatus", "")).strip().lower()
 
         if tipo and pane_tipo != normalize_tipo(tipo):
             continue
@@ -255,15 +215,25 @@ def montar_ranking_panes(tipo: str | None = None, limit: int = 10):
 
         agora = datetime.now(timezone.utc)
         delta = agora - criado_em
-        horas = round(delta.total_seconds() / 3600, 1)
-        dias = max(1, int(delta.total_seconds() // 86400))
+        total_seconds = max(0, delta.total_seconds())
+        horas = round(total_seconds / 3600, 1)
+        dias = max(1, int(total_seconds // 86400))
+
+        if dias <= 7:
+            sla_status = "dentro_sla"
+            sla_label = "Dentro do SLA"
+            antiguidade_faixa = "normal"
+        elif dias <= 14:
+            sla_status = "atencao"
+            sla_label = "Atenção SLA"
+            antiguidade_faixa = "atencao"
+        else:
+            sla_status = "vencido"
+            sla_label = "SLA Vencido"
+            antiguidade_faixa = "critico"
 
         aeronave_id = str(payload.get("aeronaveId", "")).strip()
         aeronave = aeronaves.get(aeronave_id, {})
-
-        status_normalizado = normalize_status(pane_status)
-        status_label = get_status_label(status_normalizado)
-        sla_info = get_sla_info(dias)
 
         panes.append(
             {
@@ -274,15 +244,17 @@ def montar_ranking_panes(tipo: str | None = None, limit: int = 10):
                 "descricao": payload.get("paneDescricao", ""),
                 "ata": payload.get("paneAta"),
                 "tipo": pane_tipo,
-                "status": status_normalizado,
-                "statusLabel": status_label,
-                "statusOrder": get_status_order(status_normalizado),
+                "status": pane_status,
+                "statusLabel": status_label_map.get(pane_status, pane_status or "Sem status"),
+                "statusOrder": status_order_map.get(pane_status, 999),
                 "criadoEm": criado_em.isoformat(),
                 "horasEmAberto": horas,
                 "diasEmAberto": dias,
-                "diasTexto": f"{dias} dia" + ("" if dias == 1 else "s") + " pendente",
+                "diasTexto": f"{dias} dia{'s' if dias != 1 else ''} pendente",
+                "slaStatus": sla_status,
+                "slaLabel": sla_label,
+                "antiguidadeFaixa": antiguidade_faixa,
                 "criadoPor": payload.get("criadoPor"),
-                **sla_info,
             }
         )
 
@@ -290,7 +262,7 @@ def montar_ranking_panes(tipo: str | None = None, limit: int = 10):
         key=lambda item: (
             -int(item.get("diasEmAberto") or 0),
             -float(item.get("horasEmAberto") or 0),
-            int(item.get("statusOrder") or 99),
+            int(item.get("statusOrder") or 999),
             str(item.get("prefixo") or ""),
             str(item.get("descricao") or ""),
         )
