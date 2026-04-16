@@ -770,10 +770,16 @@
         'SCISSORS SPHERICAL BEARING': {
           measures: ['Lower', 'Link', 'Entre Link'],
           colors: ['Yellow', 'Blue', 'White'],
+          singleMeasurePerColor: true,
+          colorMeasureMap: {
+            'Yellow': 'Lower',
+            'Blue': 'Link',
+            'White': 'Entre Link'
+          },
           partNumbers: {
-            'Lower': 'M623G40T1001 (Alternate P/N 11-13354P)',
-            'Link': 'M623G40T1001 (Alternate P/N 11-13354P)',
-            'Entre Link': 'M623G40T1001 (Alternate P/N 11-13354P)'
+            'Lower': 'M623G40T1001\nAlternate P/N 11-13354P',
+            'Link': 'M623G40T1001\nAlternate P/N 11-13354P',
+            'Entre Link': 'M623G40T1001\nAlternate P/N 11-13354P'
           }
         }
       },
@@ -1007,6 +1013,21 @@
 
     function componentHasThirdMeasure(config) {
       return getMeasureCount(config) >= 3;
+    }
+
+    function isSingleMeasurePerColorComponent(config = null, componentType = currentComponentType) {
+      const resolvedConfig = config || COMPONENT_CONFIG?.[currentAircraft?.model]?.[componentType];
+      return !!resolvedConfig?.singleMeasurePerColor;
+    }
+
+    function getColorMeasureName(color, config = null, componentType = currentComponentType) {
+      const resolvedConfig = config || COMPONENT_CONFIG?.[currentAircraft?.model]?.[componentType];
+      if (resolvedConfig?.colorMeasureMap?.[color]) return resolvedConfig.colorMeasureMap[color];
+      return color || '';
+    }
+
+    function formatPartNumberHtml(value) {
+      return String(value || '').split('\n').filter(Boolean).map((line, idx) => `<p class="text-slate-300 text-xs ${idx === 0 ? 'font-medium' : ''}">${line}</p>`).join('');
     }
 
     function getMeasureValues(component) {
@@ -1414,6 +1435,7 @@
       const container = document.getElementById('components-list');
       const emptyState = document.getElementById('components-empty');
       const addBtn = document.getElementById('add-component-btn');
+      const isSingleMeasureComponent = isSingleMeasurePerColorComponent(config, componentType);
       
       container.innerHTML = '';
       container.classList.remove('hidden');
@@ -1427,202 +1449,179 @@
         const existingComp = existingComponents.find(c => c.component_color === color);
         const card = document.createElement('div');
         card.className = 'glass-card rounded-xl p-6 cursor-pointer hover:border-blue-500/50 transition-all w-full';
-        
+        const displayName = isSingleMeasureComponent ? getColorMeasureName(color, config, componentType) : getColorBadge(color);
+        const partNumberText = config.partNumbers ? (config.partNumbers[displayName] || config.partNumbers[color] || '') : '';
+
         if (existingComp) {
           const status = getComponentStatus(existingComp);
-          const m1Percent = (existingComp.measure1_current / existingComp.measure1_max) * 100;
-          const m2Percent = (existingComp.measure2_current / existingComp.measure2_max) * 100;
-          const hasThirdMeasure = componentHasThirdMeasure(config) && Number.isFinite(existingComp.measure3_current) && Number.isFinite(existingComp.measure3_max) && existingComp.measure3_max > 0;
-          const m3Percent = hasThirdMeasure ? (existingComp.measure3_current / existingComp.measure3_max) * 100 : null;
-          
-          // Parse inspection history
-          let inspectionHistory = [];
-          if (existingComp.inspection_history) {
-            try {
-              inspectionHistory = JSON.parse(existingComp.inspection_history);
-            } catch (e) {
-              inspectionHistory = [];
-            }
-          }
-          
-          // Build history HTML
-          const latestDisplayUnit = existingComp.measurement_unit || inspectionHistory?.[0]?.unit || 'mm';
+          const latestDisplayUnit = existingComp.measurement_unit || 'mm';
 
-          let historyHTML = '';
-          if (inspectionHistory.length > 0) {
-            historyHTML = '<div class="w-full mt-3 space-y-1.5">';
-            historyHTML += '<p class="text-slate-400 text-xs font-semibold mb-2">📋 Histórico:</p>';
-            inspectionHistory.slice(0, 3).forEach((hist, idx) => {
-              const date = new Date(hist.date);
-              const dateStr = date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-              // Get proper labels based on component type and model
-              let label1 = 'M1', label2 = 'M2';
-              if (currentAircraft.model === 'EC175') {
-                if (currentComponentType === 'Main Rotor Link') {
-                  label1 = 'Upper';
-                  label2 = 'Lower';
-                } else if (currentComponentType === 'Tail Rotor Link') {
-                  label1 = 'Inboard';
-                  label2 = 'Outboard';
-                } else if (currentComponentType === 'Tail Rotor Damper') {
-                  label1 = 'RH';
-                  label2 = 'LH';
-                }
-              } else if (currentAircraft.model === 'AW139') {
-                if (currentComponentType === 'Main Rotor Link' || currentComponentType === 'Tail Rotor Link') {
-                  label1 = 'Upper';
-                  label2 = 'Lower';
-                }
+          if (isSingleMeasureComponent) {
+            const m1Percent = (existingComp.measure1_current / existingComp.measure1_max) * 100;
+            let inspectionHistory = [];
+            if (existingComp.inspection_history) {
+              try {
+                inspectionHistory = JSON.parse(existingComp.inspection_history);
+              } catch (e) {
+                inspectionHistory = [];
               }
-              
-              historyHTML += `
-                <div class="bg-slate-800/50 rounded p-2 ${idx === 0 ? 'border border-blue-500/30' : ''}">
-                  <div class="flex items-center justify-between mb-1">
-                    <span class="text-slate-400 text-xs">${dateStr}</span>
-                    ${idx === 0 ? '<span class="text-blue-400 text-xs font-semibold">Atual</span>' : ''}
-                  </div>
-                  <div class="text-xs space-y-0.5">
-                    <div class="text-center whitespace-nowrap">
-                      <span class="text-slate-400">${label1}:</span>
-                      <span class="text-white font-bold ml-1">${formatStoredMeasurement(hist.measure1, hist.unit || existingComp.measurement_unit || 'mm')}</span>
+            }
+
+            let historyHTML = '';
+            if (inspectionHistory.length > 0) {
+              historyHTML = '<div class="w-full mt-3 space-y-1.5">';
+              historyHTML += '<p class="text-slate-400 text-xs font-semibold mb-2">📋 Histórico:</p>';
+              inspectionHistory.slice(0, 3).forEach((hist, idx) => {
+                const date = new Date(hist.date);
+                const dateStr = date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                historyHTML += `
+                  <div class="bg-slate-800/50 rounded p-2 ${idx === 0 ? 'border border-blue-500/30' : ''}">
+                    <div class="flex items-center justify-between mb-1">
+                      <span class="text-slate-400 text-xs">${dateStr}</span>
+                      ${idx === 0 ? '<span class="text-blue-400 text-xs font-semibold">Atual</span>' : ''}
                     </div>
-                    <div class="text-center whitespace-nowrap">
-                      <span class="text-slate-400">${label2}:</span>
-                      <span class="text-white font-bold ml-1">${formatStoredMeasurement(hist.measure2, hist.unit || existingComp.measurement_unit || 'mm')}</span>
+                    <div class="text-xs text-center whitespace-nowrap">
+                      <span class="text-slate-400">${displayName}:</span>
+                      <span class="text-white font-bold ml-1">${formatStoredMeasurement(hist.measure1, hist.unit || latestDisplayUnit)}</span>
                     </div>
-                    ${componentHasThirdMeasure(config) && hist.measure3 !== undefined ? `<div class="text-center whitespace-nowrap"><span class="text-slate-400">${config.measures[2]}:</span><span class="text-white font-bold ml-1">${formatStoredMeasurement(hist.measure3, hist.unit || existingComp.measurement_unit || 'mm')}</span></div>` : ''}
+                  </div>
+                `;
+              });
+              historyHTML += '</div>';
+            }
+
+            card.innerHTML = `
+              <div class="flex flex-col items-center py-4 px-3">
+                <div class="color-badge mb-3" style="background: ${color}; width: 48px; height: 48px;"></div>
+                <h3 class="text-white font-bold text-lg mb-3 text-center">${displayName}</h3>
+                <div class="w-full mb-3 bg-slate-700/30 rounded p-3 text-center">
+                  ${formatPartNumberHtml(existingComp.measure1_part_number || partNumberText || '')}
+                </div>
+                <div class="w-full space-y-2 mb-3">
+                  <div class="measure-zoom-trigger bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-lg p-3 border border-blue-500/20 cursor-pointer hover:border-blue-500/50 transition-all w-full" data-measure="1">
+                    <p class="text-slate-300 text-xs mb-1 text-center">${displayName}</p>
+                    <p class="text-white text-2xl font-bold text-center">${formatStoredMeasurement(existingComp.measure1_current, latestDisplayUnit)}</p>
+                    <div class="progress-bar mt-1">
+                      <div class="progress-fill ${m1Percent >= 100 ? 'bg-red-500' : m1Percent >= existingComp.measure1_alert ? 'bg-amber-500' : 'bg-green-500'}" style="width: ${Math.min(m1Percent, 100)}%"></div>
+                    </div>
                   </div>
                 </div>
-              `;
-            });
-            historyHTML += '</div>';
-          }
-          
-          // Show single consolidated P/N only for components configured with singleSerial
-          const useSinglePartNumberDisplay = !!config.singleSerial;
-          const singlePartNumberText = String(existingComp.measure1_part_number || '');
-          const singlePNBase = singlePartNumberText.includes(' (P/N ')
-            ? singlePartNumberText.split(' (P/N ')[0]
-            : singlePartNumberText;
-          const singlePNSuffix = singlePartNumberText.includes(' (P/N ')
-            ? singlePartNumberText.split(' (P/N ')[1].replace(')', '')
-            : '';
-          const partNumberDisplay = useSinglePartNumberDisplay ? `
-            <div class="w-full mb-3 text-center">
-              <p class="text-white text-xs font-bold leading-tight">${singlePNBase}</p>
-              ${singlePNSuffix ? `<p class="text-slate-300 text-xs leading-tight">(P/N ${singlePNSuffix})</p>` : ''}
-            </div>
-          ` : '';
-          
-          card.innerHTML = `
-            <div class="flex flex-col items-center py-4 px-3">
-              <div class="color-badge mb-2" style="background: ${color}; width: 48px; height: 48px;"></div>
-              
-              ${partNumberDisplay}
-              
-              <div class="w-full space-y-2 mb-3">
-                <div class="measure-zoom-trigger bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-lg p-3 border border-blue-500/20 cursor-pointer hover:border-blue-500/50 transition-all w-full" data-measure="1">
-                  <p class="text-slate-300 text-xs mb-1">${existingComp.measure1_name}</p>
-                  ${!useSinglePartNumberDisplay ? `<p class="text-slate-300 text-xs mb-1 whitespace-nowrap text-left">${existingComp.measure1_part_number || ''}</p>` : ''}
-                  <p class="text-white text-2xl font-bold">${formatStoredMeasurement(existingComp.measure1_current, latestDisplayUnit)}</p>
-                  <div class="progress-bar mt-1">
-                    <div class="progress-fill ${m1Percent >= 100 ? 'bg-red-500' : m1Percent >= existingComp.measure1_alert ? 'bg-amber-500' : 'bg-green-500'}" 
-                         style="width: ${Math.min(m1Percent, 100)}%"></div>
-                  </div>
+                ${historyHTML}
+                <div class="flex items-center gap-2 mt-3 mb-2">
+                  <button class="edit-component-btn text-blue-400 hover:text-blue-300 transition-colors p-1.5" data-component-id="${existingComp.__backendId}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                  </button>
+                  <button class="delete-component-btn text-red-400 hover:text-red-300 transition-colors p-1.5" data-component-id="${existingComp.__backendId}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                  </button>
                 </div>
-                
-                <div class="measure-zoom-trigger bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-lg p-3 border border-blue-500/20 cursor-pointer hover:border-blue-500/50 transition-all w-full" data-measure="2">
-                  <p class="text-slate-300 text-xs mb-1">${existingComp.measure2_name}</p>
-                  ${!useSinglePartNumberDisplay ? `<p class="text-slate-300 text-xs mb-1 whitespace-nowrap text-left">${existingComp.measure2_part_number || ''}</p>` : ''}
-                  <p class="text-white text-2xl font-bold">${formatStoredMeasurement(existingComp.measure2_current, latestDisplayUnit)}</p>
-                  <div class="progress-bar mt-1">
-                    <div class="progress-fill ${m2Percent >= 100 ? 'bg-red-500' : m2Percent >= existingComp.measure2_alert ? 'bg-amber-500' : 'bg-green-500'}" 
-                         style="width: ${Math.min(m2Percent, 100)}%"></div>
-                  </div>
-                </div>
-                ${hasThirdMeasure ? `<div class="measure-zoom-trigger bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-lg p-3 border border-blue-500/20 cursor-pointer hover:border-blue-500/50 transition-all w-full" data-measure="3"><p class="text-slate-300 text-xs mb-1">${existingComp.measure3_name}</p>${!useSinglePartNumberDisplay ? `<p class="text-slate-300 text-xs mb-1 whitespace-nowrap text-left">${existingComp.measure3_part_number || ''}</p>` : ''}<p class="text-white text-2xl font-bold">${formatStoredMeasurement(existingComp.measure3_current, latestDisplayUnit)}</p><div class="progress-bar mt-1"><div class="progress-fill ${m3Percent >= 100 ? 'bg-red-500' : m3Percent >= existingComp.measure3_alert ? 'bg-amber-500' : 'bg-green-500'}" style="width: ${Math.min(m3Percent, 100)}%"></div></div></div>` : ''}
+                <span class="px-2 py-1 rounded-full text-xs font-semibold status-${status.status}">${status.label}</span>
               </div>
-              
-              ${historyHTML}
-              
-              <div class="flex items-center gap-2 mt-3 mb-2">
-                <button class="edit-component-btn text-blue-400 hover:text-blue-300 transition-colors p-1.5" data-component-id="${existingComp.__backendId}">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                  </svg>
-                </button>
-                <button class="delete-component-btn text-red-400 hover:text-red-300 transition-colors p-1.5" data-component-id="${existingComp.__backendId}">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                  </svg>
-                </button>
-              </div>
-              
-              <span class="px-2 py-1 rounded-full text-xs font-semibold status-${status.status}">
-                ${status.label}
-              </span>
-            </div>
-          `;
-          
-          const editBtn = card.querySelector('.edit-component-btn');
-          const deleteBtn = card.querySelector('.delete-component-btn');
-          const zoomTriggers = card.querySelectorAll('.measure-zoom-trigger');
-          
-          editBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            editComponent(existingComp);
-          });
-          deleteBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            deleteComponent(existingComp);
-          });
-          
-          zoomTriggers.forEach((trigger, idx) => {
-            trigger.addEventListener('click', (e) => {
+            `;
+
+            card.querySelector('.edit-component-btn').addEventListener('click', (e) => {
               e.stopPropagation();
-              showMeasureZoom(existingComp, idx + 1);
+              editComponent(existingComp);
             });
-          });
-          
-          card.addEventListener('click', () => editComponent(existingComp));
+            card.querySelector('.delete-component-btn').addEventListener('click', (e) => {
+              e.stopPropagation();
+              deleteComponent(existingComp);
+            });
+            card.querySelector('.measure-zoom-trigger').addEventListener('click', (e) => {
+              e.stopPropagation();
+              showMeasureZoom(existingComp, 1);
+            });
+            card.addEventListener('click', () => editComponent(existingComp));
+          } else {
+            const m1Percent = (existingComp.measure1_current / existingComp.measure1_max) * 100;
+            const m2Percent = (existingComp.measure2_current / existingComp.measure2_max) * 100;
+            const hasThirdMeasure = componentHasThirdMeasure(config) && Number.isFinite(existingComp.measure3_current) && Number.isFinite(existingComp.measure3_max) && existingComp.measure3_max > 0;
+            const m3Percent = hasThirdMeasure ? (existingComp.measure3_current / existingComp.measure3_max) * 100 : null;
+            let inspectionHistory = [];
+            if (existingComp.inspection_history) {
+              try { inspectionHistory = JSON.parse(existingComp.inspection_history); } catch (e) { inspectionHistory = []; }
+            }
+            let historyHTML = '';
+            if (inspectionHistory.length > 0) {
+              historyHTML = '<div class="w-full mt-3 space-y-1.5">';
+              historyHTML += '<p class="text-slate-400 text-xs font-semibold mb-2">📋 Histórico:</p>';
+              inspectionHistory.slice(0, 3).forEach((hist, idx) => {
+                const date = new Date(hist.date);
+                const dateStr = date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                let label1 = 'M1', label2 = 'M2';
+                if (currentAircraft.model === 'EC175') {
+                  if (currentComponentType === 'Main Rotor Link') { label1 = 'Upper'; label2 = 'Lower'; }
+                  else if (currentComponentType === 'Tail Rotor Link') { label1 = 'Inboard'; label2 = 'Outboard'; }
+                  else if (currentComponentType === 'Tail Rotor Damper') { label1 = 'RH'; label2 = 'LH'; }
+                } else if (currentAircraft.model === 'AW139') {
+                  if (currentComponentType === 'Main Rotor Link' || currentComponentType === 'Tail Rotor Link') { label1 = 'Upper'; label2 = 'Lower'; }
+                }
+                historyHTML += `
+                  <div class="bg-slate-800/50 rounded p-2 ${idx === 0 ? 'border border-blue-500/30' : ''}">
+                    <div class="flex items-center justify-between mb-1">
+                      <span class="text-slate-400 text-xs">${dateStr}</span>
+                      ${idx === 0 ? '<span class="text-blue-400 text-xs font-semibold">Atual</span>' : ''}
+                    </div>
+                    <div class="text-xs space-y-0.5">
+                      <div class="text-center whitespace-nowrap"><span class="text-slate-400">${label1}:</span><span class="text-white font-bold ml-1">${formatStoredMeasurement(hist.measure1, hist.unit || latestDisplayUnit)}</span></div>
+                      <div class="text-center whitespace-nowrap"><span class="text-slate-400">${label2}:</span><span class="text-white font-bold ml-1">${formatStoredMeasurement(hist.measure2, hist.unit || latestDisplayUnit)}</span></div>
+                      ${componentHasThirdMeasure(config) && hist.measure3 !== undefined ? `<div class="text-center whitespace-nowrap"><span class="text-slate-400">${config.measures[2]}:</span><span class="text-white font-bold ml-1">${formatStoredMeasurement(hist.measure3, hist.unit || latestDisplayUnit)}</span></div>` : ''}
+                    </div>
+                  </div>`;
+              });
+              historyHTML += '</div>';
+            }
+            const useSinglePartNumberDisplay = !!config.singleSerial;
+            const singlePartNumberText = String(existingComp.measure1_part_number || '');
+            const singlePNBase = singlePartNumberText.includes(' (P/N ') ? singlePartNumberText.split(' (P/N ')[0] : singlePartNumberText;
+            const singlePNSuffix = singlePartNumberText.includes(' (P/N ') ? singlePartNumberText.split(' (P/N ')[1].replace(')', '') : '';
+            const partNumberDisplay = useSinglePartNumberDisplay ? `<div class="w-full mb-3 text-center"><p class="text-white text-xs font-bold leading-tight">${singlePNBase}</p>${singlePNSuffix ? `<p class="text-slate-300 text-xs leading-tight">(P/N ${singlePNSuffix})</p>` : ''}</div>` : '';
+            card.innerHTML = `
+              <div class="flex flex-col items-center py-4 px-3">
+                <div class="color-badge mb-2" style="background: ${color}; width: 48px; height: 48px;"></div>
+                ${partNumberDisplay}
+                <div class="w-full space-y-2 mb-3">
+                  <div class="measure-zoom-trigger bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-lg p-3 border border-blue-500/20 cursor-pointer hover:border-blue-500/50 transition-all w-full" data-measure="1"><p class="text-slate-300 text-xs mb-1">${existingComp.measure1_name}</p>${!useSinglePartNumberDisplay ? `<p class="text-slate-300 text-xs mb-1 whitespace-nowrap text-left">${existingComp.measure1_part_number || ''}</p>` : ''}<p class="text-white text-2xl font-bold">${formatStoredMeasurement(existingComp.measure1_current, latestDisplayUnit)}</p><div class="progress-bar mt-1"><div class="progress-fill ${m1Percent >= 100 ? 'bg-red-500' : m1Percent >= existingComp.measure1_alert ? 'bg-amber-500' : 'bg-green-500'}" style="width: ${Math.min(m1Percent, 100)}%"></div></div></div>
+                  <div class="measure-zoom-trigger bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-lg p-3 border border-blue-500/20 cursor-pointer hover:border-blue-500/50 transition-all w-full" data-measure="2"><p class="text-slate-300 text-xs mb-1">${existingComp.measure2_name}</p>${!useSinglePartNumberDisplay ? `<p class="text-slate-300 text-xs mb-1 whitespace-nowrap text-left">${existingComp.measure2_part_number || ''}</p>` : ''}<p class="text-white text-2xl font-bold">${formatStoredMeasurement(existingComp.measure2_current, latestDisplayUnit)}</p><div class="progress-bar mt-1"><div class="progress-fill ${m2Percent >= 100 ? 'bg-red-500' : m2Percent >= existingComp.measure2_alert ? 'bg-amber-500' : 'bg-green-500'}" style="width: ${Math.min(m2Percent, 100)}%"></div></div></div>
+                  ${hasThirdMeasure ? `<div class="measure-zoom-trigger bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-lg p-3 border border-blue-500/20 cursor-pointer hover:border-blue-500/50 transition-all w-full" data-measure="3"><p class="text-slate-300 text-xs mb-1">${existingComp.measure3_name}</p>${!useSinglePartNumberDisplay ? `<p class="text-slate-300 text-xs mb-1 whitespace-nowrap text-left">${existingComp.measure3_part_number || ''}</p>` : ''}<p class="text-white text-2xl font-bold">${formatStoredMeasurement(existingComp.measure3_current, latestDisplayUnit)}</p><div class="progress-bar mt-1"><div class="progress-fill ${m3Percent >= 100 ? 'bg-red-500' : m3Percent >= existingComp.measure3_alert ? 'bg-amber-500' : 'bg-green-500'}" style="width: ${Math.min(m3Percent, 100)}%"></div></div></div>` : ''}
+                </div>
+                ${historyHTML}
+                <div class="flex items-center gap-2 mt-3 mb-2">
+                  <button class="edit-component-btn text-blue-400 hover:text-blue-300 transition-colors p-1.5" data-component-id="${existingComp.__backendId}"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>
+                  <button class="delete-component-btn text-red-400 hover:text-red-300 transition-colors p-1.5" data-component-id="${existingComp.__backendId}"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+                </div>
+                <span class="px-2 py-1 rounded-full text-xs font-semibold status-${status.status}">${status.label}</span>
+              </div>`;
+            card.querySelector('.edit-component-btn').addEventListener('click', (e) => { e.stopPropagation(); editComponent(existingComp); });
+            card.querySelector('.delete-component-btn').addEventListener('click', (e) => { e.stopPropagation(); deleteComponent(existingComp); });
+            card.querySelectorAll('.measure-zoom-trigger').forEach((trigger, idx) => trigger.addEventListener('click', (e) => { e.stopPropagation(); showMeasureZoom(existingComp, idx + 1); }));
+            card.addEventListener('click', () => editComponent(existingComp));
+          }
         } else {
-          // Empty card - click to add
-          const colorName = color === 'Yellow' ? 'Amarelo' : 
-                           color === 'Red' ? 'Vermelho' : 
-                           color === 'Black' ? 'Preto' : 
-                           color === 'White' ? 'Branco' : 
-                           color === 'Blue' ? 'Azul' : 'Verde';
-          
-          card.innerHTML = `
-            <div class="flex flex-col items-center justify-center py-6 px-3">
-              <div class="color-badge mb-3" style="background: ${color}; width: 48px; height: 48px;"></div>
-              <h3 class="text-white font-bold text-base mb-2">${getColorBadge(color)}</h3>
-              
-              <div class="w-full space-y-2 mb-3">
-                <div class="bg-slate-700/30 rounded p-2 w-full">
-                  <p class="text-slate-400 text-xs mb-1">${config.measures[0]}</p>
-                  <p class="text-slate-300 text-xs">${config.partNumbers ? config.partNumbers[config.measures[0]] : 'A definir'}</p>
+          if (isSingleMeasureComponent) {
+            card.innerHTML = `
+              <div class="flex flex-col items-center justify-center py-6 px-3">
+                <div class="color-badge mb-3" style="background: ${color}; width: 48px; height: 48px;"></div>
+                <h3 class="text-white font-bold text-lg mb-3 text-center">${displayName}</h3>
+                <div class="w-full space-y-2 mb-3">
+                  <div class="bg-slate-700/30 rounded p-3 w-full text-center">${formatPartNumberHtml(partNumberText || 'A definir')}</div>
                 </div>
-                <div class="bg-slate-700/30 rounded p-2 w-full">
-                  <p class="text-slate-400 text-xs mb-1">${config.measures[1]}</p>
-                  <p class="text-slate-300 text-xs">${config.partNumbers ? config.partNumbers[config.measures[1]] : 'A definir'}</p>
+                <div class="flex items-center gap-1 text-blue-400 text-xs"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg><span class="font-medium">Clique para adicionar</span></div>
+              </div>`;
+          } else {
+            card.innerHTML = `
+              <div class="flex flex-col items-center justify-center py-6 px-3">
+                <div class="color-badge mb-3" style="background: ${color}; width: 48px; height: 48px;"></div>
+                <h3 class="text-white font-bold text-base mb-2">${getColorBadge(color)}</h3>
+                <div class="w-full space-y-2 mb-3">
+                  <div class="bg-slate-700/30 rounded p-2 w-full"><p class="text-slate-400 text-xs mb-1">${config.measures[0]}</p><p class="text-slate-300 text-xs">${config.partNumbers ? config.partNumbers[config.measures[0]] : 'A definir'}</p></div>
+                  <div class="bg-slate-700/30 rounded p-2 w-full"><p class="text-slate-400 text-xs mb-1">${config.measures[1]}</p><p class="text-slate-300 text-xs">${config.partNumbers ? config.partNumbers[config.measures[1]] : 'A definir'}</p></div>
                 </div>
-              </div>
-              
-              <div class="flex items-center gap-1 text-blue-400 text-xs">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                </svg>
-                <span class="font-medium">Clique para adicionar</span>
-              </div>
-            </div>
-          `;
-          
-          card.addEventListener('click', () => {
-            openComponentForm(color);
-          });
+                <div class="flex items-center gap-1 text-blue-400 text-xs"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg><span class="font-medium">Clique para adicionar</span></div>
+              </div>`;
+          }
+          card.addEventListener('click', () => openComponentForm(color));
         }
-        
         container.appendChild(card);
       });
     }
@@ -1633,17 +1632,19 @@
 
     function openComponentForm(color = '') {
       const config = COMPONENT_CONFIG[currentAircraft.model][currentComponentType];
+      const isSingleMeasureComponent = isSingleMeasurePerColorComponent(config);
+      const selectedMeasureName = isSingleMeasureComponent ? getColorMeasureName(color || document.getElementById('component-color').value, config) : '';
       
       document.getElementById('modal-component-type').textContent = currentComponentType;
-      document.getElementById('measure1-title').textContent = config.measures[0];
-      document.getElementById('measure2-title').textContent = config.measures[1];
+      document.getElementById('measure1-title').textContent = isSingleMeasureComponent ? selectedMeasureName : config.measures[0];
+      document.getElementById('measure2-title').textContent = config.measures[1] || '';
       
-      document.getElementById('measure1-pn').placeholder = `P/N ${config.measures[0]}`;
+      document.getElementById('measure1-pn').placeholder = isSingleMeasureComponent ? 'P/N' : `P/N ${config.measures[0]}`;
       document.getElementById('measure2-pn').placeholder = `P/N ${config.measures[1]}`;
       
       // Pre-fill part numbers
       if (config.partNumbers) {
-        document.getElementById('measure1-pn').value = config.partNumbers[config.measures[0]] || '';
+        document.getElementById('measure1-pn').value = isSingleMeasureComponent ? (config.partNumbers[selectedMeasureName] || '') : (config.partNumbers[config.measures[0]] || '');
         document.getElementById('measure2-pn').value = config.partNumbers[config.measures[1]] || '';
         
         // For AW139, disable the P/N fields since they're pre-defined
@@ -1677,6 +1678,20 @@
       document.getElementById('component-color').value = selectedColor;
       
       updateMeasure3Visibility(config, existingComp);
+
+      if (isSingleMeasureComponent) {
+        document.getElementById('measure2-title').textContent = '';
+        document.getElementById('measure2-pn-container').classList.add('hidden');
+        document.getElementById('measure2-current').parentElement.parentElement.classList.add('hidden');
+        document.getElementById('quick-measure2-title').textContent = '';
+        document.getElementById('quick-measure2').parentElement.classList.add('hidden');
+        document.getElementById('measure3-wrapper').classList.add('hidden');
+        document.getElementById('quick-measure3-wrapper').classList.add('hidden');
+      } else {
+        document.getElementById('measure2-pn-container').classList.remove('hidden');
+        document.getElementById('measure2-current').parentElement.parentElement.classList.remove('hidden');
+        document.getElementById('quick-measure2').parentElement.classList.remove('hidden');
+      }
 
       // Update color display
       const colorNames = {
@@ -1736,7 +1751,10 @@
             ${existingComp.link_serial_number ? `<p class="text-slate-300 text-sm"><strong>Link S/N Atual:</strong> ${existingComp.link_serial_number}</p>` : ''}
           `;
         } else {
-          currentSNInfo.innerHTML = `
+          currentSNInfo.innerHTML = isSingleMeasureComponent ? `
+            <p class="text-slate-300 text-sm mb-1"><strong>${selectedMeasureName}:</strong></p>
+            <p class="text-slate-400 text-xs">P/N: ${existingComp.measure1_part_number}</p>
+          ` : `
             <p class="text-slate-300 text-sm mb-1"><strong>${config.measures[0]}:</strong></p>
             <p class="text-slate-400 text-xs mb-2">P/N: ${existingComp.measure1_part_number}${existingComp.measure1_serial_number ? ' | S/N: ' + existingComp.measure1_serial_number : ''}</p>
             <p class="text-slate-300 text-sm mb-1"><strong>${config.measures[1]}:</strong></p>
@@ -1780,6 +1798,9 @@
         document.getElementById('measure1-alert').value = existingComp.measure1_alert;
         document.getElementById('measure2-current').value = '';
         document.getElementById('measure2-alert').value = existingComp.measure2_alert;
+        if (isSingleMeasureComponent) {
+          document.getElementById('measure1-pn').value = existingComp.measure1_part_number || config.partNumbers?.[selectedMeasureName] || '';
+        }
         if (componentHasThirdMeasure(config)) {
           document.getElementById('measure3-current').value = '';
           document.getElementById('measure3-alert').value = existingComp.measure3_alert || 80;
@@ -1799,7 +1820,7 @@
           document.getElementById('quick-measure3').value = '';
         }
         document.getElementById('quick-inspection-date').value = new Date().toISOString().split('T')[0];
-        document.getElementById('quick-measure1-title').textContent = config.measures[0];
+        document.getElementById('quick-measure1-title').textContent = isSingleMeasureComponent ? selectedMeasureName : config.measures[0];
         document.getElementById('quick-measure2-title').textContent = config.measures[1];
         if (componentHasThirdMeasure(config)) {
           document.getElementById('quick-measure3-title').textContent = config.measures[2];
@@ -1816,6 +1837,9 @@
         } else {
           document.getElementById('measure1-serial').value = '';
           document.getElementById('measure2-serial').value = '';
+          if (isSingleMeasureComponent) {
+            document.getElementById('measure1-pn').value = config.partNumbers ? (config.partNumbers[selectedMeasureName] || '') : '';
+          }
         }
         
         document.getElementById('measure1-current').value = '';
@@ -1844,12 +1868,14 @@
     }
     
     function showMeasureZoom(comp, measureNum) {
-      const measureName = measureNum === 1 ? comp.measure1_name : comp.measure2_name;
-      const measureValue = measureNum === 1 ? comp.measure1_current : comp.measure2_current;
-      const measureMax = measureNum === 1 ? comp.measure1_max : comp.measure2_max;
-      const measurePN = measureNum === 1 ? comp.measure1_part_number : comp.measure2_part_number;
-      const measureSN = measureNum === 1 ? comp.measure1_serial_number : comp.measure2_serial_number;
-      const measureAlert = measureNum === 1 ? comp.measure1_alert : comp.measure2_alert;
+      const componentConfig = COMPONENT_CONFIG?.[comp.aircraft_model]?.[comp.component_type];
+      const isSingleMeasureComponent = isSingleMeasurePerColorComponent(componentConfig, comp.component_type);
+      const measureName = measureNum === 1 ? comp.measure1_name : measureNum === 2 ? comp.measure2_name : comp.measure3_name;
+      const measureValue = measureNum === 1 ? comp.measure1_current : measureNum === 2 ? comp.measure2_current : comp.measure3_current;
+      const measureMax = measureNum === 1 ? comp.measure1_max : measureNum === 2 ? comp.measure2_max : comp.measure3_max;
+      const measurePN = measureNum === 1 ? comp.measure1_part_number : measureNum === 2 ? comp.measure2_part_number : comp.measure3_part_number;
+      const measureSN = measureNum === 1 ? comp.measure1_serial_number : measureNum === 2 ? comp.measure2_serial_number : comp.measure3_serial_number;
+      const measureAlert = measureNum === 1 ? comp.measure1_alert : measureNum === 2 ? comp.measure2_alert : comp.measure3_alert;
       
       const percent = (measureValue / measureMax) * 100;
       const statusClass = percent >= 100 ? 'status-critical' : percent >= measureAlert ? 'status-attention' : 'status-normal';
@@ -1859,6 +1885,7 @@
       
       // Check if this is a Tail Rotor Link component
       const isTailRotorLink = comp.component_type === 'Tail Rotor Link';
+      const displayUnit = comp.measurement_unit || 'mm';
       const linkSN = comp.link_serial_number || '';
       
       const zoomDiv = document.createElement('div');
@@ -1870,7 +1897,7 @@
             <div class="inline-flex items-center justify-center w-20 h-20 rounded-full ${statusClass} mb-4">
               <span class="text-4xl">${getColorBadge(comp.component_color)}</span>
             </div>
-            <h2 class="text-2xl font-bold text-white mb-2">${measureName}</h2>
+            <h2 class="text-2xl font-bold text-white mb-2">${isSingleMeasureComponent ? getColorMeasureName(comp.component_color, componentConfig, comp.component_type) : measureName}</h2>
             <p class="text-slate-300 text-sm">${comp.component_type}</p>
           </div>
           
@@ -2657,7 +2684,9 @@
         const snChoice = document.querySelector('input[name="sn-change"]:checked')?.value || 'no';
         const selectedUnit = getSelectedUnit();
 
-        const hasThirdMeasure = componentHasThirdMeasure(componentConfig);
+        const hasThirdMeasure = componentHasThirdMeasure(componentConfig) && !isSingleMeasurePerColorComponent(componentConfig);
+        const isSingleMeasureComponent = isSingleMeasurePerColorComponent(componentConfig);
+        const selectedMeasureName = isSingleMeasureComponent ? getColorMeasureName(document.getElementById('component-color').value, componentConfig) : '';
         let measure1_current;
         let measure2_current;
         let measure3_current = null;
@@ -2665,7 +2694,7 @@
 
         if (isQuickUpdate && snChoice === 'no') {
           measure1_current = parseFloat(document.getElementById('quick-measure1').value);
-          measure2_current = parseFloat(document.getElementById('quick-measure2').value);
+          measure2_current = isSingleMeasureComponent ? measure1_current : parseFloat(document.getElementById('quick-measure2').value);
           if (hasThirdMeasure) {
             measure3_current = parseFloat(document.getElementById('quick-measure3').value);
           }
@@ -2677,7 +2706,7 @@
           inspection_date_iso = parseInspectionDate(document.getElementById('quick-inspection-date').value);
         } else {
           measure1_current = parseFloat(document.getElementById('measure1-current').value);
-          measure2_current = parseFloat(document.getElementById('measure2-current').value);
+          measure2_current = isSingleMeasureComponent ? measure1_current : parseFloat(document.getElementById('measure2-current').value);
           if (hasThirdMeasure) {
             measure3_current = parseFloat(document.getElementById('measure3-current').value);
           }
@@ -2689,7 +2718,7 @@
           inspection_date_iso = parseInspectionDate(document.getElementById('inspection-date').value);
         }
 
-        const measurementError = validateMeasurements([measure1_current, measure2_current, ...(hasThirdMeasure ? [measure3_current] : [])]);
+        const measurementError = validateMeasurements(isSingleMeasureComponent ? [measure1_current] : [measure1_current, measure2_current, ...(hasThirdMeasure ? [measure3_current] : [])]);
         if (measurementError) {
           showToast(measurementError, 'error');
           return;
@@ -2748,13 +2777,13 @@
             aircraft_model: currentAircraft.model,
             component_type: currentComponentType,
             component_color: componentColor,
-            measure1_name: measures[0],
+            measure1_name: isSingleMeasureComponent ? selectedMeasureName : measures[0],
             measure1_part_number: existingRecord.measure1_part_number,
             measure1_serial_number: existingRecord.measure1_serial_number,
             measure1_current: measure1_current,
             measure1_max: measure1_max,
             measure1_alert: existingRecord.measure1_alert,
-            measure2_name: measures[1],
+            measure2_name: isSingleMeasureComponent ? selectedMeasureName : measures[1],
             measure2_part_number: existingRecord.measure2_part_number,
             measure2_serial_number: existingRecord.measure2_serial_number,
             measure2_current: measure2_current,
@@ -2790,9 +2819,9 @@
             measure2_pn = singlePN;
           } else {
             measure1_pn = (document.getElementById('measure1-pn').value || '').trim();
-            measure2_pn = (document.getElementById('measure2-pn').value || '').trim();
-            if (!measure1_pn || !measure2_pn) {
-              showToast('Informe os Part Numbers das medições do componente.', 'error');
+            measure2_pn = isSingleMeasureComponent ? measure1_pn : (document.getElementById('measure2-pn').value || '').trim();
+            if (!measure1_pn || (!isSingleMeasureComponent && !measure2_pn)) {
+              showToast(isSingleMeasureComponent ? 'Informe o Part Number do bearing.' : 'Informe os Part Numbers das medições do componente.', 'error');
               return;
             }
             if (hasThirdMeasure) {
@@ -2813,13 +2842,13 @@
             aircraft_model: currentAircraft.model,
             component_type: currentComponentType,
             component_color: componentColor,
-            measure1_name: measures[0],
+            measure1_name: isSingleMeasureComponent ? selectedMeasureName : measures[0],
             measure1_part_number: measure1_pn,
             measure1_serial_number: componentConfig.singleSerial ? '' : (document.getElementById('measure1-serial').value || ''),
             measure1_current: measure1_current,
             measure1_max: measure1_max,
             measure1_alert: parseInt(document.getElementById('measure1-alert').value || '80', 10),
-            measure2_name: measures[1],
+            measure2_name: isSingleMeasureComponent ? selectedMeasureName : measures[1],
             measure2_part_number: measure2_pn,
             measure2_serial_number: componentConfig.singleSerial ? '' : (document.getElementById('measure2-serial').value || ''),
             measure2_current: measure2_current,
@@ -2901,7 +2930,7 @@
         quickUpdateFields.classList.remove('hidden');
         
         // Update quick form titles
-        document.getElementById('quick-measure1-title').textContent = config.measures[0];
+        document.getElementById('quick-measure1-title').textContent = isSingleMeasureComponent ? selectedMeasureName : config.measures[0];
         document.getElementById('quick-measure2-title').textContent = config.measures[1];
         if (componentHasThirdMeasure(config)) {
           document.getElementById('quick-measure3-title').textContent = config.measures[2];
