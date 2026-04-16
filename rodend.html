@@ -1879,19 +1879,20 @@ Alternate P/N
       
       if (auth.success) {
         document.getElementById('error-message').classList.add('hidden');
-        currentUser = { username: user, isAdmin: auth.isAdmin, id: auth.user?.id || '' };
+        currentUser = {
+          username: user,
+          isAdmin: auth.isAdmin,
+          id: auth.user?.id || '',
+          role: auth.user?.role || (auth.isAdmin ? 'admin' : ''),
+          fullName: auth.user?.fullName || auth.user?.name || user
+        };
         await loadRecords();
         
         if (auth.needsPasswordChange) {
           loginScreen.classList.add('hidden');
           changePasswordScreen.classList.remove('hidden');
         } else {
-          document.getElementById('user-display').textContent = user;
-          if (auth.isAdmin) {
-            document.getElementById('manage-users-btn').classList.remove('hidden');
-          }
-          loginScreen.classList.add('hidden');
-          mainApp.classList.remove('hidden');
+          applyRodEndSession(currentUser);
         }
         this.reset();
       } else {
@@ -1946,6 +1947,7 @@ Alternate P/N
 
     // Back to Monitoring
     document.getElementById('back-to-monitoring-btn').addEventListener('click', function() {
+      saveRodEndSessionState();
       window.location.href = '/';
     });
 
@@ -2548,12 +2550,14 @@ Alternate P/N
 
     async function init() {
       await onConfigChange(defaultConfig);
+      const restoredSession = restoreRodEndSessionState();
       try {
         await loadRecords();
-        restoreRodEndSessionState();
       } catch (error) {
         console.error(error);
-        showToast('Erro ao carregar dados do ROD END', 'error');
+        if (!restoredSession) {
+          showToast('Erro ao carregar dados do ROD END', 'error');
+        }
       }
     }
 
