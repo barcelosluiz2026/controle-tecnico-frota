@@ -732,7 +732,8 @@
       'EC175': {
         'Main Rotor Link': { max_mm: 0.25, max_inch: 0.0098 },
         'Tail Rotor Link': { max_mm: 0.25, max_inch: 0.0098 },
-        'Tail Rotor Damper': { max_mm: 0.25, max_inch: 0.0098 }
+        'Tail Rotor Damper': { max_mm: 0.25, max_inch: 0.0098 },
+        'SCISSORS SPHERICAL BEARING': { max_mm: 0.25, max_inch: 0.0098 }
       },
       'AW139': {
         'Main Rotor Link': { max_mm: 0.2, max_inch: 0.008 },
@@ -1141,7 +1142,11 @@
       if (!limitText || !currentAircraft.model || !currentComponentType) return;
       
       const selectedUnit = document.querySelector('input[name="unit"]:checked').value;
-      const limits = MAX_CLEARANCE[currentAircraft.model][currentComponentType];
+      const limits = MAX_CLEARANCE?.[currentAircraft.model]?.[currentComponentType];
+      if (!limits) {
+        limitText.textContent = 'Limite não configurado';
+        return;
+      }
       
       if (selectedUnit === 'mm') {
         limitText.textContent = `< ${limits.max_mm} mm`;
