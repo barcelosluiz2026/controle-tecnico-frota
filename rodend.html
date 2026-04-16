@@ -760,9 +760,9 @@
             'Blue': "Between Link's"
           },
           partNumbers: {
-            'Lower Bearing': 'M623G40T1001\nAlternate P/N\n11-13354P',
-            'Yellow Link': 'M623G40T1001\nAlternate P/N\n11-13354P',
-            "Between Link's": 'M623G40T1001\nAlternate P/N\n11-13354P'
+            'Lower Bearing': 'P/N M623G40T1001\nor\nP/N 11-13354P',
+            'Yellow Link': 'P/N M623G40T1001\nor\nP/N 11-13354P',
+            "Between Link's": 'P/N M623G40T1001\nor\nP/N 11-13354P'
           }
         }
       },
@@ -1497,8 +1497,8 @@
             const percent = measure.max > 0 ? (measure.current / measure.max) * 100 : 0;
             return `
               <div class="measure-zoom-trigger bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-lg p-3 border border-blue-500/20 cursor-pointer hover:border-blue-500/50 transition-all w-full" data-measure="${measure.num}">
-                <p class="text-slate-300 text-xs mb-1">${measure.name}</p>
-                <p class="text-slate-300 text-xs mb-1 text-left leading-tight">${formatPartNumberHtml(measure.partNumber)}</p>
+                <p class="text-slate-300 text-xs mb-1 text-center">${measure.name}</p>
+                <p class="text-slate-300 text-xs mb-1 text-center leading-tight">${formatPartNumberHtml(measure.partNumber)}</p>
                 <p class="text-white text-2xl font-bold">${formatStoredMeasurement(measure.current, latestDisplayUnit)}</p>
                 <div class="progress-bar mt-1">
                   <div class="progress-fill ${percent >= 100 ? 'bg-red-500' : percent >= measure.alert ? 'bg-amber-500' : 'bg-green-500'}" style="width: ${Math.min(percent, 100)}%"></div>
@@ -1540,8 +1540,8 @@
               <div class="color-badge mb-4" style="background: ${color}; width: 48px; height: 48px;"></div>
               ${singleMeasureComponent ? `
                 <div class="w-full bg-slate-800/50 rounded-lg p-3 mb-4 text-left">
-                  <p class="text-slate-300 text-sm mb-1">${measureName}</p>
-                  <p class="text-slate-300 text-xs leading-tight">${formatPartNumberHtml(partText)}</p>
+                  <p class="text-slate-300 text-sm mb-1 text-center">${measureName}</p>
+                  <p class="text-slate-300 text-xs leading-tight text-center">${formatPartNumberHtml(partText)}</p>
                 </div>
               ` : `<p class="text-white font-semibold text-lg mb-4">${colorName}</p>`}
               <div class="flex items-center gap-2 text-blue-400">
