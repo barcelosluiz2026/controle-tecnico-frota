@@ -613,6 +613,7 @@
     const SHARED_AUTH_STORAGE_KEY = 'omni_shared_auth_v1';
     const PANES_SESSION_STORAGE_KEY = 'omni_panes_session_v1';
     const RODEND_SESSION_STORAGE_KEY = 'omni_rodend_session_v1';
+    const RODEND_BYPASS_SESSION_KEY = 'omni_rodend_bypass_once';
 
     function getRodEndSessionPayload() {
       if (!currentUser || !currentUser.username) return null;
@@ -626,11 +627,11 @@
       try {
         const payload = getRodEndSessionPayload();
         if (!payload) {
-          localStorage.removeItem(RODEND_SESSION_STORAGE_KEY);
+          sessionStorage.removeItem(RODEND_SESSION_STORAGE_KEY);
           return;
         }
 
-        localStorage.setItem(RODEND_SESSION_STORAGE_KEY, JSON.stringify(payload));
+        sessionStorage.setItem(RODEND_SESSION_STORAGE_KEY, JSON.stringify(payload));
 
         const sharedPayload = {
           username: currentUser.username || '',
@@ -649,7 +650,7 @@
     function clearUnifiedSessionState() {
       localStorage.removeItem(SHARED_AUTH_STORAGE_KEY);
       localStorage.removeItem(PANES_SESSION_STORAGE_KEY);
-      localStorage.removeItem(RODEND_SESSION_STORAGE_KEY);
+      sessionStorage.removeItem(RODEND_SESSION_STORAGE_KEY);
     }
 
     function applyRodEndSession(user) {
@@ -679,13 +680,18 @@
 
     function restoreRodEndSessionState() {
       try {
-        const rawRod = localStorage.getItem(RODEND_SESSION_STORAGE_KEY);
+        const rawRod = sessionStorage.getItem(RODEND_SESSION_STORAGE_KEY);
         if (rawRod) {
           const savedRod = JSON.parse(rawRod);
           if (savedRod?.currentUser?.username) {
             applyRodEndSession(savedRod.currentUser);
             return true;
           }
+        }
+
+        const canBypassFromPanes = consumeRodEndBypassFlag();
+        if (!canBypassFromPanes) {
+          return false;
         }
 
         const rawShared = localStorage.getItem(SHARED_AUTH_STORAGE_KEY);
@@ -2554,9 +2560,6 @@ Alternate P/N
       const restored = restoreRodEndSessionState();
       try {
         await loadRecords();
-        if (!restored) {
-          restoreRodEndSessionState();
-        }
       } catch (error) {
         console.error(error);
         if (!restored) {
