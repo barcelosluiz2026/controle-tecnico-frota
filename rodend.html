@@ -613,7 +613,6 @@
     const SHARED_AUTH_STORAGE_KEY = 'omni_shared_auth_v1';
     const PANES_SESSION_STORAGE_KEY = 'omni_panes_session_v1';
     const RODEND_SESSION_STORAGE_KEY = 'omni_rodend_session_v1';
-    const RODEND_BYPASS_SESSION_KEY = 'omni_rodend_bypass_once';
 
     function getRodEndSessionPayload() {
       if (!currentUser || !currentUser.username) return null;
@@ -627,11 +626,11 @@
       try {
         const payload = getRodEndSessionPayload();
         if (!payload) {
-          sessionStorage.removeItem(RODEND_SESSION_STORAGE_KEY);
+          localStorage.removeItem(RODEND_SESSION_STORAGE_KEY);
           return;
         }
 
-        sessionStorage.setItem(RODEND_SESSION_STORAGE_KEY, JSON.stringify(payload));
+        localStorage.setItem(RODEND_SESSION_STORAGE_KEY, JSON.stringify(payload));
 
         const sharedPayload = {
           username: currentUser.username || '',
@@ -650,7 +649,7 @@
     function clearUnifiedSessionState() {
       localStorage.removeItem(SHARED_AUTH_STORAGE_KEY);
       localStorage.removeItem(PANES_SESSION_STORAGE_KEY);
-      sessionStorage.removeItem(RODEND_SESSION_STORAGE_KEY);
+      localStorage.removeItem(RODEND_SESSION_STORAGE_KEY);
     }
 
     function applyRodEndSession(user) {
@@ -680,18 +679,13 @@
 
     function restoreRodEndSessionState() {
       try {
-        const rawRod = sessionStorage.getItem(RODEND_SESSION_STORAGE_KEY);
+        const rawRod = localStorage.getItem(RODEND_SESSION_STORAGE_KEY);
         if (rawRod) {
           const savedRod = JSON.parse(rawRod);
           if (savedRod?.currentUser?.username) {
             applyRodEndSession(savedRod.currentUser);
             return true;
           }
-        }
-
-        const canBypassFromPanes = consumeRodEndBypassFlag();
-        if (!canBypassFromPanes) {
-          return false;
         }
 
         const rawShared = localStorage.getItem(SHARED_AUTH_STORAGE_KEY);
@@ -757,24 +751,18 @@
           }
         },
         'SCISSORS SPHERICAL BEARING': {
-          measures: ['Lower Bearing', 'Yellow Link', "Between Link's"],
-          colors: ['White', 'Yellow', 'Blue'],
+          measures: ['Lower', 'Link', 'Entre Link'],
+          colors: ['Yellow', 'Blue', 'White'],
           singleMeasurePerColor: true,
           colorMeasureMap: {
-            'White': 'Lower Bearing',
-            'Yellow': 'Yellow Link',
-            'Blue': "Between Link's"
+            'Yellow': 'Lower',
+            'Blue': 'Link',
+            'White': 'Entre Link'
           },
           partNumbers: {
-            'Lower Bearing': 'M623G40T1001
-Alternate P/N
-11-13354P',
-            'Yellow Link': 'M623G40T1001
-Alternate P/N
-11-13354P',
-            "Between Link's": 'M623G40T1001
-Alternate P/N
-11-13354P'
+            'Lower': 'M623G40T1001\nAlternate P/N 11-13354P',
+            'Link': 'M623G40T1001\nAlternate P/N 11-13354P',
+            'Entre Link': 'M623G40T1001\nAlternate P/N 11-13354P'
           }
         }
       },
@@ -1885,21 +1873,19 @@ Alternate P/N
       
       if (auth.success) {
         document.getElementById('error-message').classList.add('hidden');
-        currentUser = {
-          username: user,
-          isAdmin: auth.isAdmin,
-          id: auth.user?.id || '',
-          role: auth.user?.role || (auth.isAdmin ? 'admin' : ''),
-          fullName: auth.user?.fullName || ''
-        };
+        currentUser = { username: user, isAdmin: auth.isAdmin, id: auth.user?.id || '' };
         await loadRecords();
         
         if (auth.needsPasswordChange) {
           loginScreen.classList.add('hidden');
           changePasswordScreen.classList.remove('hidden');
-          saveRodEndSessionState();
         } else {
-          applyRodEndSession(currentUser);
+          document.getElementById('user-display').textContent = user;
+          if (auth.isAdmin) {
+            document.getElementById('manage-users-btn').classList.remove('hidden');
+          }
+          loginScreen.classList.add('hidden');
+          mainApp.classList.remove('hidden');
         }
         this.reset();
       } else {
@@ -1954,7 +1940,6 @@ Alternate P/N
 
     // Back to Monitoring
     document.getElementById('back-to-monitoring-btn').addEventListener('click', function() {
-      saveRodEndSessionState();
       window.location.href = '/';
     });
 
@@ -2557,14 +2542,12 @@ Alternate P/N
 
     async function init() {
       await onConfigChange(defaultConfig);
-      const restored = restoreRodEndSessionState();
       try {
         await loadRecords();
+        restoreRodEndSessionState();
       } catch (error) {
         console.error(error);
-        if (!restored) {
-          showToast('Erro ao carregar dados do ROD END', 'error');
-        }
+        showToast('Erro ao carregar dados do ROD END', 'error');
       }
     }
 
