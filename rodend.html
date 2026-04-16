@@ -751,18 +751,24 @@
           }
         },
         'SCISSORS SPHERICAL BEARING': {
-          measures: ['Lower', 'Link', 'Entre Link'],
-          colors: ['Yellow', 'Blue', 'White'],
+          measures: ['Lower Bearing', 'Yellow Link', "Between Link's"],
+          colors: ['White', 'Yellow', 'Blue'],
           singleMeasurePerColor: true,
           colorMeasureMap: {
-            'Yellow': 'Lower',
-            'Blue': 'Link',
-            'White': 'Entre Link'
+            'White': 'Lower Bearing',
+            'Yellow': 'Yellow Link',
+            'Blue': "Between Link's"
           },
           partNumbers: {
-            'Lower': 'M623G40T1001\nAlternate P/N 11-13354P',
-            'Link': 'M623G40T1001\nAlternate P/N 11-13354P',
-            'Entre Link': 'M623G40T1001\nAlternate P/N 11-13354P'
+            'Lower Bearing': 'M623G40T1001
+Alternate P/N
+11-13354P',
+            'Yellow Link': 'M623G40T1001
+Alternate P/N
+11-13354P',
+            "Between Link's": 'M623G40T1001
+Alternate P/N
+11-13354P'
           }
         }
       },
@@ -830,8 +836,21 @@
       return resolvedConfig.measures?.[0] || '';
     }
 
+    function normalizePartNumberText(partNumber) {
+      const raw = String(partNumber || '')
+        .replace(/<br\s*\/?/gi, '\n')
+        .replace(/\r/g, '')
+        .trim();
+
+      if (/M623G40T1001/i.test(raw) && /11-13354P/i.test(raw)) {
+        return 'P/N M623G40T1001\nor\nP/N 11-13354P';
+      }
+
+      return raw;
+    }
+
     function formatPartNumberHtml(partNumber) {
-      return String(partNumber || '').replace(/\n/g, '<br>');
+      return normalizePartNumberText(partNumber).replace(/\n/g, '<br>');
     }
 
     function getComponentDisplayMeasures(component, config = null) {
@@ -1497,7 +1516,7 @@
             const percent = measure.max > 0 ? (measure.current / measure.max) * 100 : 0;
             return `
               <div class="measure-zoom-trigger bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-lg p-3 border border-blue-500/20 cursor-pointer hover:border-blue-500/50 transition-all w-full" data-measure="${measure.num}">
-                <p class="text-slate-300 text-xs mb-1 text-center">${measure.name}</p>
+                <p class="text-slate-300 text-xs mb-1">${measure.name}</p>
                 <p class="text-slate-300 text-xs mb-1 text-left leading-tight">${formatPartNumberHtml(measure.partNumber)}</p>
                 <p class="text-white text-2xl font-bold">${formatStoredMeasurement(measure.current, latestDisplayUnit)}</p>
                 <div class="progress-bar mt-1">
@@ -1540,7 +1559,7 @@
               <div class="color-badge mb-4" style="background: ${color}; width: 48px; height: 48px;"></div>
               ${singleMeasureComponent ? `
                 <div class="w-full bg-slate-800/50 rounded-lg p-3 mb-4 text-left">
-                  <p class="text-slate-300 text-sm mb-1 text-center">${measureName}</p>
+                  <p class="text-slate-300 text-sm mb-1">${measureName}</p>
                   <p class="text-slate-300 text-xs leading-tight">${formatPartNumberHtml(partText)}</p>
                 </div>
               ` : `<p class="text-white font-semibold text-lg mb-4">${colorName}</p>`}
@@ -1676,12 +1695,12 @@
       if (existingComp) {
         document.getElementById('edit-component-id').value = existingComp.__backendId;
         if (config.singleSerial) {
-          document.getElementById('single-pn').value = existingComp.measure1_part_number;
+          document.getElementById('single-pn').value = normalizePartNumberText(existingComp.measure1_part_number);
           document.getElementById('link-serial').value = existingComp.link_serial_number || '';
         } else {
-          document.getElementById('measure1-pn').value = existingComp.measure1_part_number || config.partNumbers?.[singleMeasureComponent ? selectedMeasureName : config.measures[0]] || '';
+          document.getElementById('measure1-pn').value = normalizePartNumberText(existingComp.measure1_part_number || config.partNumbers?.[singleMeasureComponent ? selectedMeasureName : config.measures[0]] || '');
           document.getElementById('measure1-serial').value = existingComp.measure1_serial_number || '';
-          document.getElementById('measure2-pn').value = existingComp.measure2_part_number || config.partNumbers?.[config.measures[1]] || '';
+          document.getElementById('measure2-pn').value = normalizePartNumberText(existingComp.measure2_part_number || config.partNumbers?.[config.measures[1]] || '');
           document.getElementById('measure2-serial').value = existingComp.measure2_serial_number || '';
         }
         document.getElementById('measure1-current').value = '';
@@ -1697,8 +1716,8 @@
         document.getElementById('quick-measure2-title').textContent = existingComp.measure2_name || config.measures[1] || '';
       } else {
         document.getElementById('edit-component-id').value = '';
-        document.getElementById('measure1-pn').value = config.partNumbers ? (config.partNumbers[singleMeasureComponent ? selectedMeasureName : config.measures[0]] || '') : '';
-        document.getElementById('measure2-pn').value = config.partNumbers ? (config.partNumbers[config.measures[1]] || '') : '';
+        document.getElementById('measure1-pn').value = normalizePartNumberText(config.partNumbers ? (config.partNumbers[singleMeasureComponent ? selectedMeasureName : config.measures[0]] || '') : '');
+        document.getElementById('measure2-pn').value = normalizePartNumberText(config.partNumbers ? (config.partNumbers[config.measures[1]] || '') : '');
         document.getElementById('measure1-serial').value = '';
         document.getElementById('measure2-serial').value = '';
         document.getElementById('measure1-current').value = '';
