@@ -1884,13 +1884,14 @@ Alternate P/N
           isAdmin: auth.isAdmin,
           id: auth.user?.id || '',
           role: auth.user?.role || (auth.isAdmin ? 'admin' : ''),
-          fullName: auth.user?.fullName || auth.user?.name || user
+          fullName: auth.user?.fullName || ''
         };
         await loadRecords();
         
         if (auth.needsPasswordChange) {
           loginScreen.classList.add('hidden');
           changePasswordScreen.classList.remove('hidden');
+          saveRodEndSessionState();
         } else {
           applyRodEndSession(currentUser);
         }
@@ -2550,12 +2551,15 @@ Alternate P/N
 
     async function init() {
       await onConfigChange(defaultConfig);
-      const restoredSession = restoreRodEndSessionState();
+      const restored = restoreRodEndSessionState();
       try {
         await loadRecords();
+        if (!restored) {
+          restoreRodEndSessionState();
+        }
       } catch (error) {
         console.error(error);
-        if (!restoredSession) {
+        if (!restored) {
           showToast('Erro ao carregar dados do ROD END', 'error');
         }
       }
