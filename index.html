@@ -139,6 +139,7 @@
     const SHARED_AUTH_STORAGE_KEY = 'omni_shared_auth_v1';
     const PANES_SESSION_STORAGE_KEY = 'omni_panes_session_v1';
     const RODEND_SESSION_STORAGE_KEY = 'omni_rodend_session_v1';
+    const RODEND_BYPASS_SESSION_KEY = 'omni_rodend_bypass_once';
 
     function buildSharedAuthPayloadFromPanes() {
       if (!currentUser) return null;
@@ -2161,6 +2162,12 @@
       const controleRodEndBtn = document.getElementById('controleRodEndBtn');
       if (controleRodEndBtn) {
         controleRodEndBtn.addEventListener('click', () => {
+          savePanesSessionState();
+          try {
+            sessionStorage.setItem(RODEND_BYPASS_SESSION_KEY, '1');
+          } catch (error) {
+            console.error('Erro ao preparar bypass do login do ROD END:', error);
+          }
           window.location.href = '/rodend';
         });
       }
